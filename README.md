@@ -11,5 +11,6 @@ The scripts included here use a template that makes the result part of a reprodu
 
 *Script*
 --------
-[http://htmlpreview.github.com/?https://github.com/harrelfe/rscripts/blob/master/descriptives.html](descriptives)
+[descriptives](http://htmlpreview.github.com/?https://github.com/harrelfe/rscripts/blob/master/descriptives.html)
+
 
