@@ -9,9 +9,10 @@ The scripts included here use a template that makes the result part of a reprodu
 
 `html` output for some of the scripts may be viewed by clicking below.
 
-*Script*
+|*Script*|
 --------
-[descriptives](http://htmlpreview.github.io/?https://github.com/harrelfe/rscripts/blob/master/descriptives.html)
-[lead-ols](http://htmlpreview.github.io/?https://github.com/harrelfe/rscripts/blob/master/lead-ols.html)
+| [descriptives](http://htmlpreview.github.io/?https://github.com/harrelfe/rscripts/blob/master/descriptives.html) |
+| [lead-ols](http://htmlpreview.github.io/?https://github.com/harrelfe/rscripts/blob/master/lead-ols.html) |
+
 
 
