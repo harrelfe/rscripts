@@ -118,7 +118,7 @@ plot(summary(f))
 ```
 
 # Getting Predicted Values
-## Using \co{predict}
+## Using `predict`
 ```{r predict}
 predict(f, data.frame(age=3, ld72=21, ld73=21))
 # must specify all variables in the model
