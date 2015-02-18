@@ -7,3 +7,4 @@ The special file `contents.md` lists all the available files and short descripti
 
 The scripts included here use a template that makes the result part of a reproducible research process by documenting the versions of R and attached packages at the end of the report.  They make use of the `knitrSet` function also defined in the `.Rprofile`.  When running Rmarkdown, call `knitrSet(lang='markdown')`.  `knitrSet` gets rid of ## at the start of R output lines, and makes it easy to specify things like figure sizes in `knitr` chunk headers.  It also causes annoying messages such as those generated from attaching R packages to be put in a separate file `messages.txt` rather than in the report.
 
+`html` output for some of the scripts is also included in this repository.  The file names are the same as the script names with `.Rmd` replaced with `.html`.
