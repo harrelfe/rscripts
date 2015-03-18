@@ -1,5 +1,5 @@
 ## Statistical Tests
-### Unadjusted Comparisons
+#### Unadjusted Comparisons
 *File Name* | *Type* | *Description*
 ---- | ---- | ----
 introda.r | R | Intro to R for data analysis (self contained data) 
@@ -31,7 +31,7 @@ catgNoise.r | R | Interactive RStudio simulation of noise and categorization
 
 
 ## Regression Modeling
-### Ordinary Least Squares (Linear Model)
+#### Ordinary Least Squares (Linear Model)
 *File Name* | *Type* | *Description*
 ---- | ---- | ----
 lead-ols.Rmd | Rmarkdown | Ordinary least squares analysis of Rosner lead dataset
