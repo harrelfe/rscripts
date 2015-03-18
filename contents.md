@@ -2,7 +2,7 @@
 #### Unadjusted Comparisons
 *File Name* | *Type* | *Description*
 ---- | ---- | ----
-introda.r | R | Intro to R for data analysis (self contained data) 
+introda.r | R | Intro to R for data analysis (self contained data; t-test) 
 
 
 ## Curve Fitting
