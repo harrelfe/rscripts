@@ -1,5 +1,5 @@
 # rscripts
-### R Scripts:  Templates, Examples of Analyses using `knitr` with `Rmarkdown` or `LaTeX`, Interactive `RStudio` Demonstrations  
+### R Scripts:  Templates, Examples of Analyses using `knitr` with `Rmarkdown` or `LaTeX`, Interactive `RStudio` Demonstrations | [Contents Directory](https://github.com/harrelfe/rscripts/blob/master/contents.md)
 
 This is for use with the R function `getRs` (included in the `.Rprofile` file mentioned below) for auto-populating an RStudio script editor window with a script stored here.  Windows users must install `wget` in order to access github because it uses https instead of http.  Installation instructions as well as an attachment containing `.Rprofile` are [here](http://biostat.mc.vanderbilt.edu/RConfiguration).
 
