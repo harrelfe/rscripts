@@ -21,19 +21,19 @@ Possible values for major categories are listed below.
 
 |*Major Category*|*Comments*|
 ------------
-curve fitting |
-descriptive statistics |
-graphics |
-hazards of dichotomization/cutpoints/thresholds |
-introduction | Introduction to R
-regression modeling |
-statistical tests |
+| curve fitting |
+| descriptive statistics |
+| graphics |
+| hazards of dichotomization/cutpoints/thresholds |
+| introduction | Introduction to R
+| regression modeling |
+| statistical tests |
 
 Possible values for minor categories are listed below.
 
 |*Minor Category*|*Comments*|
 ------------
-unadjusted comparisons |
+| unadjusted comparisons |
 
 To request the addition of new categories open an issue for this GitHub project.
 
