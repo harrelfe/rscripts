@@ -14,9 +14,13 @@ The `Rmarkdown` and `LaTeX` scripts included here use a template that makes the 
 # major: major category 1; major category 2 ...
 # minor: minor category 1; minor category 2 ...
 ```
-Possible values for major categories are listed below
+
+See `introda.r` for an example.
+
+Possible values for major categories are listed below.
 
 |*Major Category*|*Comments*|
+------------
 curve fitting |
 descriptive statistics |
 graphics |
@@ -25,9 +29,10 @@ introduction | Introduction to R
 regression modeling |
 statistical tests |
 
-Possible values for minor categories are listed below
+Possible values for minor categories are listed below.
 
 |*Minor Category*|*Comments*|
+------------
 unadjusted comparisons |
 
 To request the addition of new categories open an issue for this GitHub project.
