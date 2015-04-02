@@ -1,3 +1,5 @@
+# title: Interactive RStudio Simulation of Noise and Categorization
+# major: hazards of dichotomization/cutpoints/thresholds
 # Interactive demonstration of power loss by categorizing
 # a single x in a linear model, and by introducing
 # measurement error in x.  The categorical analysis amounts to a

@@ -33,6 +33,7 @@ Possible values for minor categories are listed below.
 
 |*Minor Category*|*Comments*|
 --------|--------
+| ordinary least squares | Linear Model |
 | unadjusted comparisons | |
 
 To request the addition of new categories open an issue for this GitHub project.

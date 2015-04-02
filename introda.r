@@ -1,3 +1,6 @@
+# title: Intro to R for Data Analysis (With Self-Contained Data)
+# major: introduction
+#
 # This script shows what a basic analysis looks like in R
 # We focus on the 2-sample t-test for comparing serum creatinine (SCr)
 # in a small sample of males and females

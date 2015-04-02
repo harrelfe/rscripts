@@ -1,3 +1,5 @@
+# title: Non-Interactive Demo of Polynomial and Spline Fitting with OLS and quantile regression and how to use a list of models
+# major: curve fitting
 # Quick way to compare multiple types of OLS and quantile regression fits 
 
 set.seed(1)

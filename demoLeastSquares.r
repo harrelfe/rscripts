@@ -1,3 +1,5 @@
+# title: Interactive Demo of Least Squares and Other Fitting
+# major: curve fitting
 require(Hmisc)
 require(MASS)
 while (TRUE) {

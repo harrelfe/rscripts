@@ -6,7 +6,7 @@ output:
   html_document:
     highlight: pygments
     toc: yes
-
+major: descriptive statistics; graphics
 ---
 # Data Description and Univariable Statistics
 ```{r contents,results='asis'}
