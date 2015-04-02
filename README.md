@@ -20,7 +20,7 @@ See `introda.r` for an example.
 Possible values for major categories are listed below.
 
 |*Major Category*|*Comments*|
---------
+--------|--------
 | curve fitting | |
 | descriptive statistics | | 
 | graphics | |
@@ -32,7 +32,7 @@ Possible values for major categories are listed below.
 Possible values for minor categories are listed below.
 
 |*Minor Category*|*Comments*|
---------
+--------|--------
 | unadjusted comparisons | |
 
 To request the addition of new categories open an issue for this GitHub project.
