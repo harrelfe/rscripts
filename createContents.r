@@ -57,6 +57,8 @@ for(maj in Major) {
   for(mi in posminor) {
     cat('  ', mi, '\n')
     if(mi != '') cat('#### ', upFirst(mi), '\n', sep='', file=f, append=TRUE)
+    cat('*File Name* | *Type* | *Description*\n---- | ---- | ----\n',
+        file=f, append=TRUE)
     containingMin <- sapply(minor, function(x) any(x == mi))
     cat(containingMaj, '\n', containingMin, '\n',
         containingMaj & containingMin, '\n')
