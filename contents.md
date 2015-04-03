@@ -1,38 +1,22 @@
-## Statistical Tests
-#### Unadjusted Comparisons
-*File Name* | *Type* | *Description*
----- | ---- | ----
-introda.r | R | Intro to R for data analysis (self contained data; t-test) 
-
 
 ## Curve Fitting
-*File Name* | *Type* | *Description*
----- | ---- | ----
-demoLeastSquares.r | R | Interactive demo of least squares and other fitting
-demoSpline.r | R | Interactive demo of spline fitting
-demoOLSqr.r | R | Non-interactive demo of polynomial and spline fitting with OLS and quantile regression and how to use a list of models
+demoLeastSquares.r | R | Interactive Demo of Least Squares and Other Fitting 
+demoOLSqr.r | R | Non-Interactive Demo of Polynomial and Spline Fitting with OLS and quantile regression and how to use a list of models 
+demoSpline.r | R | Interactive Demo of Spline Fitting 
 
+## Descriptive Statistics
+descriptives.Rmd | R Markdown | Descriptive Analysis of FEV Dataset 
 
-## Descriptive Statistics/Graphics
-*File Name* | *Type* | *Description*
----- | ---- | ----
-descriptives.Rmd | Rmarkdown | Descriptive analysis of FEV dataset
+## Graphics
+descriptives.Rmd | R Markdown | Descriptive Analysis of FEV Dataset 
 
-
-## Introduction to R
-*File Name* | *Type* | *Description*
----- | ---- | ----
-introda.r | R | Intro to R for data analysis (self contained data) 
-
-
-## Hazards of Dichotomization/Cutpoints/Thresholds
-*File Name* | *Type* | *Description*
----- | ---- | ----
-catgNoise.r | R | Interactive RStudio simulation of noise and categorization
-
+## Introduction
+introda.r | R | Intro to R for Data Analysis (With Self-Contained Data) 
 
 ## Regression Modeling
-#### Ordinary Least Squares (Linear Model)
-*File Name* | *Type* | *Description*
----- | ---- | ----
-lead-ols.Rmd | Rmarkdown | Ordinary least squares analysis of Rosner lead dataset
+#### Ordinary Least Squares
+lead-ols.Rmd | R Markdown | Linear Model Analysis of Rosner `lead` Dataset 
+
+## Statistical Pitfalls
+#### Categorization
+catgNoise.r | R | Interactive RStudio Simulation of Noise and Categorization 

@@ -24,7 +24,7 @@ Possible values for major categories are listed below.
 | curve fitting | |
 | descriptive statistics | | 
 | graphics | |
-| hazards of dichotomization/cutpoints/thresholds | |
+| statistical pitfalls | |
 | introduction | Introduction to R |
 | regression modeling | |
 | statistical tests | |
@@ -35,6 +35,7 @@ Possible values for minor categories are listed below.
 --------|--------
 | ordinary least squares | Linear Model |
 | unadjusted comparisons | |
+| categorization | |
 
 To request the addition of new categories open an issue for this GitHub project.
 
