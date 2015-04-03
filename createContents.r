@@ -1,3 +1,5 @@
+method <- c('septables', 'onetable')[2]
+
 trim <- function(x) {
   x <- sub("[[:space:]]+$", "", x)
   sub('^[[:space:]]+', '', x)
@@ -45,25 +47,45 @@ for(f in rfiles) {
 Major <- unique(sort(unlist(major)))
 Minor <- unique(sort(unlist(minor)))
 upFirst <- greport:::upFirst
-
+fwrap <- function(x) paste('[', x,
+   '](https://github.com/harrelfe/rscripts/blob/master/', x, ')', sep='')
 f <- 'contents.md'
 cat('', file=f, sep='')
 cat('\nCategories Found:\n\n')
+
+if(method == 'onetable') cat('*Major Category* | *Minor Category* | *File Name* | *Type* | *Description*\n---- | ---- | ---- | ---- | ----\n',
+     file=f)
+
+lastmaj <- lastmin <- 'xxxxxx'
 for(maj in Major) {
   cat(maj, '\n')
-  cat('\n## ', upFirst(maj), '\n', sep='', file=f, append=TRUE)
+  if(method == 'septables')
+    cat('\n## ', upFirst(maj), '\n', sep='', file=f, append=TRUE)
   containingMaj <- sapply(major, function(x) any(x == maj))
   posminor <- unique(sort(unlist(minor[containingMaj])))
+
   for(mi in posminor) {
     cat('  ', mi, '\n')
-    if(mi != '') cat('#### ', upFirst(mi), '\n', sep='', file=f, append=TRUE)
-    cat('*File Name* | *Type* | *Description*\n---- | ---- | ----\n',
-        file=f, append=TRUE)
+    if(method == 'septables') {
+      if(mi != '') cat('#### ', upFirst(mi), '\n', sep='', file=f, append=TRUE)
+      cat('*File Name* | *Type* | *Description*\n---- | ---- | ----\n',
+          file=f, append=TRUE)
+    }
     containingMin <- sapply(minor, function(x) any(x == mi))
-    cat(containingMaj, '\n', containingMin, '\n',
-        containingMaj & containingMin, '\n')
-    for(g in which(containingMaj & containingMin))
-      cat(Files[g], '|', type[g], '|', title[g], '\n', file=f, append=TRUE)
+      for(g in which(containingMaj & containingMin)) {
+        switch(method,
+               septables=cat(fwrap(Files[g]), '|', type[g], '|', title[g],
+                 '\n', file=f, append=TRUE),
+               onetable={
+                 ma <- ifelse(maj == lastmaj, '"', maj)
+                 m  <- ifelse(maj == lastmaj && mi  == lastmin, ' ', mi)
+                 cat('**', upFirst(ma), '**| ', upFirst(m), ' | ',
+                     fwrap(Files[g]), ' | ',
+                     type[g], ' | ', title[g], '\n', file=f, append=TRUE, sep='')
+               } )
+        lastmaj <- maj
+        lastmin <- mi
+      }
   }
 }
 
