@@ -8,6 +8,9 @@ trim <- function(x) {
 files <- list.files(pattern='\\.Rmd$')
 rfiles <- setdiff(list.files(pattern='\\.r$'), 'createContents.r')
 Files <- c(files, rfiles)
+baseFiles <- sub('\\.Rmd$', '', sub('\\.r$', '', Files))
+htmls     <- list.files(pattern='\\.html$')
+
 n <- length(files)
 m <- length(rfiles)
 type <- c(rep('R Markdown', n), rep('R', m))
@@ -47,8 +50,11 @@ for(f in rfiles) {
 Major <- unique(sort(unlist(major)))
 Minor <- unique(sort(unlist(minor)))
 upFirst <- greport:::upFirst
-fwrap <- function(x) paste('[', x,
-   '](https://github.com/harrelfe/rscripts/blob/master/', x, ')', sep='')
+fwrap <- function(x, html=FALSE) {
+  link <- if(html)'http://htmlpreview.github.io/?https://github.com/harrelfe/rscripts/blob/master/' else 'https://github.com/harrelfe/rscripts/blob/master/'
+  nam <- if(html) 'report' else x
+  paste('[', nam, '](', link, x, ')', sep='')
+}
 f <- 'contents.md'
 cat('', file=f, sep='')
 cat('\nCategories Found:\n\n')
@@ -73,15 +79,20 @@ for(maj in Major) {
     }
     containingMin <- sapply(minor, function(x) any(x == mi))
       for(g in which(containingMaj & containingMin)) {
+        htmlf <- paste(baseFiles[g], 'html', sep='.')
+        tig <- title[g]
+        if(htmlf %in% htmls)
+          tig <- paste(tig, '; ', fwrap(htmlf, html=TRUE), sep='')
+                      
         switch(method,
-               septables=cat(fwrap(Files[g]), '|', type[g], '|', title[g],
+               septables=cat(fwrap(Files[g]), '|', type[g], '|', tig,
                  '\n', file=f, append=TRUE),
                onetable={
                  ma <- ifelse(maj == lastmaj, '"', maj)
                  m  <- ifelse(maj == lastmaj && mi  == lastmin, ' ', mi)
                  cat('**', upFirst(ma), '**| ', upFirst(m), ' | ',
                      fwrap(Files[g]), ' | ',
-                     type[g], ' | ', title[g], '\n', file=f, append=TRUE, sep='')
+                     type[g], ' | ', tig, '\n', file=f, append=TRUE, sep='')
                } )
         lastmaj <- maj
         lastmin <- mi

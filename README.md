@@ -38,14 +38,3 @@ Possible values for minor categories are listed below.
 | categorization | |
 
 To request the addition of new categories open an issue for this GitHub project.
-
-
-`html` output for some of the scripts may be viewed by clicking below.
-
-|*Script*|
---------
-| [descriptives](http://htmlpreview.github.io/?https://github.com/harrelfe/rscripts/blob/master/descriptives.html) |
-| [lead-ols](http://htmlpreview.github.io/?https://github.com/harrelfe/rscripts/blob/master/lead-ols.html) |
-
-
-
