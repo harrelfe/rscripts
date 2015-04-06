@@ -1,5 +1,6 @@
 # title: Interactive Demo of Spline Fitting
-# major: curve fitting
+# major: regression modeling
+# minor: curve fitting
 require(rms)
 pag <- function(x,titl,df) {
   if(!show.constructed.variables) return(invisible())
