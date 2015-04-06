@@ -4,7 +4,7 @@
 **Graphics**|  | [descriptives.Rmd](https://github.com/harrelfe/rscripts/blob/master/descriptives.Rmd) | R Markdown | Descriptive Analysis of FEV Dataset; [report](http://htmlpreview.github.io/?https://github.com/harrelfe/rscripts/blob/master/descriptives.html)
 **Introduction**|  | [introda.r](https://github.com/harrelfe/rscripts/blob/master/introda.r) | R | Intro to R for Data Analysis (With Self-Contained Data)
 **Regression Modeling**| Curve Fitting | [demoLeastSquares.r](https://github.com/harrelfe/rscripts/blob/master/demoLeastSquares.r) | R | Interactive Demo of Least Squares and Other Fitting
-**"**|  | [demoOLSqr.r](https://github.com/harrelfe/rscripts/blob/master/demoOLSqr.r) | R | Non-Interactive Demo of Polynomial and Spline Fitting with OLS and quantile regression and how to use a list of models
-**"**|  | [demoSpline.r](https://github.com/harrelfe/rscripts/blob/master/demoSpline.r) | R | Interactive Demo of Spline Fitting
+**"**| " | [demoOLSqr.r](https://github.com/harrelfe/rscripts/blob/master/demoOLSqr.r) | R | Non-Interactive Demo of Polynomial and Spline Fitting with OLS and quantile regression and how to use a list of models
+**"**| " | [demoSpline.r](https://github.com/harrelfe/rscripts/blob/master/demoSpline.r) | R | Interactive Demo of Spline Fitting
 **"**| Ordinary Least Squares | [lead-ols.Rmd](https://github.com/harrelfe/rscripts/blob/master/lead-ols.Rmd) | R Markdown | Linear Model Analysis of Rosner `lead` Dataset; [report](http://htmlpreview.github.io/?https://github.com/harrelfe/rscripts/blob/master/lead-ols.html)
 **Statistical Pitfalls**| Categorization | [catgNoise.r](https://github.com/harrelfe/rscripts/blob/master/catgNoise.r) | R | Interactive RStudio Simulation of Noise and Categorization

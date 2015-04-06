@@ -89,7 +89,7 @@ for(maj in Major) {
                  '\n', file=f, append=TRUE),
                onetable={
                  ma <- ifelse(maj == lastmaj, '"', maj)
-                 m  <- ifelse(maj == lastmaj && mi  == lastmin, ' ', mi)
+                 m  <- ifelse(maj == lastmaj && mi  == lastmin, '"', mi)
                  cat('**', upFirst(ma), '**| ', upFirst(m), ' | ',
                      fwrap(Files[g]), ' | ',
                      type[g], ' | ', tig, '\n', file=f, append=TRUE, sep='')
