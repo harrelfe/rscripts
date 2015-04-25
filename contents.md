@@ -1,5 +1,6 @@
 *Major Category* | *Minor Category* | *File Name* | *Type* | *Description*
 ---- | ---- | ---- | ---- | ----
+**Data Manipulation**| Import | [importREDCap.r](https://github.com/harrelfe/rscripts/blob/master/importREDCap.r) | R | Function to clean up REDCap dataset exported to R
 **Descriptive Statistics**|  | [descriptives.Rmd](https://github.com/harrelfe/rscripts/blob/master/descriptives.Rmd) | R Markdown | Descriptive Analysis of FEV Dataset; [report](http://htmlpreview.github.io/?https://github.com/harrelfe/rscripts/blob/master/descriptives.html)
 **Graphics**|  | [descriptives.Rmd](https://github.com/harrelfe/rscripts/blob/master/descriptives.Rmd) | R Markdown | Descriptive Analysis of FEV Dataset; [report](http://htmlpreview.github.io/?https://github.com/harrelfe/rscripts/blob/master/descriptives.html)
 **Introduction**|  | [introda.r](https://github.com/harrelfe/rscripts/blob/master/introda.r) | R | Intro to R for Data Analysis (With Self-Contained Data)
