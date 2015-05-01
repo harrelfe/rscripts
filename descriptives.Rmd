@@ -11,8 +11,8 @@ major: descriptive statistics; graphics
 # Data Description and Univariable Statistics
 ```{r contents,results='asis'}
 # results='asis' in the chunk header because html(contents) output html directly
-knitrSet(lang='markdown', w=4, h=3)  # set default figure width and height
 require(Hmisc)
+knitrSet(lang='markdown', w=4, h=3)  # set default figure width and height
 getHdata(FEV)
 h <- html(contents(FEV), file='', maxlevels=10, levelType='table')
 ```
