@@ -24,6 +24,7 @@ d <- upData(d, labels=c(face    = 'Face Width:Height Ratio',
 ```
 ```{r show}
 d    # same as print(d)
+ggplot(d, aes(x=face, y=penalty)) + geom_point()
 dd <- datadist(d); options(datadist='dd')
 ```
 # Linear Regression Fit
@@ -36,9 +37,11 @@ sxx <- sum(x ^ 2) - sum(x) ^ 2 / n
 syy <- sum(y ^ 2) - sum(y) ^ 2 / n
 sxy <- sum(x * y) - sum(x) * sum(y) / n
 b   <- sxy / sxx
-mse <- (syy - b * sxy) / (n - 2)
+mse <- (syy - b * sxy) / (n - 2)   # 1 d.f. intercept 1 d.f. slope
 seb <- sqrt(mse / sxx)
 c(xbar=mean(x), ybar=mean(y), sxx=sxx, syy=syy, sxy=sxy, b=b, mse=mse, seb=seb)
+tcrit <- qt(0.975, n - 2)
+tcrit
 f <- ols(penalty ~ face)
 f
 anova(f)
