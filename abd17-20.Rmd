@@ -19,23 +19,23 @@ knitrSet(lang='markdown')
 # What is between data <- .. and ') is exactly like an external .csv file
 data <- textConnection('
 species,mass,rate
-"alouatta palliata",4670,11.6
-"aotus trivirgatus",1020,2.6
-"arctocebus calabarensis",206,.7
-"callithrix jachus",190,.9
-"cebuella pygmaea",105,.6
-"cheirogaleus medius",300,1.1
-"euoticus elegantilus",261.5,1.2
-"galago crassicaudatus",1039,2.9
-"galago demidovii",61,.4
-"galago elegantulus",261.5,1.2
-"homo sapiens",70000,82.8,
-"lemur fulvus",2330,4.2
-"nycticebus coucang",1300,1.7
-"papio anubis",9500,16
-"perodicticus potto",1011,2.1
-"saguinus geoffroyi",225,1.3
-"saimiri sciureus",800,4.4
+alouatta palliata,4670,11.6
+aotus trivirgatus,1020,2.6
+arctocebus calabarensis,206,.7
+callithrix jachus,190,.9
+cebuella pygmaea,105,.6
+cheirogaleus medius,300,1.1
+euoticus elegantilus,261.5,1.2
+galago crassicaudatus,1039,2.9
+galago demidovii,61,.4
+galago elegantulus,261.5,1.2
+homo sapiens,70000,82.8,
+lemur fulvus,2330,4.2
+nycticebus coucang,1300,1.7
+papio anubis,9500,16
+perodicticus potto,1011,2.1
+saguinus geoffroyi,225,1.3
+saimiri sciureus,800,4.4
 ')
 d <- csv.get(data)
 close(data)
