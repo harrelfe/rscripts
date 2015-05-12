@@ -28,6 +28,7 @@ Possible values for major categories are listed below.
 | introduction | Introduction to R |
 | regression modeling | |
 | statistical tests | |
+| ABD | Problems from _Analysis of Biological Data_, 2nd edition, by Whitlock and Schluter |
 
 Possible values for minor categories are listed below.
 
@@ -39,4 +40,3 @@ Possible values for minor categories are listed below.
 
 To request the addition of new categories open an issue for this GitHub project.
 
-In `contents.md` the abbreviation ABD refers to the book _Analysis of Biological Data_, 2nd edition, by Whitlock and Schluter.
