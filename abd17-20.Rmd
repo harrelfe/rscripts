@@ -44,11 +44,21 @@ d <- upData(d, labels=c(species = 'Species', mass='Mass',
 							 units=c(mass='g', rate='watts'))
 ```
 Raw data are plotted using log10 scales for x and y.
-```{r show}
+```{r show,h=4}
 contents(d)
 d    # same as print(d)
-ggplot(d, aes(x=mass, y=rate)) + geom_point() + geom_text(aes(label=species), size=2, hjust=1.1) + 
-  scale_x_log10() + scale_y_log10()
+# Function to form 2-letter versions of species names using
+# first letter of each word
+w <- function(x) {
+   x <- strsplit(as.character(x), split=' ')
+	 sapply(x, function(y) paste(substring(y, 1, 1), collapse=''))
+	 }
+
+ggplot(d, aes(x=mass, y=rate, color=species)) + geom_point() +
+  geom_text(aes(label=w(species)), size=3, hjust=1.2) + 
+  scale_x_log10() + scale_y_log10() +
+  guides(col=guide_legend(nrow=4, override.aes=list(size=1))) +
+  theme(legend.position='bottom', legend.text=element_text(size=4), legend.key.size=unit(2, 'mm'))
 dd <- datadist(d); options(datadist='dd')
 ```
 
