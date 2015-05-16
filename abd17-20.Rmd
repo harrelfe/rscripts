@@ -11,6 +11,7 @@ minor: ordinary least squares
 ---
 
 # Data
+The data are from Heusner, A. A. 1991. Size and power in mammals. _Journal of Experimental Biology_ **160**: 25-54.
 ```{r setup}
 require(rms)
 knitrSet(lang='markdown')
@@ -42,6 +43,8 @@ close(data)
 d <- upData(d, labels=c(species = 'Species', mass='Mass',
                         rate    = 'Basal metabolic rate'),
 							 units=c(mass='g', rate='watts'))
+xl <- label(d$mass, plot=TRUE, units=TRUE)
+yl <- label(d$rate, plot=TRUE, units=TRUE)
 ```
 Raw data are plotted using log10 scales for x and y.
 ```{r show,h=4}
@@ -55,8 +58,8 @@ w <- function(x) {
 	 }
 
 ggplot(d, aes(x=mass, y=rate, color=species)) + geom_point() +
-  geom_text(aes(label=w(species)), size=3, hjust=1.2) + 
-  scale_x_log10() + scale_y_log10() +
+  geom_text(aes(label=w(species)), size=3, hjust=1.3) + 
+  scale_x_log10() + scale_y_log10() + xlab(xl) + ylab(yl) +
   guides(col=guide_legend(nrow=4, override.aes=list(size=1))) +
   theme(legend.position='bottom', legend.text=element_text(size=4), legend.key.size=unit(2, 'mm'))
 dd <- datadist(d); options(datadist='dd')
@@ -68,7 +71,7 @@ With R you can log while fitting, without creating new variables.  A predicted v
 ```{r fit}
 f <- ols(log10(rate) ~ log10(mass), data=d)
 f
-ggplot(Predict(f, mass=seq(50, 70000, by=50), fun=function(y) 10^y)) +
+ggplot(Predict(f, mass=seq(50, 70000, by=50), fun=function(y) 10^y), ylab=yl) +
   geom_point(aes(x=mass, y=rate), data=d)
 ```
 The confidence interval for $\beta$ (slope of mass on the log10 scale) can be obtained from the confidence interval for a 10-fold change in mass.

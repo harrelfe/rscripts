@@ -11,6 +11,8 @@ minor: ordinary least squares
 ---
 
 # Data
+The data are from Carré, J. M., and C. M McCormick. 2008. _Proceedings of the
+Royal Society of London, Series B, Biological Sciences_ **275**:2651–2656.
 ```{r input}
 require(rms)
 knitrSet(lang='markdown')
@@ -19,12 +21,13 @@ face    <- c(159,167,165,172,179,177,174,174,177,178,176,
 penalty <- c(44,143,157,14,27,35,85,113,147,151,199,
              106,120,123,80,253,123,110,161,195,295)/100
 d <- data.frame(face, penalty)
-d <- upData(d, labels=c(face    = 'Face Width:Height Ratio',
-                        penalty = 'Penalty Minutes'))
+xl <- 'Face Width:Height Ratio'
+yl <- 'Penalty Minutes'
+d <- upData(d, labels=c(face = xl, penalty = yl))
 ```
 ```{r show}
 d    # same as print(d)
-ggplot(d, aes(x=face, y=penalty)) + geom_point()
+ggplot(d, aes(x=face, y=penalty)) + geom_point() + xlab(xl) + ylab(yl)
 dd <- datadist(d); options(datadist='dd')
 ```
 # Linear Regression Fit
@@ -42,7 +45,7 @@ seb <- sqrt(mse / sxx)
 c(xbar=mean(x), ybar=mean(y), sxx=sxx, syy=syy, sxy=sxy, b=b, mse=mse, seb=seb)
 tcrit <- qt(0.975, n - 2)
 tcrit
-f <- ols(penalty ~ face)
+f <- ols(penalty ~ face, data=d)
 f
 anova(f)
 ```
@@ -53,12 +56,12 @@ r <- resid(f)
 par(mfrow=c(1,2))   # 1x2 matrix of plots
 plot(fitted(f), r); abline(h=0)  # yhat vs. r
 qqnorm(r)           # linearity indicates normality
-qqline(r)
+qqline(as.numeric(r))
 ```
 
 # Partial Effects of Predictors With Raw Data
 ```{r peffects}
-ggplot(Predict(f, face=seq(1.59, 2.07, length=100))) +
+ggplot(Predict(f, face=seq(1.59, 2.07, length=100)), ylab=yl) +
     geom_point(aes(x=face, y=penalty), d)
 ```
 
