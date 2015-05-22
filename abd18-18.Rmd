@@ -1,0 +1,91 @@
+---
+title: "Analysis of Biological Data Chapter 18 Assignment Problem 18"
+author: "your name"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    highlight: pygments
+    toc: yes
+major: regression modeling; ABD
+minor: ordinary least squares
+---
+
+# Data
+The data are from Fuller, R. C., L. A. Noa, and R. S. Strellner. 2010. _American Naturalist_ **176**: 1--13.
+```{r setup}
+require(rms)
+knitrSet(lang='markdown')
+```
+```{r input}
+# What is between data <- .. and ') is exactly like an external .csv file
+data <- textConnection('
+population,clarity,sws1
+Spring,Clear,0.16
+Spring,Clear,0.11
+Spring,Clear,0.12
+Spring,Clear,0.11
+Spring,Clear,0.08
+Spring,Clear,0.09
+Spring,Clear,0.14
+Spring,Clear,0.16
+Swamp,Clear,0.08
+Swamp,Clear,0.13
+Swamp,Clear,0.07
+Swamp,Clear,0.12
+Swamp,Clear,0.12
+Swamp,Clear,0.05
+Swamp,Clear,0.06
+Swamp,Clear,0.11
+Spring,Tea,0.09
+Spring,Tea,0.09
+Spring,Tea,0.08
+Spring,Tea,0.1
+Spring,Tea,0.12
+Spring,Tea,0.06
+Spring,Tea,0.13
+Spring,Tea,0.08
+Spring,Tea,0.11
+Spring,Tea,0.07
+Swamp,Tea,0.06
+Swamp,Tea,0.07
+Swamp,Tea,0.08
+Swamp,Tea,0.08
+Swamp,Tea,0.1
+Swamp,Tea,0.03
+Swamp,Tea,0.03
+')
+d <- csv.get(data)
+close(data)
+yl <- 'Relative Expression of SWS1'
+d <- upData(d, labels=c(clarity='Water Clarity', sws1 = yl))
+crossedData <- with(d, tapply(sws1, list(population,clarity),
+                              function(x) paste(x, collapse=', ')))
+print(crossedData, quote=FALSE)
+dd <- datadist(d); options(datadist='dd')
+```
+
+# Anova Model
+The main effect assessments in the output of `anova` do not match the ABD table for problem 18 because `anova` does not try to isolate main effects when a factor is contained in an interaction.  Instead, it computes the combined main effect + interaction effect.  For example, the test for `population` is the test for whether there is a difference between populations for any level of `clarity`.  The dots at the right of the anova table show which terms are being testing in each line. 
+```{r fit,h=1.5,w=5.5}
+f <- ols(sws1 ~ population * clarity, data=d)
+f
+a <- anova(f)
+print(a, which='dots')
+p <- Predict(f, population, clarity)
+# Create an interaction plot
+ggplot(p, groups=FALSE) +
+  geom_point(aes(y=sws1, x=population), data=d, col='blue', alpha=.3)
+# Complication: had to reverse x and y in geom_point because ggplot(Predict())
+# has already reversed them once
+# Estimated group means are black dots, raw data blue dots
+# Bars are 0.95 confidence intervals
+```
+
+# Computing Environment
+```{r rsession,echo=FALSE}
+si <- sessionInfo(); si$loadedOnly <- NULL
+print(si, locale=FALSE)
+```
+```{r cite,results='asis',echo=FALSE}
+print(citation(), style='text')
+```
