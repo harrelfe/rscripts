@@ -65,7 +65,7 @@ dd <- datadist(d); options(datadist='dd')
 ```
 
 # Anova Model
-The main effect assessments in the output of `anova` do not match the ABD table for problem 18 because `anova` does not try to isolate main effects when a factor is contained in an interaction.  Instead, it computes the combined main effect + interaction effect.  For example, the test for `population` is the test for whether there is a difference between populations for any level of `clarity`.  The dots at the right of the anova table show which terms are being testing in each line. 
+The main effect assessments in the output of `anova` do not match the ABD table for problem 18 because `anova` does not try to isolate main effects when a factor is contained in an interaction.  Instead, it computes the combined main effect + interaction effect.  For example, the test for `population` is the test for whether there is a difference between populations for any level of `clarity`.  The dots at the right of the anova table show which terms are being testing in each line.  "Main effect" tests in the anova table from ABD 
 ```{r fit,h=1.5,w=5.5}
 f <- ols(sws1 ~ population * clarity, data=d)
 f
@@ -79,6 +79,25 @@ ggplot(p, groups=FALSE) +
 # has already reversed them once
 # Estimated group means are black dots, raw data blue dots
 # Bars are 0.95 confidence intervals
+```
+
+# Contrasts
+Contrasts can be used to get P-values and point and interval estimates of differences (effects).  The easiest way to get contrasts is to think of them as differences in predicted values.  That way they are easy to specify whether the involved factors interact with themselves or other variables in the model or not.  Examples are below.
+```{r contrasts}
+# Compare swamp and spring when water clarity is `clear`:
+contrast(f, list(population='Swamp',  clarity='Clear'),
+            list(population='Spring', clarity='Clear'))
+# Compare swamp and spring for each level of water clarity
+contrast(f, list(population='Swamp',  clarity=c('Clear', 'Tea')),
+            list(population='Spring', clarity=c('Clear', 'Tea')))
+# A comparison of the above 2 contrasts is the interaction effect
+# (-.02875 - -0.02871429 = -0.00003571)
+# Obtain the interaction contrast directly by having contrast() do differences of differences
+contrast(f, list(population='Swamp',  clarity='Clear'),   # A
+            list(population='Spring', clarity='Clear'),   # B
+            list(population='Swamp',  clarity='Tea'),     # C
+            list(population='Spring', clarity='Tea'))     # D
+# Estimate is A - B - (C - D); P-value identical to interaction test in anova()
 ```
 
 # Computing Environment
