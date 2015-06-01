@@ -9,7 +9,7 @@ while (TRUE) {
 						  'Least Median\nSquared Deviation','Loess')
 	
 	plot(0:1,0:1,xlab='x', ylab='y', type='n')
-	cat('\nClick any points you desire.  Terminate points with right-click.\n')
+	cat('\nClick any points you desire.  Terminate points by pressing Esc.\n')
 	z <- locator(type='p')
 	f <- lsfit(z$x, z$y)	
 	abline(f, lwd=3)
