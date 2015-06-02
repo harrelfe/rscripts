@@ -7,7 +7,7 @@ output:
     highlight: pygments
     toc: yes
 major: regression modeling; rms
-minor: ordinary least squares
+minor: curve fitting
 ---
 ```{r setup}
 require(Hmisc)
