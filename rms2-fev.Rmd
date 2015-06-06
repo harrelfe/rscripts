@@ -1,0 +1,108 @@
+---
+title: "RMS Chapter 2 Example: Analysis of FEV Dataset"
+author: "Frank Harrell"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    highlight: pygments
+    toc: yes
+major: regression modeling; rms
+minor: curve fitting
+---
+```{r setup}
+require(Hmisc)
+knitrSet(lang='markdown')
+```
+# Descriptive Statistics
+```{r importdesc}
+require(rms)
+getHdata(FEV)
+contents(FEV)
+describe(FEV)
+dd <- datadist(FEV); options(datadist='dd')
+dd
+```
+
+# Regression Models of Increasing Complexity
+FEV is log-transformed to satisfy normality and equal variance assumptions.
+
+## Single Predictor, Linear Effect
+```{r lin,w=6.5,mfrow=c(1,2)}
+f <- ols(log(fev) ~ age, data=FEV)
+f
+r <- as.numeric(resid(f))
+with(FEV, plot(age, r))
+qqnorm(r)
+qqline(r)
+```
+```{r linplot}
+
+# Show algebraic form of fitted model
+Function(f)
+g <- Function(f)
+exp(g()); exp(g(age=10))   # Evaluate the fitted model, antilog to get original scale
+ggplot(Predict(f)) + geom_point(aes(x=age, y=log(fev), color=sex), FEV)
+```
+
+## Restricted Cubic Spline With 3 Default Knots
+The knots are at these quantiles of age: 0.1, 0.5, 0.9.
+```{r rcs3}
+f <- ols(log(fev) ~ rcs(age, 3), data=FEV, x=TRUE)
+f
+g <- Function(f)
+g(10:20)
+g()
+g
+ggplot(Predict(f))
+anova(f)
+```
+
+## RCS With 5 Default Knots
+```{r rcs5}
+f <- ols(log(fev) ~ rcs(age, 5), data=FEV)
+f
+Function(f)
+anova(f)
+ggplot(Predict(f))
+```
+
+## RCS with 5 Knots, Additive (Non-Interacting) Sex Effect
+```{r rcs5sex,w=5}
+f <- ols(log(fev) ~ rcs(age, 5) + sex, data=FEV)
+Function(f)
+anova(f)
+ggplot(Predict(f, age, sex)) + geom_point(aes(x=age, y=log(fev), color=sex), FEV)
+```
+
+## RCS in Age Interacting With Sex
+The following model allows for different shapes of effects for males and females.
+```{r rcsia}
+f <- ols(log(fev) ~ rcs(age, 5) * sex, data=FEV)
+Function(f)
+anova(f)
+ggplot(Predict(f, age, sex))
+```
+
+## RCS with Age * Sex and Additive Nonlinear Effect of Height
+We show the joint age and height effects using a color image plot
+```{r rcsiah}
+f <- ols(log(fev) ~ rcs(age, 5) * sex + rcs(height, 5), data=FEV)
+anova(f)
+bplot(Predict(f, age, height))
+```
+
+## Model Ignoring Sex and Height But Including Smoking History
+By plotting spike histograms showing the smoking-specific age distribution we see that there are almost no very young children who have smoked.  This limits the power to detect an age by smoking interaction.
+```{r amoke,w=5}
+f <- ols(log(fev) ~ rcs(age, 5) + smoke, data=FEV)
+ggplot(Predict(f, age, smoke), rdata=FEV)
+```
+
+# Computing Environment
+```{r rsession,echo=FALSE}
+si <- sessionInfo(); si$loadedOnly <- NULL
+print(si, locale=FALSE)
+```
+```{r cite,results='asis',echo=FALSE}
+print(citation(), style='text')
+```
