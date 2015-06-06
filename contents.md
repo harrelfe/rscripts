@@ -11,6 +11,7 @@
 **"**| " | [graphicsSet.r](https://github.com/harrelfe/rscripts/blob/master/graphicsSet.r) | R | various graphics utility functions including color specifications
 **Introduction**|  | [introda.r](https://github.com/harrelfe/rscripts/blob/master/introda.r) | R | Intro to R for Data Analysis (With Self-Contained Data)
 **Regression Modeling**| Curve Fitting | [rms2-5.Rmd](https://github.com/harrelfe/rscripts/blob/master/rms2-5.Rmd) | R Markdown | RMS Chapter 2 Problem 5; [report](http://htmlpreview.github.io/?https://github.com/harrelfe/rscripts/blob/master/rms2-5.html)
+**"**| " | [rms2-fev.Rmd](https://github.com/harrelfe/rscripts/blob/master/rms2-fev.Rmd) | R Markdown | RMS Chapter 2 Example: Analysis of FEV Dataset; [report](http://htmlpreview.github.io/?https://github.com/harrelfe/rscripts/blob/master/rms2-fev.html)
 **"**| " | [demoLeastSquares.r](https://github.com/harrelfe/rscripts/blob/master/demoLeastSquares.r) | R | Interactive Demo of Least Squares and Other Fitting
 **"**| " | [demoOLSqr.r](https://github.com/harrelfe/rscripts/blob/master/demoOLSqr.r) | R | Non-Interactive Demo of Polynomial and Spline Fitting with OLS and quantile regression and how to use a list of models
 **"**| " | [demoSpline.r](https://github.com/harrelfe/rscripts/blob/master/demoSpline.r) | R | Interactive Demo of Spline Fitting
@@ -21,4 +22,5 @@
 **"**| " | [abd18-18.Rmd](https://github.com/harrelfe/rscripts/blob/master/abd18-18.Rmd) | R Markdown | Analysis of Biological Data Chapter 18 Assignment Problem 18; [report](http://htmlpreview.github.io/?https://github.com/harrelfe/rscripts/blob/master/abd18-18.html)
 **"**| " | [lead-ols.Rmd](https://github.com/harrelfe/rscripts/blob/master/lead-ols.Rmd) | R Markdown | Linear Model Analysis of Rosner `lead` Dataset; [report](http://htmlpreview.github.io/?https://github.com/harrelfe/rscripts/blob/master/lead-ols.html)
 **Rms**| Curve Fitting | [rms2-5.Rmd](https://github.com/harrelfe/rscripts/blob/master/rms2-5.Rmd) | R Markdown | RMS Chapter 2 Problem 5; [report](http://htmlpreview.github.io/?https://github.com/harrelfe/rscripts/blob/master/rms2-5.html)
+**"**| " | [rms2-fev.Rmd](https://github.com/harrelfe/rscripts/blob/master/rms2-fev.Rmd) | R Markdown | RMS Chapter 2 Example: Analysis of FEV Dataset; [report](http://htmlpreview.github.io/?https://github.com/harrelfe/rscripts/blob/master/rms2-fev.html)
 **Statistical Pitfalls**| Categorization | [catgNoise.r](https://github.com/harrelfe/rscripts/blob/master/catgNoise.r) | R | Interactive RStudio Simulation of Noise and Categorization
