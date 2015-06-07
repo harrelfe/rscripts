@@ -14,11 +14,12 @@ require(Hmisc)
 knitrSet(lang='markdown')
 ```
 # Descriptive Statistics
-```{r importdesc}
+```{r importdesc,w=7,h=6}
 require(rms)
 getHdata(FEV)
 contents(FEV)
 describe(FEV)
+ggplot(FEV, aes(x=age, y=fev, color=height)) + geom_point() + facet_grid(smoke ~ sex)
 dd <- datadist(FEV); options(datadist='dd')
 dd
 ```
@@ -76,11 +77,20 @@ ggplot(Predict(f, age, sex)) + geom_point(aes(x=age, y=log(fev), color=sex), FEV
 
 ## RCS in Age Interacting With Sex
 The following model allows for different shapes of effects for males and females.
-```{r rcsia}
+```{r rcsia,mfrow=c(1,2),w=6.5}
 f <- ols(log(fev) ~ rcs(age, 5) * sex, data=FEV)
+r <- as.numeric(resid(f))
+plot(fitted(f), r)
+qqnorm(r); qqline(r)
 Function(f)
 anova(f)
+```
+```{r rcsiap}
 ggplot(Predict(f, age, sex))
+```
+Plot predicted median FEV by anti-logging predicted values.
+```{r rcsiapm}
+ggplot(Predict(f, age, sex, fun=exp), ylab='Estimated Median FEV')
 ```
 
 ## RCS with Age * Sex and Additive Nonlinear Effect of Height
