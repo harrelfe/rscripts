@@ -1,3 +1,4 @@
+require(Hmisc)
 method <- c('septables', 'onetable')[2]
 
 trim <- function(x) {
@@ -49,7 +50,6 @@ for(f in rfiles) {
 
 Major <- unique(sort(unlist(major)))
 Minor <- unique(sort(unlist(minor)))
-upFirst <- greport:::upFirst
 fwrap <- function(x, html=FALSE) {
   link <- if(html)'http://htmlpreview.github.io/?https://github.com/harrelfe/rscripts/blob/master/' else 'https://github.com/harrelfe/rscripts/blob/master/'
   nam <- if(html) 'report' else x
