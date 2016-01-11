@@ -6,6 +6,7 @@
 **"**| " | [abd18-11.Rmd](https://github.com/harrelfe/rscripts/blob/master/abd18-11.Rmd) | R Markdown | Analysis of Biological Data Chapter 18 Assignment Problem 11; [report](http://htmlpreview.github.io/?https://github.com/harrelfe/rscripts/blob/master/abd18-11.html)
 **"**| " | [abd18-18.Rmd](https://github.com/harrelfe/rscripts/blob/master/abd18-18.Rmd) | R Markdown | Analysis of Biological Data Chapter 18 Assignment Problem 18; [report](http://htmlpreview.github.io/?https://github.com/harrelfe/rscripts/blob/master/abd18-18.html)
 **Data Manipulation**| Import | [importREDCap.r](https://github.com/harrelfe/rscripts/blob/master/importREDCap.r) | R | Function to clean up REDCap dataset exported to R
+**"**| " | [r2stata.r](https://github.com/harrelfe/rscripts/blob/master/r2stata.r) | R | Convert an R data frame to a Stata .dta file
 **Descriptive Statistics**|  | [descriptives.Rmd](https://github.com/harrelfe/rscripts/blob/master/descriptives.Rmd) | R Markdown | Descriptive Analysis of FEV Dataset; [report](http://htmlpreview.github.io/?https://github.com/harrelfe/rscripts/blob/master/descriptives.html)
 **Graphics**|  | [descriptives.Rmd](https://github.com/harrelfe/rscripts/blob/master/descriptives.Rmd) | R Markdown | Descriptive Analysis of FEV Dataset; [report](http://htmlpreview.github.io/?https://github.com/harrelfe/rscripts/blob/master/descriptives.html)
 **"**| " | [graphicsSet.r](https://github.com/harrelfe/rscripts/blob/master/graphicsSet.r) | R | various graphics utility functions including color specifications
