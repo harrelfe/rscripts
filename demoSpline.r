@@ -18,7 +18,7 @@ while (TRUE) {
 			  'Restricted Cubic Spline')
 	
 	plot(0:1,0:1,xlab='x', ylab='y', type='n')
-	cat('\nClick any points you desire.\nTerminate points by pressing Esc.\n')
+	cat('\nClick any points you desire.\nTerminate points by mouse right-click (Esc if under RStudio).\n')
 	z <- locator(type='p')
 	x <- z$x
 	y <- z$y
@@ -27,7 +27,7 @@ while (TRUE) {
 
 	k <- 0
 	while(k < 3) {
-	  cat('\nClick >= 3 knot locations (y-coordinates ignored).\nTerminate points by pressing Esc.\n')
+	  cat('\nClick >= 3 knot locations (y-coordinates ignored).\nTerminate points by mouse right-click (Esc if under RStudio).\n')
 	  knots <- locator()$x
 	  abline(v=knots, lty=2)
 	  k <- length(knots)
