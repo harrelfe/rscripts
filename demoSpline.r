@@ -9,7 +9,7 @@ pag <- function(x,titl,df) {
   invisible()
 }
 nam <- function(w, dof) paste(w, ' (', dof, ' d.f.)', sep='')
-worked <- function(f) ! inherits(f, 'try-error')
+worked <- function(f) ! (inherits(f, 'try-error') || any(is.na(coef(f))))
 
 show.constructed.variables <- FALSE
 
@@ -64,7 +64,6 @@ while (TRUE) {
 	pag(f$x,'Restricted Cubic Spline',dfs[5])
   if(worked(f))
     curves[[nam('Restricted Cubic Spline', k - 1)]] <- list(xs, predict(f, dx))
-
 	labcurve(curves, col=1 : length(curves), pl=TRUE, add=TRUE, keys='lines')
 	title(sub='Left click for another example.  Click outside plot to stop',
 			adj=0)
