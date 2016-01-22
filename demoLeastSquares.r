@@ -5,15 +5,15 @@ require(Hmisc)
 require(MASS)
 while (TRUE) {
 	curves <- vector('list',4)
-	names(curves) <- c('Least Squares','Least Sum of\nAbsolute Deviations',
-						  'Least Median\nSquared Deviation','Loess')
+	names(curves) <- c('Least Squares','Least Sum of Absolute Deviations',
+						  'Least Median Squared Deviation','Loess')
 	
 	plot(0:1,0:1,xlab='x', ylab='y', type='n')
 	cat('\nClick any points you desire.  Terminate points by right mouse click (Esc under RStudio).\n')
 	z <- locator(type='p')
 	f <- lsfit(z$x, z$y)	
 	abline(f, lwd=3)
-	segments(z$x, z$y, z$x, z$y - f$residuals, lwd=1, col=3)
+	segments(z$x, z$y, z$x, z$y - f$residuals, lwd=1, col=gray(.8))
 	x <- c(0,1)
 	curves[[1]] <- list(x, f$coef[1]+(0:1)*f$coef[2])
     f <- rlm(cbind(1,z$x), z$y)
@@ -29,7 +29,7 @@ while (TRUE) {
 	lines(f, col=4)
 	curves[[4]] <- f
 	if(n <= 4) curves[[3]] <- NULL
-	labcurve(curves, col=1:4, tilt=T)
+	labcurve(curves, col=1:4, tilt=T, keys='lines', cex=.75)
 	title(sub='Left click for another example.  Click outside plot to stop',
 			adj=0)
 	z <- locator(1)
