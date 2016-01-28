@@ -9,21 +9,28 @@
 ## argument in the invocation of r2stata
 ## Specify for example dir='/tmp' to create /tmp/foo.dta
 
-r2stata <- function(x, dir='') {
-  require(haven)
+r2stata <- function(x, pkg=c('foreign', 'haven'), dir='') {
+  pkg=match.arg(pkg)
   name <- deparse(substitute(x))
-  for(i in 1 : length(x)) {
-    w <- x[[i]]
-    cl <- attr(w, 'class')
-    if('labelled' %in% cl) {
-      cl <- setdiff(cl, 'labelled')
-      class(w) <- cl
-      x[[i]] <- w
-    }
-  }
-
   file <- paste(name, 'dta', sep='.')
   if(dir != '') file <- paste(dir, file, sep='/')
-  write_dta(x, file)
+  
+  if(pkg == 'foreign') {
+    require(foreign)
+    attr(x, 'var.labels') <- sapply(x, label)
+    write.dta(x, file, version=10)
+  } else {
+    require(haven)
+    for(i in 1 : length(x)) {
+      w <- x[[i]]
+      cl <- attr(w, 'class')
+      if('labelled' %in% cl) {
+        cl <- setdiff(cl, 'labelled')
+        class(w) <- cl
+        x[[i]] <- w
+      }
+    }
+    write_dta(x, file)
+  }
   invisible()
 }
