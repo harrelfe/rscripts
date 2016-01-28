@@ -17,7 +17,10 @@ r2stata <- function(x, pkg=c('foreign', 'haven'), dir='') {
   
   if(pkg == 'foreign') {
     require(foreign)
-    attr(x, 'var.labels') <- sapply(x, label)
+    vl <- sapply(x, label)
+    un <- sapply(x, units)
+    vl <- ifelse(un == '', vl, paste(vl, ' [', un, ']', sep=''))
+    attr(x, 'var.labels') <- vl
     write.dta(x, file, version=10)
   } else {
     require(haven)
