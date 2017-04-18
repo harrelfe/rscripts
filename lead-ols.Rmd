@@ -15,15 +15,16 @@ minor: ordinary least squares
 # results='asis' in the chunk header because html(contents) output html directly
 require(rms)
 knitrSet(lang='markdown')
+options(prType='html')   # html output for print, summary, anova
 getHdata(lead)
-h <- html(contents(lead), file='', maxlevels=10, levelType='table')
+html(contents(lead), maxlevels=10, levelType='table')
 ```
 ```{r describe}
-describe(lead)
+html(describe(lead))
 ```
 
 # ANOVA for Three Exposure Groups
-```{r anova}
+```{r anova,results='asis'}
 dd <- datadist(lead); options(datadist='dd')
 f <- ols(maxfwt ~ group, data=lead)
 f
@@ -31,14 +32,14 @@ anova(f)
 ```
 
 # ANCOVA for Three Groups Adjusted for Age
-```{r ancova}
+```{r ancova,results='asis'}
 fa <- ols(maxfwt ~ age + group, data=lead)
 fa
 anova(fa)
 # Also get group effect by subtracting SSRs or SSEs using anova(f)
 
 # Continuous Lead Exposure Analyses
-```{r contexp}
+```{r contexp,results='asis'}
 f <- ols(maxfwt ~ age + ld72 + ld73, data=lead)
 f         # same as print(f)
 coef(f)   # retrieve coefficients
@@ -106,7 +107,7 @@ The estimated effects depend on the type of model:
 - Cox models: hazard ratios and their logs
 - quantile regression: differences in quantiles
 
-```{r summary}
+```{r summary,results='asis'}
 summary(f)         # inter-quartile-range effects
 summary(f, age=5)  # adjust age to 5 when examining ld72,ld73
                    # (no effect since no interactions in model)
@@ -114,7 +115,7 @@ summary(f, ld73=c(20, 40))  # effect of changing ld73 from 20 to 40
 ```
 There is a `plot` method for `summary` results.  By default it
 shows 0.9, 0.95, and 0.99 confidence limits.
-```{r plotsummary,top=2}
+```{r plotsummary,results='asis',top=2}
 # top=2 in chunk header: leave extra room for labels
 plot(summary(f))
 ```
@@ -159,6 +160,7 @@ g(age=3)              # 3 year old at median ld72, ld73
   various ways, or to plot it:
   
 ```{r printanova}
+options(prType='plain')# so names,subscripts,dots work
 an <- anova(f)
 an                     # same as print(an)
 print(an, 'names')     # print names of variables being tested
