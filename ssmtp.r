@@ -1,10 +1,11 @@
 
-## Instead try https://help.ubuntu.com/community/EmailAlerts
-## Also see https://wiki.archlinux.org/index.php/SSMTP
-## sudo apt-get install ssmtp
-## sudo cp ssmtp.conf /etc/ssmtp/
-## sudo cp revaliases /etc/ssmtp/
-## echo -e "To: Frank Harrell <harrelfe@gmail.com>\nSubject: Test Subject\n\nBody 1\nBody 2\nBody 3" | ssmtp -vvv harrelfe@gmail.com
+## See https://help.ubuntu.com/community/EmailAlerts
+# Also see https://wiki.archlinux.org/index.php/SSMTP
+# sudo apt-get install ssmtp
+# sudo cp ssmtp.conf /etc/ssmtp/ (contact harrelfe@gmail.com for examples)
+# sudo cp revaliases /etc/ssmtp/ ( " " " )
+# Tests installation:
+# echo -e "To: Frank Harrell <harrelfe@gmail.com>\nSubject: Test Subject\n\nBody 1\nBody 2\nBody 3" | ssmtp -vvv harrelfe@gmail.com
 
 ssmtp <- function(to, subject, body, verbose=FALSE) {
     x <- strsplit(to, '<')[[1]]
@@ -18,6 +19,7 @@ ssmtp <- function(to, subject, body, verbose=FALSE) {
     system(cmd)
     invisible()
 }
+
 body <- 'This is a body of an email message\nLine 2\nLine 3'
-ssmtp('Frank Harrell <harrelfe@gmail.com>', 'Test Subject Line', body)
+# ssmtp('Frank Harrell <harrelfe@gmail.com>', 'Test Subject Line', body)
 
