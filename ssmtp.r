@@ -39,7 +39,7 @@ sendMails <- function(to, names, subject='', filebody,
   for(i in 1 : n) {
     greet <- paste0('Dear ', names[i], ':')
     cat('Sending to', to[i], ': ', greet, '\n')
-    bod <- c(paste0(greet, '\n'), body)
+    bod <- c(paste0(greet, '\n\n'), body)
     ssmtp(to[i], subject=subject, body=bod, attach=attach, verbose=verbose)
   }
   }
