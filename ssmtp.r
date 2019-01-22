@@ -28,9 +28,33 @@ ssmtp <- function(to, subject='', body='', attach=NULL, verbose=FALSE) {
     invisible()
 }
 
+## Send a series of separate emails to a list of recipients, each with their
+## own first name greeting.  The body of the email is in a text file.
+
+sendMails <- function(to, names, subject='', filebody,
+                      attach=NULL, verbose=FALSE) {
+  n <- length(to)
+  if(n != length(names)) stop('length mismatch')
+  body <- paste0(readLines(filebody), '\n')
+  for(i in 1 : n) {
+    greet <- paste0('Dear ', names[i], ':')
+    cat('Sending to', to[i], ': ', greet, '\n')
+    bod <- c(paste0(greet, '\n'), body)
+    ssmtp(to[i], subject=subject, body=bod, attach=attach, verbose=verbose)
+  }
+  }
+
 if(FALSE) {
-    body <- 'This is a body of an email message\nLine 2 http://fharrell.com\nLine 3'
+    body <- 'This is a body of an email message\nLine 2 http://fharrell.com\nLine 3\n'
     ssmtp('Frank Harrell <harrelfe@gmail.com>', 'Test Subject Line', body)
     ssmtp('Frank Harrell <harrelfe@gmail.com>', 'Test Subject Line', body,
           attach=c('~/tmp/my.docx', 'ssmtp.r'))
+    ssmtp('Frank Harrell <f.harrell@vumc.org>', 'Test to vumc', body,
+          attach='~/tmp/my.docx')
+
+    cat(body, file='/tmp/z')
+    sendMails(c('Frank Harrell <harrelfe@gmail.com>',
+                'Frank Harrell <f.harrell@vumc.org>'),
+              c('Frank', 'Frankie'),
+              subject='Test Subject Line', filebody='/tmp/z')
 }
