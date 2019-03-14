@@ -1,8 +1,8 @@
-
 # See https://help.ubuntu.com/community/EmailAlerts
 # https://wiki.archlinux.org/index.php/SSMTP
 # https://unix.stackexchange.com/questions/44043
 # https://www.nixtutor.com/linux/send-mail-with-gmail-and-ssmtp/
+# https://rich-iannone.github.io/blastula
 #
 # sudo apt-get install ssmtp
 # sudo apt-get install sharutils (for uuencode if using attachments)
