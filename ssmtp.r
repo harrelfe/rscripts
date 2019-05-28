@@ -12,6 +12,8 @@
 #
 # Tests installation:
 # echo -e "To: Frank Harrell <harrelfe@gmail.com>\nSubject: Test Subject\n\nBody 1\nBody 2\nBody 3" | ssmtp -vvv harrelfe@gmail.com
+# See also the curl approach:
+#  https://www.r-bloggers.com/emayili-sending-email-from-r/
 
 ssmtp <- function(to, subject='', body='', attach=NULL, verbose=FALSE) {
     x <- strsplit(to, '<')[[1]]
