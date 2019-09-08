@@ -1,13 +1,16 @@
 ---
 title: 'RMS Chapter 2 Example: Analysis of FEV Dataset'
 author: "Frank Harrell"
-date: '`r Sys.Date()`'
+date: "`r Sys.Date()`"
 output:
+  html_document:
+    df_print: paged
+    toc: yes
   html_notebook:
     highlight: textmate
-    toc: true
+    toc: yes
     toc_float:
-      collapsed: true
+      collapsed: yes
 minor: curve fitting
 major: regression modeling; rms
 ---
@@ -18,8 +21,9 @@ knitrSet(lang='markdown')
 # Descriptive Statistics
 ```{r importdesc,w=7,h=6,results='asis'}
 require(rms)
+options(prType='html')
 getHdata(FEV)
-html(contents(FEV), file='')
+html(contents(FEV))
 options(grType='plotly')  # use plotly interactive graphics
 plot(describe(FEV))
 require(plotly, quietly=TRUE)
@@ -34,7 +38,7 @@ FEV is log-transformed to satisfy normality and equal variance assumptions.
 ## Single Predictor, Linear Effect
 ```{r lin,w=6.5,mfrow=c(1,2),results='asis'}
 f <- ols(log(fev) ~ age, data=FEV)
-print(f, md=TRUE)
+f
 r <- as.numeric(resid(f))
 with(FEV, plot(age, r))
 qqnorm(r)
@@ -52,18 +56,18 @@ ggplot(Predict(f), addlayer=geom_point(aes(x=age, y=log(fev), color=sex), FEV))
 The knots are at these quantiles of age: 0.1, 0.5, 0.9.
 ```{r rcs3,results='asis'}
 f <- ols(log(fev) ~ rcs(age, 3), data=FEV, x=TRUE)
-print(f, md=TRUE)
+print(f)
 g <- Function(f)
 htmlVerbatim(g(10:20), g(), g)
 ggplot(Predict(f))
-ha <- function(f) html(anova(f), dec.ms=2, dec.ss=2)
+ha <- function(f) print(anova(f), dec.ms=2, dec.ss=2)
 ha(f)
 ```
 
 ## RCS With 5 Default Knots
 ```{r rcs5,results='asis'}
 f <- ols(log(fev) ~ rcs(age, 5), data=FEV)
-print(f, md=TRUE)
+f
 Function(f)
 ha(f)
 ggplot(Predict(f))
@@ -110,10 +114,10 @@ bplot(p)
 ```{r rcspl1}
 p <- with(p, list(age=unique(age), height=unique(height),
                   Yhat=matrix(yhat, ncol=200)))
-plot_ly(p, x=age, y=height, z=Yhat, type='heatmap')
+with(p, plot_ly(x=age, y=height, z=Yhat, type='heatmap'))
 ```
 ```{r rcspl2}
-plot_ly(p, x=age, y=height, z=Yhat, type='surface')
+with(p, plot_ly(x=age, y=height, z=Yhat, type='surface'))
 ```
 
 ## Model Ignoring Sex and Height But Including Smoking History
