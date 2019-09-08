@@ -14,7 +14,7 @@ major: descriptive statistics; graphics
 require(Hmisc)
 knitrSet(lang='markdown', w=4, h=3)  # set default figure width and height
 getHdata(FEV)
-h <- html(contents(FEV), file='', maxlevels=10, levelType='table')
+html(contents(FEV), maxlevels=10, levelType='table')
 ```
 ```{r describe}
 describe(FEV)
