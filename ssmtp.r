@@ -17,13 +17,18 @@
 
 # Send to one recipient if to="email@foo <name>" or Bcc to a list of recipients if to is a vector
 # In the latter case todesc is a description to appear after To:
-ssmtp <- function(to, subject='', body='', todesc='Unspecified recipients', attach=NULL, verbose=FALSE) {
+# Note that some smtp servers such as vumc only allow 300 emails to be sent at once.
+# Specify batch=300 in this case to send multiple emails to up to batch users
+ssmtp <- function(to, subject='', body='',
+                  todesc='Unspecified recipients', attach=NULL, verbose=FALSE,
+                  logfile=NULL, batch=1e7, dryrun=FALSE) {
+  dashes <- '------------------------------------------\n'
   if(length(to) > 1) {
-    toaddr <- paste(to, collapse=',')
+    multusers <- to
     to <- todesc
   } else {
+    multusers <- character(0)
     x <- strsplit(to, '<')[[1]]
-    toname <- trimws(x[1])
     toaddr <- sub('>', '', trimws(x[2]))
   }
     tf <- tempfile()
@@ -32,8 +37,27 @@ ssmtp <- function(to, subject='', body='', todesc='Unspecified recipients', atta
         body, '\n', sep='', file=tf)
     if(length(attach)) for(a in attach)
         system(paste('cat', a, '| uuencode `basename', a, '` >>', tf))
-    cmd <- paste('ssmtp', if(verbose) '-vvv', toaddr, '<', tf)
-    system(cmd)
+    if(length(logfile))
+       cat(dashes, date(), dashes, file=logfile, sep='', append=TRUE)
+    n <- length(multusers)
+    if(n > batch) {
+      i <- 1
+      while(i <= n) {
+        j <- min(n, i + batch - 1)
+        if(length(logfile)) cat(dashes, 'Sending to user',
+          i, 'to', j, '\n', file=logfile, sep='', append=TRUE)
+        toad <- paste(multusers[i:j], collapse=',')
+        cmd <- paste('ssmtp', if(verbose || length(logfile)) '-vvv', toad, '<', tf,
+              if(length(logfile)) paste('>>', logfile, '2>&1'))
+        if(dryrun) cat(cmd, '\n') else system(cmd)
+        i <- i + batch
+      }
+    return(invisible())
+    }
+    toad <- if(length(multusers)) paste(multusers, collapse=',') else toaddr
+    cmd <- paste('ssmtp', if(verbose || length(logfile)) '-vvv', toad, '<', tf,
+              if(length(logfile)) paste('>>', logfile, '2>&1'))
+    if(dryrun) cat(cmd, '\n') else system(cmd)
     invisible()
 }
 
