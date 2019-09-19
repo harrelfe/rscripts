@@ -15,10 +15,17 @@
 # See also the curl approach:
 #  https://www.r-bloggers.com/emayili-sending-email-from-r/
 
-ssmtp <- function(to, subject='', body='', attach=NULL, verbose=FALSE) {
+# Send to one recipient if to="email@foo <name>" or Bcc to a list of recipients if to is a vector
+# In the latter case todesc is a description to appear after To:
+ssmtp <- function(to, subject='', body='', todesc='Unspecified recipients', attach=NULL, verbose=FALSE) {
+  if(length(to) > 1) {
+    toaddr <- paste(to, collapse=',')
+    to <- todesc
+  } else {
     x <- strsplit(to, '<')[[1]]
     toname <- trimws(x[1])
     toaddr <- sub('>', '', trimws(x[2]))
+  }
     tf <- tempfile()
     cat('To: ', to, '\n', 
         'Subject: ', subject, '\n\n',
