@@ -44,8 +44,8 @@ ssmtp <- function(to, subject='', body='',
       i <- 1
       while(i <= n) {
         j <- min(n, i + batch - 1)
-        if(length(logfile)) cat(dashes, 'Sending to user',
-          i, 'to', j, '\n', file=logfile, sep='', append=TRUE)
+        if(length(logfile)) cat(dashes, 'Sending to user ',
+          i, ' to ', j, '\n', file=logfile, sep='', append=TRUE)
         toad <- paste(multusers[i:j], collapse=',')
         cmd <- paste('ssmtp', if(verbose || length(logfile)) '-vvv', toad, '<', tf,
               if(length(logfile)) paste('>>', logfile, '2>&1'))
