@@ -17,7 +17,7 @@
 
 # Send to one recipient if to="email@foo <name>" or Bcc to a list of recipients if to is a vector
 # In the latter case todesc is a description to appear after To:
-# Note that some smtp servers such as vumc only allow 300 emails to be sent at once.
+# Note that some smtp servers such as vumc only allow 200 emails to be sent at once.
 # Specify batch=300 in this case to send multiple emails to up to batch users
 ssmtp <- function(to, subject='', body='',
                   todesc='Unspecified recipients', attach=NULL, verbose=FALSE,
