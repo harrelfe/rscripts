@@ -77,6 +77,32 @@ sendMails <- function(to, names, subject='', filebody,
   }
   }
 
+# When a logfile was specified to ssmtp(), the checkSsmtp function
+# analyzes that log file to report errors and to find out how many of
+# the emails were successfully sent.  It invisibly returns a data frame
+# with variables email and sent, where email contains all the original
+# intended email addresses and sent is a logical vecture with TRUE
+# indicating that person's email was sent successfully, and FALSE that
+# it was not (most likely due to exceeding smtp server limits, i.e.,
+# batch was too large)
+checkSsmtp <- function(emails, logfile) {
+  s <- readLines(logfile)
+  snext <- c(s[-1], '')    # record after current one
+  x <- grep('Too many recipients', s)
+  if(length(x)) {
+    cat('\nERROR: SMTP server does not allow that many recipients in one batch.\n')
+    cat('Error occurred', length(x), 'times\n\n')
+  }
+  success <- grepl('RCPT TO:', s) & grepl('Recipient OK', snext)
+
+  cat('\nEmail sent successfully to', sum(success), 'recipients out of',
+      length(emails), '\n')
+
+  emailsSent <- gsub('^\\[->\\] RCPT TO:<(.*)>', '\\1', s[success])
+  emailstatus <- data.frame(email=em, sent=em %in% emailsSent)
+  invisible(emailstatus)
+}
+
 if(FALSE) {
     body <- 'This is a body of an email message\nLine 2 http://fharrell.com\nLine 3\n'
     ssmtp('Frank Harrell <harrelfe@gmail.com>', 'Test Subject Line', body)
