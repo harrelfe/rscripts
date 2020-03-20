@@ -175,8 +175,9 @@ convertL2M <- function(file, out='', transtab=NULL) {
                  c(grep('\\\\begin\\{array\\}', z),
                    grep('\\\\end\\{array\\}',   z)))
 
-  for(i in wrn)
-    if(any(ar >= wrn[i] & are <= wrn[i])) wrn[i] <- 0
+  if(length(wrn))
+    for(i in 1 : length(wrn))
+      if(any(ar >= wrn[i] & are <= wrn[i])) wrn[i] <- 0
   wrn <- setdiff(wrn, 0)
   
   if(length(wrn)) {
