@@ -21,19 +21,19 @@ $$
 $$\\begin{array}{ccc}
 
 \\end\{eqnarray\}
-\\end{array}$$
+\\end{array}$$NEWLINE
 
 \\begin\{eqnarray\*\}
 $$\\begin{array}{ccc}
 
 \\end\{eqnarray\*\}
-\\end{array}$$
+\\end{array}$$NEWLINE
 
 \\beqa
 $$\\begin{array}{ccc}
 
 \\eeqa
-\\end{array}$$
+\\end{array}$$NEWLINE
 
 \\begin\{itemize\}
 \\bi
@@ -69,10 +69,10 @@ $$\\begin{array}{ccc}
 \\"\1\\"
 
 \\ipacue
- `r ipacue()` 
+ `r apacue <- apacue + 1; ipacue(apacue)` 
 
 \\def\\apacue\{(.*?)\}
- `r apacue(\1)`
+ `r apacue <- 0`
 
 \\sound\{(.*?)\}
  `r sound("\1")`
@@ -93,10 +93,10 @@ $$\\begin{array}{ccc}
  `r blog("\1")`
 
 \\abd\{(.*?)\}
- `r abd(\1)`
+ `r abd("\1")`
 
 \\ems\{(.*?)\}
- `r ems(\1)`
+ `r ems("\1")`
  
 \\ros\{.*?\}
 

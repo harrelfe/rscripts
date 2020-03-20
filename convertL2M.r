@@ -1,5 +1,10 @@
 # Function to partially convert a LaTeX knitr file to Markdown
 #
+# Usage:
+#   require(Hmisc)
+#   getRs('convertL2M.r', put='source')   # gets from github
+#   convertL2M('my.Rnw', 'my.Rmd')
+#
 # Must be done manually:
 #  before running: make sure chunk headers are all on one input line
 #  look for \ commands split over multiple lines, especially \emph{}
@@ -7,10 +12,9 @@
 #  Likewise for \footnote \chapter \section \subsection \subsubsection
 #  After running:
 #  Edit lines marked with <!-- ?---> and look for closing } to edit
-#  Edit translations from \begin{tabular} to markdown tables
-#  Edit chunk headers that used to have scap=" " in them to add back commas
-#   if keep.scap=TRUE
+#  Edit translations from \begin{tabular} to markdown tables to fine tune
 #  Add fig.align='left', lang='markdown' in knitrSet()
+# See ~/r/rmarkdown/style.txt (insert in new .Rmd file) and bookfun.r
 
 convertL2M <- function(file, out='', transtab=NULL) {
 
@@ -161,6 +165,23 @@ convertL2M <- function(file, out='', transtab=NULL) {
       z[j] <- ''
     }
 
+  ## Flag warnings but only outside array environment
+  wrn <- integer(0)
+  for(f in from[typet == 'w'])
+    wrn <- c(wrn, grep(f, z))
+  wrn <- setdiff(wrn,
+                 c(grep('\\\\begin\\{array\\}', z),
+                   grep('\\\\end\\{array\\}',   z)))
+
+  for(i in wrn)
+    if(any(ar >= wrn[i] & are <= wrn[i])) wrn[i] <- 0
+  wrn <- setdiff(wrn, 0)
+  
+  if(length(wrn)) {
+    wrn <- unique(wrn)
+    z[wrn] <- paste(z[wrn], '<!-- ?--->')
+  }
+
   ## Remove now unnecessary environment begin and ends
   z <- gsub('\\\\bi$', '', z)
   z <- gsub('\\\\be$', '', z)
@@ -178,17 +199,6 @@ convertL2M <- function(file, out='', transtab=NULL) {
   }
   z <- z[z != '**DELETE**']
 
-  wrn <- integer(0)
-  for(f in from[typet == 'w'])
-    wrn <- c(wrn, grep(f, z))
-  wrn <- setdiff(wrn,
-                 c(grep('\\\\begin\\{array\\}', z),
-                   grep('\\\\end\\{array\\}',   z)))
-  
-  if(length(wrn)) {
-    wrn <- unique(wrn)
-    z[wrn] <- paste(z[wrn], '<!-- ?--->')
-    }
 
   cat(z, sep='\n', file=out)
   invisible()
