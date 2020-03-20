@@ -5,8 +5,9 @@
 #  look for \ commands split over multiple lines, especially \emph{}
 #  Fix all \item entries to occupy a single text line
 #  Likewise for \footnote \chapter \section \subsection \subsubsection
-#  tables
-#  after running:
+#  After running:
+#  Edit lines marked with <!-- ?---> and look for closing } to edit
+#  Edit translations from \begin{tabular} to markdown tables
 #  Edit chunk headers that used to have scap=" " in them to add back commas
 #   if keep.scap=TRUE
 #  Add fig.align='left', lang='markdown' in knitrSet()
@@ -20,7 +21,7 @@ convertL2M <- function(file, out='', transtab=NULL) {
   n <- length(trans)
   if((n %% 3) != 0)
     stop('convertL2M.dat has # lines that is not a multiple of 3')
-  ttype <- trans[seq(1, n, by=3)]  # blank for now, may be used in future
+  typet <- trans[seq(1, n, by=3)]  # blank or w (warning)
   from  <- trans[seq(2, n, by=3)]
   to    <- trans[seq(3, n, by=3)]
   nt    <- length(to)
@@ -30,7 +31,8 @@ convertL2M <- function(file, out='', transtab=NULL) {
   
   ## Do main translations
 
-  for(i in 1 : nt) s <- gsub(from[i], to[i], s)
+  for(i in 1 : nt)
+    if(typet[i] != 'w') s <- gsub(from[i], to[i], s)
 
   ## For some reason neither \n nor \\n worked in convertL2M.dat
   s <- gsub('NEWLINE', '\n', s)
@@ -175,6 +177,18 @@ convertL2M <- function(file, out='', transtab=NULL) {
         if(trimws(z[j-1]) == '') z[j-1] <- '**DELETE**' 
   }
   z <- z[z != '**DELETE**']
+
+  wrn <- integer(0)
+  for(f in from[typet == 'w'])
+    wrn <- c(wrn, grep(f, z))
+  wrn <- setdiff(wrn,
+                 c(grep('\\\\begin\\{array\\}', z),
+                   grep('\\\\end\\{array\\}',   z)))
+  
+  if(length(wrn)) {
+    wrn <- unique(wrn)
+    z[wrn] <- paste(z[wrn], '<!-- ?--->')
+    }
 
   cat(z, sep='\n', file=out)
   invisible()

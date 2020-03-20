@@ -95,6 +95,9 @@ $$\\begin{array}{ccc}
 \\abd\{(.*?)\}
  `r abd(\1)`
 
+\\ems\{(.*?)\}
+ `r ems(\1)`
+ 
 \\ros\{.*?\}
 
 
@@ -177,6 +180,16 @@ w
 
 w
 \{\\large
+
+w
+\\begin\{
+
+w
+\\end\{
+
+w
+\{\\
+
 
 \\quoteit\{(.*?)\}\{(.*?)\}
 `r quoteit("\1", "\2")`
