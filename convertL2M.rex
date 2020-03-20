@@ -92,6 +92,9 @@ $$\\begin{array}{ccc}
 \\blog\{(.*?)\}
  `r blog("\1")`
 
+\\abd\{(.*?)\}
+ `r abd(\1)`
+
 \\ros\{.*?\}
 
 
@@ -169,6 +172,11 @@ NEWLINE#### \1
 
 \{\\smaller(.*?)\}
 <small>\1</small>
+w
+\{\\small
+
+w
+\{\\large
 
 \\quoteit\{(.*?)\}\{(.*?)\}
 `r quoteit("\1", "\2")`
