@@ -15,6 +15,8 @@
 #  Edit translations from \begin{tabular} to markdown tables to fine tune
 #  Add fig.align='left', lang='markdown' in knitrSet()
 # See ~/r/rmarkdown/style.txt (insert in new .Rmd file) and bookfun.r
+# This function uses translation regular expressions in
+# https://github.com/harrelfe/rscripts/blob/master/convertL2M.rex
 
 convertL2M <- function(file, out='', transtab=NULL) {
 
