@@ -10,6 +10,8 @@
 #  look for \ commands split over multiple lines, especially \emph{}
 #  Fix all \item entries to occupy a single text line
 #  Likewise for \footnote \chapter \section \subsection \subsubsection
+#  If you define \label{} for a section heading make sure it is on the
+#  same line as the \section{} or similar command
 #  After running:
 #  Edit lines marked with <!-- ?---> and look for closing } to edit
 #  Edit translations from \begin{tabular} to markdown tables to fine tune
@@ -40,6 +42,9 @@ convertL2M <- function(file, out='', transtab=NULL) {
   for(i in 1 : nt)
     if(typet[i] != 'w') s <- gsub(from[i], to[i], s)
 
+  ## Delayed conversion of back ticks to handle regular LaTeX string quoting
+  s <- gsub('BACKTICK', '`', s)
+  
   ## For some reason neither \n nor \\n worked in convertL2M.dat
   s <- gsub('NEWLINE', '\n', s)
   st <- trimws(s)    # version of s with no white space on left either

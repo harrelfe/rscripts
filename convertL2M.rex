@@ -71,6 +71,15 @@ $$\\begin{array}{ccc}
 \\newpage
 
 
+\\R\}
+BACKTICKRBACKTICK}
+
+\\R\\
+BACKTICKRBACKTICK
+
+\\R
+BACKTICKRBACKTICK
+
 `(.*?)'
 \\'\1\\'
 
@@ -78,34 +87,34 @@ $$\\begin{array}{ccc}
 \\"\1\\"
 
 \\ipacue
- `r apacue <- apacue + 1; ipacue(apacue)` 
+ BACKTICKr apacue <- apacue + 1; ipacue(apacue)BACKTICK 
 
 \\def\\apacue\{(.*?)\}
- `r apacue <- 0`
+ BACKTICKr apacue <- 0BACKTICK
 
 \\sound\{(.*?)\}
-NEWLINE`r sound("\1")`
+NEWLINEBACKTICKr sound("\1")BACKTICK
 
 \\bmovie\{(.*?)\}
-NEWLINE`r bmovie(\1)`
+NEWLINEBACKTICKr bmovie(\1)BACKTICK
 
 \\ddisc\{(.*?)\}
-NEWLINE`r ddisc(\1)`
+NEWLINEBACKTICKr ddisc(\1)BACKTICK
 
 \\movie\{(.*?)\}
-NEWLINE`r movie("\1")`
+NEWLINEBACKTICKr movie("\1")BACKTICK
 
 \\disc\{(.*?)\}
-NEWLINE`r disc("\1")`
+NEWLINEBACKTICKr disc("\1")BACKTICK
 
 \\blog\{(.*?)\}
-NEWLINE`r blog("\1")`
+NEWLINEBACKTICKr blog("\1")BACKTICK
 
 \\abd\{(.*?)\}
-NEWLINE`r abd("\1")`
+NEWLINEBACKTICKr abd("\1")BACKTICK
 
 \\ems\{(.*?)\}
-NEWLINE`r ems("\1")`
+NEWLINEBACKTICKr ems("\1")BACKTICK
  
 \\ros\{.*?\}
 
@@ -117,7 +126,7 @@ NEWLINE`r ems("\1")`
 
 
 \\rms\{(.*?)\}
-NEWLINE`r bookref("RMS", "\1")`
+NEWLINEBACKTICKr bookref("RMS", "\1")BACKTICK
 
 \\beqa
 $$\\begin{array}{ccc}
@@ -128,31 +137,31 @@ $$\\begin{array}{ccc}
 \Co\{
 \co\{
 
-[\\]\\co\{(.*?)\}
-`\1`
+\\co\{(.*?)\}
+BACKTICK\1BACKTICK
 
 \\textbf\{(.*?)\}
 <b>\1</b>
 
 ^<<
-```{r 
+BACKTICKBACKTICKBACKTICK{r 
 
 >>=
 }
 
 ^@$
-```
+BACKTICKBACKTICKBACKTICK
 
-^\\chapter\{(.*)\}
+^\\chapter\{(.*?)\}
 NEWLINE# \1
 
-^\\section\{(.*)\}
+^\\section\{(.*?)\}
 NEWLINE## \1
 
-^\\subsection\{(.*)\}
+^\\subsection\{(.*?)\}
 NEWLINE### \1
 
-^\\subsubsection\{(.*)\}
+^\\subsubsection\{(.*?)\}
 NEWLINE#### \1
 
 \.\\ 
@@ -164,14 +173,38 @@ NEWLINE#### \1
 ^%(.*)
 <!-- \1-->
 
+\\_
+_
+
 ~\\cite
  \\cite
 
 \\cite\{(.*?)\}
 @\1
 
+\\begin\{verbatim\}
+<pre>
+
+\\end\{verbatim\}
+</pre>
+
+\\verb\|(.*?)\|
+<tt>\1</tt>
+
 \\href\{(.*?)\}\{(.*?)\}
 [\2](\1)
+
+\\url\{(.*?)\}
+[hhhhHHHH\1](\1)
+
+hhhhHHHHhttp://
+
+
+hhhhHHHHhttps://
+
+
+hhhhHHHH
+
 
 \\emph\{(.*?)\}
 <em>\1</em>
@@ -215,14 +248,14 @@ w
 .*end ignore$.*
 --->
 
-\\label\{(.*?)\}
- {#\1}
-
 \\footnote\{(.*)\}
 \^[\1]
 
 \s*#\s*Fig.*\(\*\\ref\{fig*.*
 
+
+\\a*label\{(.*?)\}
+ {#\1}
 
 ~*\\ref\{(.*?)\}
  \\@ref(\1)
