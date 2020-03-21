@@ -59,11 +59,20 @@ $$\\begin{array}{ccc}
 \\end\{description\}
 \\ei
 
+\\btable\{
+\\begin{tabular
+
+\\etable
+\\end{tabular}
+
 \\clearpage
 
 
 \\newpage
 
+
+`(.*?)'
+\\'\1\\'
 
 ``(.*?)''
 \\"\1\\"
@@ -75,28 +84,28 @@ $$\\begin{array}{ccc}
  `r apacue <- 0`
 
 \\sound\{(.*?)\}
- `r sound("\1")`
+NEWLINE`r sound("\1")`
 
 \\bmovie\{(.*?)\}
- `r bmovie(\1)`
+NEWLINE`r bmovie(\1)`
 
 \\ddisc\{(.*?)\}
- `r ddisc(\1)`
+NEWLINE`r ddisc(\1)`
 
 \\movie\{(.*?)\}
- `r movie("\1")`
+NEWLINE`r movie("\1")`
 
 \\disc\{(.*?)\}
- `r disc("\1")`
+NEWLINE`r disc("\1")`
 
 \\blog\{(.*?)\}
- `r blog("\1")`
+NEWLINE`r blog("\1")`
 
 \\abd\{(.*?)\}
- `r abd("\1")`
+NEWLINE`r abd("\1")`
 
 \\ems\{(.*?)\}
- `r ems("\1")`
+NEWLINE`r ems("\1")`
  
 \\ros\{.*?\}
 
@@ -108,7 +117,7 @@ $$\\begin{array}{ccc}
 
 
 \\rms\{(.*?)\}
- `r bookref("RMS", "\1")`
+NEWLINE`r bookref("RMS", "\1")`
 
 \\beqa
 $$\\begin{array}{ccc}
@@ -134,16 +143,16 @@ $$\\begin{array}{ccc}
 ^@$
 ```
 
-^\\chapter\{(.*?)\}
+^\\chapter\{(.*)\}
 NEWLINE# \1
 
-^\\section\{(.*?)\}
+^\\section\{(.*)\}
 NEWLINE## \1
 
-^\\subsection\{(.*?)\}
+^\\subsection\{(.*)\}
 NEWLINE### \1
 
-^\\subsubsection\{(.*?)\}
+^\\subsubsection\{(.*)\}
 NEWLINE#### \1
 
 \.\\ 
@@ -188,11 +197,17 @@ w
 \\end\{
 
 w
-\{\\
+^\{\\
+
+
+\\bigskip
+
+
+\\smallskip
 
 
 \\quoteit\{(.*?)\}\{(.*?)\}
-`r quoteit("\1", "\2")`
+<div id="boxes"><div id="leftbox">\1</div><div id="rightbox">\2</div></div><div class="clear"></div>
 
 \\ignore\{
 <!--
@@ -201,7 +216,7 @@ w
 --->
 
 \\label\{(.*?)\}
-{#\1}
+ {#\1}
 
 \\footnote\{(.*)\}
 \^[\1]
