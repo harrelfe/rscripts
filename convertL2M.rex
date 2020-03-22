@@ -71,6 +71,12 @@ $$\\begin{array}{ccc}
 \\newpage
 
 
+\\centerline\{(.*)\}
+\1
+
+\\includegraphics.*\{(.*?)\}
+<img src="\1" width="50%">
+
 \\R\}
 BACKTICKRBACKTICK}
 
@@ -79,9 +85,6 @@ BACKTICKRBACKTICK
 
 \\R
 BACKTICKRBACKTICK
-
-`(.*?)'
-\\'\1\\'
 
 ``(.*?)''
 \\"\1\\"
@@ -254,11 +257,14 @@ w
 \s*#\s*Fig.*\(\*\\ref\{fig*.*
 
 
+~*\\ref\{fig:(.*?)\}
+\@ref(fig:\1)
+
 \\a*label\{(.*?)\}
- {#\1}
+<a name="\1"></a>
 
 ~*\\ref\{(.*?)\}
- \\@ref(\1)
+<a href="`{r anchorLoc('\1')`">here</a>
 
 <br>
 \\\\
