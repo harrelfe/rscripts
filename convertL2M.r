@@ -111,7 +111,7 @@ convertL2M <- function(file, out='', transtab=NULL) {
     cat(st[lines], sep='\n')
   }
     
-  nesti <- c('* ',  '    + ',      '        -') 
+  nesti <- c('* ',  '    + ',      '       - ') 
   neste <- c('1. ', '       i) ', '         A. ')
   if(max(nestingi, nestinge) > 3)
     stop('does not handle itemized or enumerated lists deeper than 3 levels')
