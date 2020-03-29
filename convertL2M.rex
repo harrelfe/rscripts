@@ -90,10 +90,10 @@ BACKTICKRBACKTICK
 \\"\1\\"
 
 \\ipacue
- BACKTICKr apacue <- apacue + 1; ipacue(apacue)BACKTICK 
+ BACKTICKr ipacue()BACKTICK 
 
 \\def\\apacue\{(.*?)\}
- BACKTICKr apacue <- 0BACKTICK
+<!--  BACKTICKr apacue <<- \1BACKTICK--->
 
 \\sound\{(.*?)\}
 NEWLINEBACKTICKr sound("\1")BACKTICK
@@ -174,7 +174,7 @@ NEWLINE#### \1
 
 
 ^%(.*)
-<!-- \1-->
+<!-- \1--->
 
 \\_
 _
