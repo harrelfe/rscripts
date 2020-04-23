@@ -98,6 +98,9 @@ BACKTICKRBACKTICK
 \\sound\{(.*?)\}
 NEWLINEBACKTICKr sound("\1")BACKTICK
 
+\\soundm\{(.*?)\}
+NEWLINEBACKTICKr sound("\1")BACKTICK
+
 \\bmovie\{(.*?)\}
 NEWLINEBACKTICKr bmovie(\1)BACKTICK
 
