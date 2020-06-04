@@ -147,7 +147,7 @@ $$\\begin{array}{ccc}
 BACKTICK\1BACKTICK
 
 \\textbf\{(.*?)\}
-<b>\1</b>
+**\1**
 
 ^<<
 BACKTICKBACKTICKBACKTICK{r 
@@ -213,7 +213,7 @@ hhhhHHHH
 
 
 \\emph\{(.*?)\}
-<em>\1</em>
+_\1_
 
 \\texttt\{(.*?)\}
 <tt>\1</tt>
@@ -261,7 +261,7 @@ w
 
 
 ~*\\ref\{fig:(.*?)\}
-\@ref(fig:\1)
+ \@ref(fig:\1)
 
 \\a*label\{(.*?)\}
 <a name="\1"></a>
