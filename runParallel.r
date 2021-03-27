@@ -23,7 +23,8 @@
 ## which is a function to be called inside onecore to write to the
 ## progress file for the current repetition or every 10 repetitions, etc.,
 ## and an argument 'core' which informs 'onecore' which sequential core
-## number (batch number) it is processing.
+## number (batch number) it is processing.  There is an optional 3rd argument
+## 'other' that can contain a single character string to add to the output.
 ## When calling 'showprogress' inside 'onecore', the arguments, in order,
 ## must be the integer value of the repetition to be noted, and 'core'.
 ##
@@ -59,9 +60,10 @@ runParallel <- function(onecore, reps, seed=round(runif(1, 0, 10000)),
     w
   }
   repsc <- evenly(reps, cores)
-  showprogress <- function(i, core) {
+  showprogress <- function(i, core, other='') {
     file <- paste0(progressDir, '/progress', core)
-    cat(i, 'of', reps, '\n')
+    if(other != '') other <- paste0(other, '   ')
+    cat(other, i, ' of ', reps, '\n', sep='')
     }
   ff <- function(i) {
     set.seed(seed + i - 1)
