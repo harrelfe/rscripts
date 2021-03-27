@@ -37,7 +37,9 @@
 ## 'along'.  This specifies to the 'abind' package 'abind' function
 ## the dimension along which to bind the arrays.  For example, if the
 ## first dimension of the array corresponding to repetitions, you would
-## specify along=1.   All arrays present must use the same 'along'.
+## specify along=1.   All arrays present must use the same 'along' unless
+## 'along' is a named vector and the names match elements of the
+## simulation result object.
 ## Set `simplify=FALSE` if you don't want the result simplified if
 ## onecore produces only one list element.  The default returns the
 ## first (and only) list element rather than the list if there is only one
@@ -92,7 +94,8 @@ runParallel <- function(onecore, reps, seed=round(runif(1, 0, 10000)),
     if(is.matrix(z) || is.list(z)) x <- data.table::rbindlist(x)
     else if(is.array(z)) {
       require(abind)
-      x <- do.call('abind', list(x, along=along))
+      al <- if(length(along) == 1) along else along[names(v1)[j]]
+      x <- do.call('abind', list(x, along=al))
     }
     else if(! is.atomic(z))
       stop(paste('list element', j,
