@@ -33,9 +33,18 @@
 ## the dimension along which to bind the arrays.  For example, if the
 ## first dimension of the array corresponding to repetitions, you would
 ## specify along=1.   All arrays present must use the same 'along'.
+## Set `simplify=FALSE` if you don't want the result simplified if
+## onecore produces only one list element.  The default returns the
+## first (and only) list element rather than the list if there is only one
+## element.
+##
+## Usage:
+##  require(Hmisc)
+##  getRs('runParallel.r', put='source')
 
 runParallel <- function(onecore, reps, seed=round(runif(1, 0, 10000)),
-                        cores=max(1, parallel::detectCores()), along) {
+                        cores=max(1, parallel::detectCores()),
+                        simplify=TRUE, along) {
 
   progressDir <- paste0(dirname(tempdir()), '/progress')
   stime <- Sys.time()
@@ -87,5 +96,5 @@ runParallel <- function(onecore, reps, seed=round(runif(1, 0, 10000)),
     }
     
   for(j in 1: m) R[[j]] <- u(j)
-  R
+  if(simplify && m == 1) R[[1]] else R
   }
