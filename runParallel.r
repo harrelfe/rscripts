@@ -1,0 +1,91 @@
+## Given a function 'onecore' that runs the needed set of simulations on
+## one CPU core, and given a total number of repetitions 'reps', determines
+## the number of available cores and by default uses one less than that.
+## By default the number of cores is one less than the number available
+## on your machine.
+## reps is divided as evenly as possible over these cores, and batches
+## are run on the cores using the 'parallel' package 'mclapply' function.
+## The current per-core repetition number is continually updated in
+## your system's temporary directory (/tmp for Linux, TEMP for Windows)
+## in a file name progressX.log where X is the core number.
+## The random number seed is set for each core and is equal to
+## the scalar 'seed' - core number + 1.  The default seed is a random
+## number between 0 and 10000 but it's best if the user provides the
+## seed so the simulation is reproducible.
+## The total run time is computed and printed
+## onefile must create a named list of all the results created during
+## that one simulation batch.  Elements of this list must be data frames,
+## vectors, matrices, or arrays.   Upon completion of all batches,
+## all the results are rbind'd and saved in a single list.
+##
+## onecore must have an argument 'reps' that will tell the function
+## how many simulations to run for one batch, another argument 'showprogress'
+## which is a function to be called inside onecore to write to the
+## progress file for the current repetition or every 10 repetitions, etc.,
+## and an argument 'core' which informs 'onecore' which sequential core
+## number (batch number) it is processing.
+## When calling 'showprogress' inside 'onecore', the arguments, in order,
+## must be the integer value of the repetition to be noted, and 'core'.
+##
+## If any of the objects appearing as list elements produced by onecore
+## are multi-dimensional arrays, you must specify an integer value fo
+## 'along'.  This specifies to the 'abind' package 'abind' function
+## the dimension along which to bind the arrays.  For example, if the
+## first dimension of the array corresponding to repetitions, you would
+## specify along=1.   All arrays present must use the same 'along'.
+
+runParallel <- function(onecore, reps, seed=round(runif(1, 0, 10000)),
+                        cores=max(1, parallel::detectCores()), along) {
+
+  progressDir <- paste0(dirname(tempdir()), '/progress')
+  stime <- Sys.time()
+  require(parallel)
+  ## Function to divide n things as evenly as possible into m groups
+  ## See https://math.stackexchange.com/questions/199690
+  evenly <- function(n, m) {
+    a <- floor(n / m)
+    r <- n %% m
+    w <- c(rep(a + 1, r), rep(a, m - r))
+    if(sum(w) != n) stop('program logic error')
+    w
+  }
+  repsc <- evenly(reps, cores)
+  showprogress <- function(i, core) {
+    file <- paste0(progressDir, '/progress', core)
+    cat(i, 'of', reps, '\n')
+    }
+  ff <- function(i) {
+    set.seed(seed + i - 1)
+    onecore(reps=repsc[i], showprogress=showprogress, core=i)
+  }
+  v <- mclapply(1 : cores, ff, mc.cores=cores, mc.set.seed=FALSE)
+  v1 <- v[[1]]
+  if(inherits(v1, 'try-error'))
+    stop(as.character(attr(v1, 'condition')))
+  etime <- Sys.time()
+  dur <- etime - stime
+  cat('\nRun time:', round(as.numeric(etime - stime) / 60., 1), 'minutes\n')
+  ## Separately for each element of each list in w, stack the results so
+  ## the use can treat them as if from a single run
+  m <- length(v1)   # number of elements in a per-core list
+  R <- vector('list', m)
+  names(R) <- names(v1)
+
+  u <- function(j) {
+    x <- lapply(v, function(x) x[[j]])
+    z <- x[[1]]
+    if(is.matrix(z) || is.list(z)) x <- data.table::rbindlist(x)
+    else if(is.array(z)) {
+      require(abind)
+      x <- do.call('abind', list(x, along=along))
+    }
+    else if(! is.atomic(z))
+      stop(paste('list element', j,
+       ' of result returned by onecore is not data.frame, matrix, array, or vector'))
+    else x <- unlist(x)   # vectors
+    x
+    }
+    
+  for(j in 1: m) R[[j]] <- u(j)
+  R
+  }

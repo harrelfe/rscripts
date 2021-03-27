@@ -16,9 +16,14 @@
 #  Edit lines marked with <!-- ?---> and look for closing } to edit
 #  Edit translations from \begin{tabular} to markdown tables to fine tune
 #  Add fig.align='left', lang='markdown' in knitrSet()
+#  Change author names @ref to just @ref
+#  For figure callouts change @ref to \@ref
 # See ~/r/rmarkdown/style.txt (insert in new .Rmd file) and bookfun.r
 # This function uses translation regular expressions in
 # https://github.com/harrelfe/rscripts/blob/master/convertL2M.rex
+
+## Notes
+##  If cache=TRUE figure captions may not be created
 
 convertL2M <- function(file, out='', transtab=NULL) {
 
