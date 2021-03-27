@@ -21,12 +21,13 @@
 ## onecore must have an argument 'reps' that will tell the function
 ## how many simulations to run for one batch, another argument 'showprogress'
 ## which is a function to be called inside onecore to write to the
-## progress file for the current repetition or every 10 repetitions, etc.,
-## and an argument 'core' which informs 'onecore' which sequential core
-## number (batch number) it is processing.  There is an optional 3rd argument
-## 'other' that can contain a single character string to add to the output.
+## progress file for the current core and repetition, and an argument 'core'
+## which informs 'onecore' which sequential core number (batch number) it is
+## processing.
 ## When calling 'showprogress' inside 'onecore', the arguments, in order,
-## must be the integer value of the repetition to be noted, and 'core'.
+## must be the integer value of the repetition to be noted, the number of reps,
+## 'core', and an optional 4th argument 'other' that can contain a single
+## character string to add to the output.
 ##
 ## If any of the objects appearing as list elements produced by onecore
 ## are multi-dimensional arrays, you must specify an integer value fo
@@ -44,10 +45,10 @@
 ##  getRs('runParallel.r', put='source')
 
 runParallel <- function(onecore, reps, seed=round(runif(1, 0, 10000)),
-                        cores=max(1, parallel::detectCores()),
+                        cores=max(1, parallel::detectCores() - 1),
                         simplify=TRUE, along) {
 
-  progressDir <- paste0(dirname(tempdir()), '/progress')
+  progressDir <- paste0(dirname(tempdir()))
   stime <- Sys.time()
   require(parallel)
   ## Function to divide n things as evenly as possible into m groups
@@ -60,10 +61,10 @@ runParallel <- function(onecore, reps, seed=round(runif(1, 0, 10000)),
     w
   }
   repsc <- evenly(reps, cores)
-  showprogress <- function(i, core, other='') {
-    file <- paste0(progressDir, '/progress', core)
+  showprogress <- function(i, reps, core, other='') {
+    file <- paste0(progressDir, '/progress', core, '.log')
     if(other != '') other <- paste0(other, '   ')
-    cat(other, i, ' of ', reps, '\n', sep='')
+    cat(other, i, ' of ', reps, '\n', sep='', file=file)
     }
   ff <- function(i) {
     set.seed(seed + i - 1)
@@ -74,8 +75,7 @@ runParallel <- function(onecore, reps, seed=round(runif(1, 0, 10000)),
   if(inherits(v1, 'try-error'))
     stop(as.character(attr(v1, 'condition')))
   etime <- Sys.time()
-  dur <- etime - stime
-  cat('\nRun time:', round(as.numeric(etime - stime) / 60., 1), 'minutes\n')
+  cat('\nRun time:', format(etime - stime), '\n')
   ## Separately for each element of each list in w, stack the results so
   ## the use can treat them as if from a single run
   m <- length(v1)   # number of elements in a per-core list
