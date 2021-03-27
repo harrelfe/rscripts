@@ -26,8 +26,11 @@
 ## processing.
 ## When calling 'showprogress' inside 'onecore', the arguments, in order,
 ## must be the integer value of the repetition to be noted, the number of reps,
-## 'core', and an optional 4th argument 'other' that can contain a single
-## character string to add to the output.
+## 'core', an optional 4th argument 'other' that can contain a single
+## character string to add to the output, and an optional 5th argument 'pr'.
+## You can set 'pr=FALSE' to suppress printing and have 'showprogress'
+## return the file name for holding progress information if you want to
+## customize printing.
 ##
 ## If any of the objects appearing as list elements produced by onecore
 ## are multi-dimensional arrays, you must specify an integer value fo
@@ -61,10 +64,11 @@ runParallel <- function(onecore, reps, seed=round(runif(1, 0, 10000)),
     w
   }
   repsc <- evenly(reps, cores)
-  showprogress <- function(i, reps, core, other='') {
+  showprogress <- function(i, reps, core, other='', pr=TRUE) {
     file <- paste0(progressDir, '/progress', core, '.log')
     if(other != '') other <- paste0(other, '   ')
-    cat(other, i, ' of ', reps, '\n', sep='', file=file)
+    if(pr) cat(other, i, ' of ', reps, '\n', sep='', file=file)
+    invisible(file)
     }
   ff <- function(i) {
     set.seed(seed + i - 1)
