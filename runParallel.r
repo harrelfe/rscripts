@@ -64,7 +64,7 @@ runParallel <- function(onecore, reps, seed=round(runif(1, 0, 10000)),
     w
   }
   repsc <- evenly(reps, cores)
-  showprogress <- function(i, reps, core, other='', pr=TRUE) {
+  showprogress <- function(i=0, reps=0, core, other='', pr=TRUE) {
     file <- paste0(progressDir, '/progress', core, '.log')
     if(other != '') other <- paste0(other, '   ')
     if(pr) cat(other, i, ' of ', reps, '\n', sep='', file=file)
