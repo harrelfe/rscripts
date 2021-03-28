@@ -21,18 +21,18 @@ hashCheck <- function(..., file, .print.=TRUE) {
   hash <- sapply(d, g)
   
   prevhash <- NULL
-  if(! exists(file)) return(result=NULL, hash=hash, changed='All')
+  if(! exists(file)) return(list(result=NULL, hash=hash, changed='All'))
 
   R        <- readRDS(file)
   prevhash <- attr(R, 'hash')
   if(! length(prevhash)) {
     if(.print.) cat('\nRe-run because of no previous hash\n\n')
-    return(result=NULL, hash=hash, changed='No previous hash')
+    return(list(result=NULL, hash=hash, changed='No previous hash'))
     }
 
   samelen <- length(hash) == length(prevhash)
   if(samelen && all(hash == prevhash))
-    return(result=R, hash=hash, changed='')
+    return(list(result=R, hash=hash, changed=''))
 
   if(! samelen) {
     a <- names(prevhash)
