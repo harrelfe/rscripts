@@ -25,8 +25,9 @@ hashCheck <- function(..., file, .print.=TRUE) {
 
   R        <- readRDS(file)
   prevhash <- attr(R, 'hash')
-  if(! length(prevhash)) return(result=NULL, hash=hash,
-                                changed='No previous hash')
+  if(! length(prevhash)) {
+    if(.print.) cat('\nRe-run because of no previous hash\n\n')
+    return(result=NULL, hash=hash, changed='No previous hash')
 
   samelen <- length(hash) == length(prevhash)
   if(samelen && all(hash == prevhash))
