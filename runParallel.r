@@ -81,7 +81,7 @@ runParallel <- function(onecore, reps, seed=round(runif(1, 0, 10000)),
   if(inherits(v1, 'try-error'))
     stop(as.character(attr(v1, 'condition')))
   etime <- Sys.time()
-  cat('\nRun time:', format(etime - stime), '\n')
+  cat('\nRun time:', format(etime - stime), 'using', cores, 'cores\n')
   ## Separately for each element of each list in w, stack the results so
   ## the use can treat them as if from a single run
   m <- length(v1)   # number of elements in a per-core list
