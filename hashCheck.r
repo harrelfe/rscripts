@@ -10,6 +10,8 @@
 ##     return a list with result=NULL, hash = new hash vector, changed
 ## * if prevhash = hash, return a list with result=file object, hash=new hash,
 ##   changed=''
+##
+## Set options(debughash=TRUE) to trace results in /tmp/debughash.txt
 
 hashCheck <- function(..., file, .print.=TRUE) {
   d <- list(...)
@@ -17,22 +19,36 @@ hashCheck <- function(..., file, .print.=TRUE) {
   nam <- nam[1 : length(d)]
   names(d) <- nam
 
+  
+  debug <- length(.Options$debughash) && .Options$debughash
+  ct <- if(debug)
+          function(...) cat(..., '\n', file='/tmp/debughash.txt', append=TRUE)
+        else
+          function(...) {}
+
   g <- function(x) digest::digest(if(is.function(x)) deparse(x) else x)
   hash <- sapply(d, g)
+  if(debug) prn(hash, fi='/tmp/debughash.txt')
   
   prevhash <- NULL
-  if(! exists(file)) return(list(result=NULL, hash=hash, changed='All'))
+  if(! file.exists(file)) {
+    ct('no file', file)
+    return(list(result=NULL, hash=hash, changed='All'))
+    }
 
   R        <- readRDS(file)
   prevhash <- attr(R, 'hash')
   if(! length(prevhash)) {
     if(.print.) cat('\nRe-run because of no previous hash\n\n')
+    ct('no previous hash')
     return(list(result=NULL, hash=hash, changed='No previous hash'))
     }
 
   samelen <- length(hash) == length(prevhash)
-  if(samelen && all(hash == prevhash))
+  if(samelen && all(hash == prevhash)) {
+    ct('no change')
     return(list(result=R, hash=hash, changed=''))
+    }
 
   if(! samelen) {
     a <- names(prevhash)
@@ -50,6 +66,7 @@ hashCheck <- function(..., file, .print.=TRUE) {
     s <- c(s, paste('changes in the following objects:',
                     paste(nam[hash != prevhash])))
   s <- paste(s, collapse=';')
+  ct(s)
       
   if(.print.) cat('\nRe-run because of', s, '\n\n')
 
