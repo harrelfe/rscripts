@@ -77,9 +77,13 @@ runParallel <- function(onecore, reps, seed=round(runif(1, 0, 10000)),
     onecore(reps=repsc[i], showprogress=showprogress, core=i)
   }
   v <- mclapply(1 : cores, ff, mc.cores=cores, mc.set.seed=FALSE)
-  v1 <- v[[1]]
-  if(inherits(v1, 'try-error'))
-    stop(as.character(attr(v1, 'condition')))
+  ite <- sapply(v, function(z) inherits(z, 'try-error'))
+  if(any(ite)) {
+    z <- sapply(v, function(x) {
+      x <- as.character(attr(x, 'condition'))
+      if(length(x)) x else '' })
+    stop(paste(z, collapse=';'))
+    }
   etime <- Sys.time()
   cat('\nRun time:', format(etime - stime), 'using', cores, 'cores\n')
   ## Separately for each element of each list in w, stack the results so
