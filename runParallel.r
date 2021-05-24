@@ -77,6 +77,7 @@ runParallel <- function(onecore, reps, seed=round(runif(1, 0, 10000)),
     onecore(reps=repsc[i], showprogress=showprogress, core=i)
   }
   v <- mclapply(1 : cores, ff, mc.cores=cores, mc.set.seed=FALSE)
+  v1 <- v[[1]]
   ite <- sapply(v, function(z) inherits(z, 'try-error'))
   if(any(ite)) {
     z <- sapply(v, function(x) {
