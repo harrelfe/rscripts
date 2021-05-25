@@ -26,6 +26,7 @@ hashCheck <- function(..., file, .print.=TRUE) {
         else
           function(...) {}
 
+  ct(nam)
   g <- function(x) digest::digest(if(is.function(x)) deparse(x) else x)
   hash <- sapply(d, g)
   if(debug) prn(hash, fi='/tmp/debughash.txt')
@@ -50,10 +51,11 @@ hashCheck <- function(..., file, .print.=TRUE) {
     return(list(result=R, hash=hash, changed=''))
     }
 
+  s <- character(0)
+
   if(! samelen) {
     a <- names(prevhash)
     b <- names(hash)
-    s <- character(0)
     w <- setdiff(a, b)
     if(length(w))
       s <- c(s, paste('objects removed:',
@@ -64,11 +66,11 @@ hashCheck <- function(..., file, .print.=TRUE) {
                       paste(w, collapse=' ')))
   } else
     s <- c(s, paste('changes in the following objects:',
-                    paste(nam[hash != prevhash])))
+                    paste(nam[hash != prevhash], collapse=' ')))
   s <- paste(s, collapse=';')
   ct(s)
       
   if(.print.) cat('\nRe-run because of', s, '\n\n')
 
-  list(result=R, hash=hash, changed=s)
+  list(result=NULL, hash=hash, changed=s)
 }
