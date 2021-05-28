@@ -109,6 +109,6 @@ runParallel <- function(onecore, reps, seed=round(runif(1, 0, 10000)),
     x
     }
     
-  for(j in 1: m) R[[j]] <- u(j)
+  for(j in 1: m)         R[[j]] <- u(j)
   if(simplify && m == 1) R[[1]] else R
   }
