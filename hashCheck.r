@@ -74,3 +74,27 @@ hashCheck <- function(..., file, .print.=TRUE) {
 
   list(result=NULL, hash=hash, changed=s)
 }
+
+## Uses hashCheck to run a function and save the results if specified
+## inputs have changed, otherwise to retrieve results from a file.
+## The file name is taken as the chunk name appended with .rds unless
+## it is given as file=.  fun has no arguments.
+
+runifChanged <- function(fun, ..., file=NULL, .print=.TRUE) {
+  if(! length(file)) {
+    file <- knitr::opts_current$get('label')
+    if(! length(file)) stop('attempt to run runifChanged outside a knitr chunk')
+    file <- paste0(file, '.rds')
+  }
+  hashobj <- hashCheck(..., file=file)
+  hash    <- hashobj$hash
+  result  <- hashobj$result
+  if(! length(result)) {
+    result <- fun()
+    setattr(result, 'hash', hash)
+    saveRDS(result, file, compress='xz')
+  }
+}
+
+
+  
