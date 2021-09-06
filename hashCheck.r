@@ -94,6 +94,7 @@ runifChanged <- function(fun, ..., file=NULL, .print=.TRUE) {
     setattr(result, 'hash', hash)
     saveRDS(result, file, compress='xz')
   }
+  result
 }
 
 
