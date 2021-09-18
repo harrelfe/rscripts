@@ -79,7 +79,7 @@ hashCheck <- function(..., file, .print.=TRUE) {
 ## inputs have changed, otherwise to retrieve results from a file.
 ## The file name is taken as the chunk name appended with .rds unless
 ## it is given as file=.  fun has no arguments.
-## Set .inclfun.=FALSE to not include fun in the hash check
+## Set .inclfun.=FALSE to not include fun in the hash check (for legacy uses)
 
 runifChanged <- function(fun, ..., file=NULL, .print.=TRUE, .inclfun.=TRUE) {
   if(! length(file)) {
