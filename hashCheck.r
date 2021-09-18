@@ -81,7 +81,7 @@ hashCheck <- function(..., file, .print.=TRUE) {
 ## it is given as file=.  fun has no arguments.
 ## Set .inclfun.=FALSE to not include fun in the hash check
 
-runifChanged <- function(fun, ..., file=NULL, .print.=.TRUE, .inclfun.=TRUE) {
+runifChanged <- function(fun, ..., file=NULL, .print.=TRUE, .inclfun.=TRUE) {
   if(! length(file)) {
     file <- knitr::opts_current$get('label')
     if(! length(file)) stop('attempt to run runifChanged outside a knitr chunk')
