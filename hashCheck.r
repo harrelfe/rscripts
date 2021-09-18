@@ -79,14 +79,23 @@ hashCheck <- function(..., file, .print.=TRUE) {
 ## inputs have changed, otherwise to retrieve results from a file.
 ## The file name is taken as the chunk name appended with .rds unless
 ## it is given as file=.  fun has no arguments.
+## Set .inclfun.=FALSE to not include fun in the hash check
 
-runifChanged <- function(fun, ..., file=NULL, .print=.TRUE) {
+runifChanged <- function(fun, ..., file=NULL, .print.=.TRUE, .inclfun.=TRUE) {
   if(! length(file)) {
     file <- knitr::opts_current$get('label')
     if(! length(file)) stop('attempt to run runifChanged outside a knitr chunk')
     file <- paste0(file, '.rds')
   }
-  hashobj <- hashCheck(..., file=file)
+  hashobj <- if(! .inclfun.) hashCheck(..., file=file, .print.=.print.)
+             else {
+               w         <- list(...)
+               w$fun     <- fun
+               w$file    <- file
+               w$.print. <- .print.
+               do.call(hashCheck, w)
+               }
+               
   hash    <- hashobj$hash
   result  <- hashobj$result
   if(! length(result)) {
