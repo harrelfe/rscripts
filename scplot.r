@@ -1,4 +1,8 @@
 ## Separate chunk plot
+##
+## Function to run a plot in its own Rmarkdown knitr chunk with its own
+## caption and size, and to put short captions in the markdown TOC
+##
 ## Usage:
 ##
 ## scplot(id='chunkid')   # initialize output file scplot.Rmd
