@@ -18,6 +18,7 @@
 ##
 ## Hmisc::putHcap is used to markup regular and short captions cap, scap
 ## Short caption appears in TOC.  If no scap, then cap is used for this.
+## To change the putHcap subsub argument set options(scplot.subsub='## ') e.g.
 
 scplot <- function(command, cap=NULL, scap=NULL, w=5, h=4, id=NULL) {
 
@@ -33,7 +34,8 @@ scplot <- function(command, cap=NULL, scap=NULL, w=5, h=4, id=NULL) {
   .iscplot. <<- .iscplot. + 1
 
   cname <- paste0(.idscplot., .iscplot.)
-  label   <- Hmisc::putHcap(cap, scap=scap, file=FALSE)
+  subsub <- if(length(.Options$scplot.subsub)) .Options$scplot.subsub else TRUE
+  label  <- Hmisc::putHcap(cap, scap=scap, subsub=subsub, file=FALSE)
 
   k <- c(paste0('\n\n```{r ', cname, ',results="asis",echo=FALSE,fig.width=',
                 w, ',fig.height=', h, '}\n'), paste0(command, '\n```\n\n'))
