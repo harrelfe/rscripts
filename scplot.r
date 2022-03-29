@@ -6,6 +6,7 @@
 ## Usage:
 ##
 ## scplot(id='chunkid')   # initialize output file scplot.Rmd
+## or use scplot() to use the current chunk name as the id
 ## scplot(plotting expression, caption, optional short caption, w, h)
 ## scplot(plotting expression ...)
 ##
@@ -22,7 +23,8 @@
 
 scplot <- function(command, cap=NULL, scap=NULL, w=5, h=4, id=NULL) {
 
-  command <- as.character(sys.call()[2])
+  command <- as.character(sys.call())
+  if(length(command) == 1) id <- knitr::opts_current$get('label')
 
   if(length(id)) {
     cat('', sep='', file='scplot.Rmd')
@@ -38,7 +40,7 @@ scplot <- function(command, cap=NULL, scap=NULL, w=5, h=4, id=NULL) {
   label  <- Hmisc::putHcap(cap, scap=scap, subsub=subsub, file=FALSE)
 
   k <- c(paste0('\n\n```{r ', cname, ',results="asis",echo=FALSE,fig.width=',
-                w, ',fig.height=', h, '}\n'), paste0(command, '\n```\n\n'))
+                w, ',fig.height=', h, '}\n'), paste0(command[2], '\n```\n\n'))
   cat(label, k, sep='', file='scplot.Rmd', append=TRUE)
   invisible()
 }
