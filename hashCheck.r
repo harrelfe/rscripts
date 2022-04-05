@@ -127,7 +127,7 @@ runifChanged <- function(fun, ..., file=NULL, .print.=TRUE, .inclfun.=TRUE) {
   result  <- hashobj$result
   if(! length(result)) {
     result <- fun()
-    setattr(result, 'hash', hash)
+    attr(result, 'hash') <- hash
     saveRDS(result, file, compress='xz')
   }
   result
