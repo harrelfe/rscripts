@@ -12,67 +12,69 @@
 ##   changed=''
 ##
 ## Set options(debughash=TRUE) to trace results in /tmp/debughash.txt
+## Pass .names. as vector of names of original arguments if not calling
+## hashCheck directly
 
-hashCheck <- function(..., file, .print.=TRUE) {
-  d <- list(...)
-  nam <- as.character(sys.call())[-1]
-  nam <- nam[1 : length(d)]
-  names(d) <- nam
-
+hashCheck <- function(..., file, .print.=TRUE, .names.=NULL) {
+  .d.      <- list(...)
+  .nam.    <- if(length(.names.)) .names. else as.character(sys.call())[-1]
+  .nam.    <- .nam.[1 : length(.d.)]
+  names(.d.) <- .nam.
   
-  debug <- length(.Options$debughash) && .Options$debughash
-  ct <- if(debug)
+  .debug. <- length(.Options$debughash) && .Options$debughash
+  ct <- if(.debug.)
           function(...) cat(..., '\n', file='/tmp/debughash.txt', append=TRUE)
         else
           function(...) {}
 
-  ct(nam)
-  g <- function(x) digest::digest(if(is.function(x)) deparse(x) else x)
-  hash <- sapply(d, g)
-  if(debug) prn(hash, fi='/tmp/debughash.txt')
+  ct(.nam.)
+  .g. <- function(x) digest::digest(if(is.function(x)) deparse(x) else x)
+  .hash. <- sapply(.d., .g.)
+  if(.debug.) prn(.hash., fi='/tmp/debughash.txt')
   
-  prevhash <- NULL
+  .prevhash. <- NULL
   if(! file.exists(file)) {
     ct('no file', file)
-    return(list(result=NULL, hash=hash, changed='All'))
+    return(list(result=NULL, hash=.hash., changed='All'))
     }
 
   R        <- readRDS(file)
-  prevhash <- attr(R, 'hash')
-  if(! length(prevhash)) {
+  .prevhash. <- attr(R, 'hash')
+  if(! length(.prevhash.)) {
     if(.print.) cat('\nRe-run because of no previous hash\n\n')
     ct('no previous hash')
-    return(list(result=NULL, hash=hash, changed='No previous hash'))
+    return(list(result=NULL, hash=.hash., changed='No previous hash'))
     }
 
-  samelen <- length(hash) == length(prevhash)
-  if(samelen && all(hash == prevhash)) {
+  samelen <- length(.hash.) == length(.prevhash.)
+  if(samelen && all(.hash. == .prevhash.)) {
     ct('no change')
-    return(list(result=R, hash=hash, changed=''))
+    return(list(result=R, hash=.hash., changed=''))
     }
 
-  s <- character(0)
+  .s. <- character(0)
 
   if(! samelen) {
-    a <- names(prevhash)
-    b <- names(hash)
-    w <- setdiff(a, b)
-    if(length(w))
-      s <- c(s, paste('objects removed:',
-                      paste(w, collapse=' ')))
-    w <- setdiff(b, a)
-    if(length(w))
-      s <- c(s, paste('objects added:',
-                      paste(w, collapse=' ')))
-  } else
-    s <- c(s, paste('changes in the following objects:',
-                    paste(nam[hash != prevhash], collapse=' ')))
-  s <- paste(s, collapse=';')
-  ct(s)
-      
-  if(.print.) cat('\nRe-run because of', s, '\n\n')
+    .a. <- names(.prevhash.)
+    .b. <- names(.hash.)
+    .w. <- setdiff(.a., .b.)
+    if(length(.w.))
+      .s. <- c(.s., paste('objects removed:',
+                      paste(.w., collapse=' ')))
+    .w. <- setdiff(.b., .a.)
+    if(length(.w.))
+      .s. <- c(.s., paste('objects added:',
+                      paste(.w., collapse=' ')))
+  } else 
+    .s. <- c(.s., paste('changes in the following objects:',
+                    paste(.nam.[.hash. != .prevhash.], collapse=' ')))
 
-  list(result=NULL, hash=hash, changed=s)
+  .s. <- paste(.s., collapse=';')
+  ct(.s.)
+      
+  if(.print.) cat('\nRe-run because of', .s., '\n\n')
+
+  list(result=NULL, hash=.hash., changed=.s.)
 }
 
 ## Uses hashCheck to run a function and save the results if specified
@@ -114,12 +116,16 @@ runifChanged <- function(fun, ..., file=NULL, .print.=TRUE, .inclfun.=TRUE) {
     if(! length(file)) stop('attempt to run runifChanged outside a knitr chunk')
     file <- paste0(file, '.rds')
   }
-  hashobj <- if(! .inclfun.) hashCheck(..., file=file, .print.=.print.)
+  w <- list(...)
+  .names. <- (as.character(sys.call())[-1])[1 : (length(w) + 1)]
+
+  hashobj <- if(! .inclfun.) hashCheck(..., file=file,
+                                       .print.=.print., .names.=.names.[-1])
              else {
-               w         <- list(...)
-               w$fun     <- fun
+               w <- c(list(fun), w)
                w$file    <- file
                w$.print. <- .print.
+               w$.names. <- .names.
                do.call(hashCheck, w)
                }
                
@@ -132,4 +138,4 @@ runifChanged <- function(fun, ..., file=NULL, .print.=TRUE, .inclfun.=TRUE) {
   }
   result
 }
-  
+
