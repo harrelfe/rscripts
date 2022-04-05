@@ -80,6 +80,33 @@ hashCheck <- function(..., file, .print.=TRUE) {
 ## The file name is taken as the chunk name appended with .rds unless
 ## it is given as file=.  fun has no arguments.
 ## Set .inclfun.=FALSE to not include fun in the hash check (for legacy uses)
+##
+## Typical workflow:
+##
+## Read the source code for the hashCheck and runifChanged functions from
+## https://github.com/harrelfe/rscripts/blob/master/hashCheck.r
+## This makes it easy to see if any objects changed that require re-running
+## a simulation, and reports on any changes
+## getRs('hashCheck.r', put='source')   # getRs is in Hmisc
+##
+## f <- function(       ) {
+## . . . do the real work with multiple function calls ...
+## }
+## seed <- 3
+## set.seed(seed)
+## w <- runifChanged(f, seed, obj1, obj2, ....)
+##
+## seed, obj1, obj2, ... are all the objects that f() uses that if changed
+## would give a different result of f().  This can include functions such as
+## those in a package, and f will be re-run if any of the function's code
+## changes.  f is also re-run if the code inside f changes.
+##
+## The result of f is stored with saveRDS by default in file named xxx.rds
+## where xxx is the label for the current chunk.  To control this use instead
+## file=xxx.rds add the file argument to runifChanged(...).  If nothing has
+## changed and the file already exists, the file is read to create the result
+## object (e.g., w above).  If f() needs to be run, the hashed input objects
+## are saved as a hash​ attribute to the result before it's written to the file.
 
 runifChanged <- function(fun, ..., file=NULL, .print.=TRUE, .inclfun.=TRUE) {
   if(! length(file)) {
@@ -105,6 +132,4 @@ runifChanged <- function(fun, ..., file=NULL, .print.=TRUE, .inclfun.=TRUE) {
   }
   result
 }
-
-
   
