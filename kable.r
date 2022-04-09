@@ -10,7 +10,7 @@ kabl <- function(..., caption=NULL, digits=4) {
     if(is.vector(x) || (is.array(x) && length(dim(x)) == 1)) t(x) else x
   if(length(w) == 1) {
     w <- w[[1]]
-    return( knitr::kable(tr(w), digits=digits))
+    return( knitr::kable(tr(w), digits=digits, caption=caption))
   }
   w <- lapply(w, function(x) knitr::kable(tr(x), digits=digits))
   knitr::kables(w, caption=caption)
