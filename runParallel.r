@@ -96,7 +96,9 @@ runParallel <- function(onecore, reps, seed=round(runif(1, 0, 10000)),
   u <- function(j) {
     x <- lapply(v, function(x) x[[j]])
     z <- x[[1]]
-    if(is.matrix(z) || is.list(z)) x <- data.table::rbindlist(x)
+    if(is.matrix(z)) x <- do.call('rbind', x)
+    else
+      if(is.list(z)) x <- data.table::rbindlist(x)
     else if(is.array(z)) {
       require(abind)
       al <- if(length(along) == 1) along else along[names(v1)[j]]
