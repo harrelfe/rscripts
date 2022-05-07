@@ -14,12 +14,10 @@
 htmlView <- function(...) {
   viewer <- getOption('viewer', default=utils::browseURL)
   w <- list(...)
-  td <- tempfile()
+  td <- tempdir()
   if(! dir.exists(td)) dir.create(td)
-  i <- 0
   for(u in w) {
-    i  <- i + 1
-    fi <- file.path(td, paste0(i, '.html'))
+    fi <- paste0(tempfile(), '.html')
     h  <- html(u)
     writeLines(as.character(h), fi)
     viewer(fi)
