@@ -21,10 +21,10 @@ for(i in 1 : length(checks)) {
   vars.involved <- all.vars(form)
   z <- d[eval(x), c('id', vars.involved), with=FALSE]
   no <- nrow(z)
-  if(html) ht[[i]] <- knitr::kable(z, caption=paste(ex, '   n=', no))
+  if(html) ht[[i]] <- knitr::kable(z, caption=paste(cx, '   n=', no))
   else {
   cat('-----------------------------------------------------------------------\n',
-      ex, '    n=', no, '\n',
+      cx, '    n=', no, '\n',
       if(no > 0)
       '-----------------------------------------------------------------------\n', sep='')
   if(no > 0) print(z)
