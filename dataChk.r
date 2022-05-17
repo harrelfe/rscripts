@@ -3,7 +3,9 @@
 # The variables listed are all variables mentioned in the expression plus
 # optional variables whose names are in the character vector id
 # %between% c(a,b) in expressions is printed as [a,b]
-# The output format is plain text unless html=TRUE
+# The output format is plain text unless html=TRUE which also puts
+# each table in a separate Quarto tab (and you must have run
+# getRs('maketabs.r', put='source') previously).
 # The returned value is an invisible data frame containing variables
 # check (the expression checked) and n (the number of records satisfying
 # the expression)
@@ -21,7 +23,9 @@ for(i in 1 : length(checks)) {
   vars.involved <- all.vars(form)
   z <- d[eval(x), c('id', vars.involved), with=FALSE]
   no <- nrow(z)
-  if(html) ht[[i]] <- knitr::kable(z, caption=paste(cx, '   n=', no))
+  if(html) ht[[cx]] <- 
+    if(no == 0) htmltools::HTML('n=0')
+     else knitr::kable(z, caption=paste(cx, '   n=', no))
   else {
   cat('-----------------------------------------------------------------------\n',
       cx, '    n=', no, '\n',
@@ -31,6 +35,6 @@ for(i in 1 : length(checks)) {
   }
   s <- rbind(s, data.frame(check=cx, n=no))
 }
-if(html) print(knitr::kables(ht))
+if(html) maketabs(ht, initblank=TRUE)
 invisible(s)
 }
