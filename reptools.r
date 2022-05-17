@@ -129,10 +129,14 @@ htmlViewx <- function(..., tab=c('notfirst', 'all', 'none')) {
 # check (the expression checked) and n (the number of records satisfying
 # the expression)
 # Set omit0 to TRUE to ignore checks finding no observations.
+# If id is given set byid=TRUE to also list a data frame with all
+# flagged conditions, sorted by id.
 
-dataChk <- function(d, checks, id=character(0), html=FALSE, omit0=FALSE) {
+dataChk <- function(d, checks, id=character(0),
+                    html=FALSE, omit0=FALSE, byid=FALSE) {
+  if(byid && length(id) < 1) stop('must specify id when byid=TRUE')
   s  <- NULL
-  X  <- list()
+  X  <- Dat <- list()
   dashes <- paste0(rep('-', getOption('width')), collapse='')
   fmt <- if(html)
            function(name, data)
@@ -149,15 +153,27 @@ dataChk <- function(d, checks, id=character(0), html=FALSE, omit0=FALSE) {
     vars.involved <- all.vars(form)
     z  <- d[eval(x), c(id, vars.involved), with=FALSE]
     no <- nrow(z)
+    if(byid && no > 0) {
+      Da <- copy(z)
+      Da[, Check := cx]
+      Dat[[cx]] <- Da
+      }
     z <- if(no == 0) 'n=0' else capture.output(print(z))
     z <- fmt(cx, z)
     if(no > 0 || ! omit0) X[[cx]] <- z
     s <- rbind(s, data.frame(Check=cx, n=no))
   }
+  if(byid) {
+    Dat <- rbindlist(Dat, fill=TRUE)
+    setcolorder(Dat, c(id, 'Check', setdiff(names(Dat), c(id, 'Check'))))
+    setkeyv(Dat, id)
+    u <- paste('By', paste(id, collapse=', '))
+    X[[u]] <- fmt(u, capture.output(print(Dat)))
+    }
   X$Summary <- fmt('Summary', capture.output(print(s)))
   if(html) maketabs(X, initblank=TRUE)
   else for(z in X) cat(z, sep='\n')
-  invisible(s)
+  if(byid) invisible(s) else invisible(Dat)
 }
 
 
