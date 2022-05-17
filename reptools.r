@@ -131,9 +131,10 @@ htmlViewx <- function(..., tab=c('notfirst', 'all', 'none')) {
 # Set omit0 to TRUE to ignore checks finding no observations.
 # If id is given set byid=TRUE to also list a data frame with all
 # flagged conditions, sorted by id.
+# nrows is the maximum number of rows to allow to be printed
 
 dataChk <- function(d, checks, id=character(0),
-                    html=FALSE, omit0=FALSE, byid=FALSE) {
+                    html=FALSE, omit0=FALSE, byid=FALSE, nrows=500) {
   if(byid && length(id) < 1) stop('must specify id when byid=TRUE')
   s  <- NULL
   X  <- Dat <- list()
@@ -156,9 +157,10 @@ dataChk <- function(d, checks, id=character(0),
     if(byid && no > 0) {
       Da <- z[, id, with=FALSE]
       Da[, Check := cx]
+      Da[, Values := do.call(paste, z[, vars.involved, with=FALSE])]
       Dat[[cx]] <- Da
       }
-    z <- if(no == 0) 'n=0' else capture.output(print(z))
+    z <- if(no == 0) 'n=0' else capture.output(print(z, nrows=nrows))
     z <- fmt(cx, z)
     if(no > 0 || ! omit0) X[[cx]] <- z
     s <- rbind(s, data.frame(Check=cx, n=no))
@@ -168,9 +170,9 @@ dataChk <- function(d, checks, id=character(0),
     # setcolorder(Dat, c(id, 'Check', setdiff(names(Dat), c(id, 'Check'))))
     setkeyv(Dat, id)
     u <- paste('By', paste(id, collapse=', '))
-    X[[u]] <- fmt(u, capture.output(print(Dat)))
+    X[[u]] <- fmt(u, capture.output(print(Dat, nrows=nrows)))
     }
-  X$Summary <- fmt('Summary', capture.output(print(s)))
+  X$Summary <- fmt('Summary', capture.output(print(s, nrows=nrows)))
   if(html) maketabs(X, initblank=TRUE)
   else for(z in X) cat(z, sep='\n')
   if(byid) invisible(s) else invisible(Dat)
