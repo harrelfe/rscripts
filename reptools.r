@@ -154,7 +154,7 @@ dataChk <- function(d, checks, id=character(0),
     z  <- d[eval(x), c(id, vars.involved), with=FALSE]
     no <- nrow(z)
     if(byid && no > 0) {
-      Da <- copy(z)
+      Da <- z[, id, with=FALSE]
       Da[, Check := cx]
       Dat[[cx]] <- Da
       }
@@ -165,7 +165,7 @@ dataChk <- function(d, checks, id=character(0),
   }
   if(byid) {
     Dat <- rbindlist(Dat, fill=TRUE)
-    setcolorder(Dat, c(id, 'Check', setdiff(names(Dat), c(id, 'Check'))))
+    # setcolorder(Dat, c(id, 'Check', setdiff(names(Dat), c(id, 'Check'))))
     setkeyv(Dat, id)
     u <- paste('By', paste(id, collapse=', '))
     X[[u]] <- fmt(u, capture.output(print(Dat)))
