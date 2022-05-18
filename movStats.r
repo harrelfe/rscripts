@@ -7,6 +7,9 @@
 ## help getting the moving statistics off on an adequate start for
 ## the left tail.
 ## eps is the half-width of each interval
+## When melt=TRUE you can feed the result into ggplot like this:
+## ggplot(w, aes(x=age, y=crea, col=Type)) + geom_line() +
+##   facet_wrap(~ Statistic)
 ##
 ## Usage:
 ##  movStat(formula, stat, eps, xlim, xinc, data=...)
@@ -24,18 +27,23 @@
 ## qreg :set to TRUE to include quantile regression estimates w rspline
 ## k    :number of knots to use for ols and/or qreg rcspline
 ## tau  :quantile numbers to estimate with quantile regression
+## melt :set to TRUE to melt data table and derive Type and Statistic
 ## data: data.table or data.frame, default is calling frame
 
 movStats <- function(formula, stat=NULL, eps, xlim=NULL, xinc=NULL,
                      loess=FALSE, ols=FALSE, qreg=FALSE,
-                     k=5, tau=(1:3)/4, data) {
+                     k=5, tau=(1:3)/4, melt=FALSE, data) {
   require(data.table)
   if(ols || qreg) require(rms)
   if(! length(stat))
     stat <- function(y) {
       if(! length(y)) return(list(Mean=NA, Median=NA, Q1=NA, Q3=NA))
       qu <- quantile(y, (1:3)/4)
-      list(Mean=mean(y), Median=qu[2], Q1=qu[1], Q3=qu[3], N=length(y))
+      list('Moving Mean'   = mean(y),
+           'Moving Median' = qu[2],
+           'Moving Q1'     = qu[1],
+           'Moving Q3'=qu[3],
+           N=length(y))
     }
 
   .knots. <<- k   # make a global copy
@@ -118,6 +126,14 @@ movStats <- function(formula, stat=NULL, eps, xlim=NULL, xinc=NULL,
   else {
     R[, by := NULL]
     setnames(R, 'tx', v[2])
+  }
+  if(melt) {
+    # Exclude N if present or would mess up melt
+    if('N' %in% names(R)) R[, N := NULL]
+    R <- melt(R, id.vars=v[2], variable.name='Statistic',
+              value.name=v[1])
+    R[, Type      := sub(' .*', '', Statistic)]
+    R[, Statistic := sub('.* ', '', Statistic)]
     }
   R
   }
