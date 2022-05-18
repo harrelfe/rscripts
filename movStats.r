@@ -29,6 +29,8 @@
 movStats <- function(formula, stat=NULL, eps, xlim=NULL, xinc=NULL,
                      loess=FALSE, ols=FALSE, qreg=FALSE,
                      k=5, tau=(1:3)/4, data) {
+  require(data.table)
+  if(ols || qreg) require(rms)
   if(! length(stat))
     stat <- function(y) {
       if(! length(y)) return(list(Mean=NA, Median=NA, Q1=NA, Q3=NA))
