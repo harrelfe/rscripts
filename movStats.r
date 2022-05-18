@@ -32,7 +32,8 @@
 
 movStats <- function(formula, stat=NULL, eps, xlim=NULL, xinc=NULL,
                      loess=FALSE, ols=FALSE, qreg=FALSE,
-                     k=5, tau=(1:3)/4, melt=FALSE, data) {
+                     k=5, tau=(1:3)/4, melt=FALSE,
+                     data=environment(formula)) {
   require(data.table)
   if(ols || qreg) require(rms)
   if(! length(stat))
