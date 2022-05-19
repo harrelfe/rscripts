@@ -19,39 +19,36 @@
 ##          variable
 ## stat: function of one argument that returns a named list of
 ##       computed values.  Defaults to computing mean and quartiles + N
+##       except when y is binary in which case it computes moving proportions
 ## eps:  tolerance for window (half width of window)
 ## xlim: 2-vector of limits to evaluate (default is 10th to 10th)
 ## xinc:  increment in x to evaluate stats, default is xlim range/100
+## trans:transformation to apply to x
+## itrans:inverse transformation
 ## loess:set to TRUE to also compute loess estimates
 ## ols  :set to TRUE to include rcspline estimate of mean using ols
-## qreg :set to TRUE to include quantile regression estimates w rspline
+## qreg :set to TRUE to include quantile regression estimates w rcspline
+## lrm  :set to TRUE to include logistic regression estimates w rcspline
 ## k    :number of knots to use for ols and/or qreg rcspline
 ## tau  :quantile numbers to estimate with quantile regression
 ## melt :set to TRUE to melt data table and derive Type and Statistic
 ## data: data.table or data.frame, default is calling frame
 
 movStats <- function(formula, stat=NULL, eps, xlim=NULL, xinc=NULL,
-                     loess=FALSE, ols=FALSE, qreg=FALSE,
+                     trans=function(x) x, itrans=function(x) x,
+                     loess=FALSE, ols=FALSE, qreg=FALSE, lrm=FALSE,
                      k=5, tau=(1:3)/4, melt=FALSE,
                      data=environment(formula)) {
   require(data.table)
-  if(ols || qreg) require(rms)
-  if(! length(stat))
-    stat <- function(y) {
-      if(! length(y)) return(list(Mean=NA, Median=NA, Q1=NA, Q3=NA))
-      qu <- quantile(y, (1:3)/4)
-      list('Moving Mean'   = mean(y),
-           'Moving Median' = qu[2],
-           'Moving Q1'     = qu[1],
-           'Moving Q3'=qu[3],
-           N=length(y))
-    }
+  if(ols || qreg || lrm) require(rms)
 
   .knots. <<- k   # make a global copy
 
   v  <- all.vars(formula)
+  if(any(v %nin% names(data)))
+     stop('formula has a variable not in data')
   Y  <- data[[v[1]]]
-  X  <- data[[v[2]]]
+  X  <- trans(data[[v[2]]])
   bythere <- length(v) > 2
   By <- if(bythere) data[[v[3]]] else rep(1, length(X))
   i  <- is.na(X) | is.na(Y) | is.na(By)
@@ -61,6 +58,21 @@ movStats <- function(formula, stat=NULL, eps, xlim=NULL, xinc=NULL,
     Y  <- Y[i]
     By <- By[i]
   }
+
+  ybin <- all(Y %in% 0:1)
+
+  if(! length(stat))
+    stat <- if(ybin) function(y) list('Moving Proportion' = mean(y))
+            else
+              function(y) {
+                if(! length(y)) return(list(Mean=NA, Median=NA, Q1=NA, Q3=NA))
+                qu <- quantile(y, (1:3)/4)
+                list('Moving Mean'   = mean(y),
+                     'Moving Median' = qu[2],
+                     'Moving Q1'     = qu[1],
+                     'Moving Q3'=qu[3],
+                     N=length(y))
+              }
 
   R    <- NULL
   Xinc <- xinc
@@ -92,7 +104,7 @@ movStats <- function(formula, stat=NULL, eps, xlim=NULL, xinc=NULL,
 
     ## Non-equi join adds observations tx=NA
     m <- m[! is.na(tx), ]
-  
+
     w <- m[, stat(y), by=tx]
 
     ## Also compute loess estimates
@@ -100,7 +112,10 @@ movStats <- function(formula, stat=NULL, eps, xlim=NULL, xinc=NULL,
     if(loess) {
       np <- loess(y ~ x, data=s)
       pc <- predict(np, dat)
-      w[, `Loess Mean` := pc]
+      if(ybin)
+        w[, 'Loess Proportion' := pc]
+      else
+        w[, `Loess Mean` := pc]
     }
 
     if(ols) {
@@ -108,6 +123,12 @@ movStats <- function(formula, stat=NULL, eps, xlim=NULL, xinc=NULL,
       pc <- predict(f, dat)
       w[, `OLS Mean` := pc]
     }
+
+    if(lrm) {
+      f <- lrm(y ~ rcs(x, .knots.), data=s)
+      pc <- predict(f, dat, type='fitted')
+      w[, 'LR Proportion' := pc]
+      }
 
     if(qreg)
       for(ta in tau) {
@@ -123,6 +144,7 @@ movStats <- function(formula, stat=NULL, eps, xlim=NULL, xinc=NULL,
     R <- rbind(R, w)
   }
 
+  R[, tx := itrans(tx)]
   if(bythere) setnames(R, c('tx', 'by'), v[2:3])
   else {
     R[, by := NULL]
