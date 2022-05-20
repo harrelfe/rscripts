@@ -28,6 +28,8 @@
 ##' @param ols   set to TRUE to include rcspline estimate of mean using ols
 ##' @param qreg  set to TRUE to include quantile regression estimates w rcspline
 ##' @param lrm   set to TRUE to include logistic regression estimates w rcspline
+##' @param orm   set to TRUE to include ordinal logistic regression estimates w rcspline (mean + quantiles in `tau`)
+##' @param family link function for ordinal regression (see `rms::orm`)
 ##' @param k     number of knots to use for ols and/or qreg rcspline
 ##' @param tau   quantile numbers to estimate with quantile regression
 ##' @param melt  set to TRUE to melt data table and derive Type and Statistic
@@ -35,7 +37,9 @@
 ##' 
 movStats <- function(formula, stat=NULL, eps, xlim=NULL, xinc=NULL,
                      trans=function(x) x, itrans=function(x) x,
-                     loess=FALSE, ols=FALSE, qreg=FALSE, lrm=FALSE,
+                     loess=FALSE,
+                     ols=FALSE, qreg=FALSE, lrm=FALSE,
+                     orm=FALSE, family='logistic',
                      k=5, tau=(1:3)/4, melt=FALSE,
                      data=environment(formula)) {
   require(data.table)
@@ -59,6 +63,13 @@ movStats <- function(formula, stat=NULL, eps, xlim=NULL, xinc=NULL,
   }
 
   ybin <- all(Y %in% 0:1)
+
+  qformat <- function(x)
+    fcase(x == 0.05, 'P5', x == 0.1, 'P10',
+          x == 0.25, 'Q1', x == 0.5, 'Median', x == 0.75, 'Q3',
+          x == 0.9, 'P90', x == 0.95, 'P95',
+          default=as.character(x))
+
 
   if(! length(stat))
     stat <- if(ybin) function(y) list('Moving Proportion' = mean(y))
@@ -127,15 +138,29 @@ movStats <- function(formula, stat=NULL, eps, xlim=NULL, xinc=NULL,
       f <- lrm(y ~ rcs(x, .knots.), data=s)
       pc <- predict(f, dat, type='fitted')
       w[, 'LR Proportion' := pc]
+    }
+
+    if(orm) {
+      f <- orm(y ~ rcs(x, .knots.), data=s, family=family)
+      pc <- predict(f, dat, type='mean')
+      w[, 'ORM Mean' := pc]
+      if(length(tau)) {
+        pc <- predict(f, dat)
+        qu <- Quantile(f)
+        for(ta in tau) {
+          w[, ormqest := qu(ta, pc)]
+          cta <- qformat(ta)
+          setnames(w, 'ormqest', paste('ORM', cta))
+        }
       }
+    }
 
     if(qreg)
       for(ta in tau) {
         f  <- Rq(y ~ rcs(x, .knots.), tau=ta, data=s)
         pc <- predict(f, dat)
         w[, qrest := pc]
-        cta <- fcase(ta == 0.25, 'Q1', ta == 0.5, 'Median',
-                     ta == 0.75, 'Q3', default=as.character(ta))
+        cta <- qformat(ta)
         setnames(w, 'qrest', paste('QR', cta))
         }
 
