@@ -129,7 +129,7 @@ movStats <- function(formula, stat=NULL, eps, xlim=NULL, xinc=NULL,
                  w[, (vv) := smfun(tx)]
                },
                both = {
-                 newname <- paste0('Smoothed/', vv)
+                 newname <- sub('Moving', 'Moving-smoothed', vv)
                  w[, (newname) := smfun(tx)]
                }
                )
