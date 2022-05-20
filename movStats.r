@@ -18,11 +18,14 @@
 ##' @author Frank Harrell
 ##' @md
 ##' @param formula a formula with the analysis variable on the left and the x-variable on the right, following by an optional stratification variable
-##' @param stat function of one argument that returns a named list of computed values.  Defaults to computing mean and quartiles + N except when y is binary in which case it computes moving proportions
+##' @param stat function of one argument that returns a named list of computed values.  Defaults to computing mean and quartiles + N except when y is binary in which case it computes moving proportions.  If y has two columns the default statistics are Kaplan-Meier estimates of cumulative incidence at a vector of `times`.
 ##' @param eps tolerance for window (half width of window)
 ##' @param xlim 2-vector of limits to evaluate (default is 10th to 10th)
 ##' @param xinc  increment in x to evaluate stats, default is xlim range/100
+##' @param times vector of times for evaluating one minus Kaplan-Meier estimates
+##' @param tunits time units when `times` is given
 ##' @param msmooth set to `'smoothed'` or `'both'` to compute `lowess`-smooth moving estimates. `msmooth='both'` will display both.  `'raw'` will display only the moving statistics.  `msmooth='smoothed'` (the default) will display only he smoothed moving estimates.
+##' @param span the `lowess` `span` used to smooth the moving statistics
 ##' @param trans transformation to apply to x
 ##' @param itrans inverse transformation
 ##' @param loess set to TRUE to also compute loess estimates
@@ -37,7 +40,8 @@
 ##' @param data: data.table or data.frame, default is calling frame
 ##' 
 movStats <- function(formula, stat=NULL, eps, xlim=NULL, xinc=NULL,
-                     msmooth=c('smoothed', 'raw', 'both'),
+                     times=NULL, tunits='year',
+                     msmooth=c('smoothed', 'raw', 'both'), span=1/4,
                      trans=function(x) x, itrans=function(x) x,
                      loess=FALSE,
                      ols=FALSE, qreg=FALSE, lrm=FALSE,
@@ -50,22 +54,35 @@ movStats <- function(formula, stat=NULL, eps, xlim=NULL, xinc=NULL,
 
   .knots. <<- k   # make a global copy
 
-  v  <- all.vars(formula)
-  if(any(v %nin% names(data)))
-     stop('formula has a variable not in data')
-  Y  <- data[[v[1]]]
-  X  <- trans(data[[v[2]]])
+  mf   <- model.frame(formula, data=data)
+  v    <- names(mf)
+  Y    <- mf[[1]]
+  sec  <- NCOL(Y) == 2
+  if(sec && ! length(times))
+    stop('when dependent variable has two columns you must specified times')
+  if(sec && (loess || ols || qreg || lrm || orm))
+    stop('loess, ols, qreg, lrm, orm do not apply when dependent variable has two columns')
+  
+  if(sec) {
+    require(survival)
+    Y2 <- Y[, 2]
+    Y  <- Y[, 1]
+    } else Y2 <- rep(1, nrow(mf))
+
+  X  <- trans(mf[[2]])
   bythere <- length(v) > 2
-  By <- if(bythere) data[[v[3]]] else rep(1, length(X))
-  i  <- is.na(X) | is.na(Y) | is.na(By)
+  By <- if(bythere) mv[[3]] else rep(1, length(X))
+  i  <- is.na(X) | is.na(Y) | is.na(Y2) | is.na(By)
   if(any(i)) {
     i  <- ! i
     X  <- X[i]
     Y  <- Y[i]
+    Y2 <- Y2[i]
+    Y  <- Y[i]
     By <- By[i]
   }
 
-  ybin <- all(Y %in% 0:1)
+  ybin <- ! sec && all(Y %in% 0:1)
 
   qformat <- function(x)
     fcase(x == 0.05, 'P5', x == 0.1, 'P10',
@@ -76,28 +93,36 @@ movStats <- function(formula, stat=NULL, eps, xlim=NULL, xinc=NULL,
 
   if(! length(stat))
     stat <- if(ybin) function(y) list('Moving Proportion' = mean(y))
-            else
+            else if(sec)
+              function(y, y2) {
+                z <- 1. - km.quick(Surv(y, y2), times)   # in Hmisc
+                names(z) <- paste0(times, '-', tunits)
+                as.list(z)
+              }
+             else 
               function(y) {
                 if(! length(y)) return(list(Mean=NA, Median=NA, Q1=NA, Q3=NA))
                 qu <- quantile(y, (1:3)/4)
                 list('Moving Mean'   = mean(y),
                      'Moving Median' = qu[2],
                      'Moving Q1'     = qu[1],
-                     'Moving Q3'=qu[3],
+                     'Moving Q3'     = qu[3],
                      N=length(y))
               }
 
   R    <- NULL
   Xinc <- xinc
+  
   for(by in sort(unique(By))) {
     j <- By == by
     if(sum(j) < 10) {
       warning(paste('Stratum', by, 'has < 10 observations and is ignored'))
       next
     }
-    x <- X[j]
-    y <- Y[j]
-    n <- length(x)
+    x  <- X[j]
+    y  <- Y[j]
+    y2 <- Y2[j]
+    n  <- length(x)
 
     xl <- xlim
     if(! length(xl)) {
@@ -109,7 +134,7 @@ movStats <- function(formula, stat=NULL, eps, xlim=NULL, xinc=NULL,
     if(! length(xinc)) xinc <- diff(xl) / 100.
     xseq <- seq(xl[1], xl[2], by=xinc)
 
-    s <- data.table(x, y)
+    s <- data.table(x, y, y2)
     a <- data.table(tx=xseq, key='tx')       # target xs for estimation
     a[, .q(lo, hi) := .(tx - eps, tx + eps)] # define all windows
     m <- a[s, on=.(lo <= x, hi >= x)]        # non-equi join
@@ -117,12 +142,13 @@ movStats <- function(formula, stat=NULL, eps, xlim=NULL, xinc=NULL,
 
     ## Non-equi join adds observations tx=NA
     m <- m[! is.na(tx), ]
+    w <- if(sec) m[, stat(y, y2), by=tx]
+         else    m[, stat(y),     by=tx]
 
-    w <- m[, stat(y), by=tx]
     if(msmooth != 'raw') {
       computed <- setdiff(names(w), c('tx', 'N'))
       for(vv in computed) {
-        smoothed <- lowess(w[, tx], w[[vv]])
+        smoothed <- lowess(w[, tx], w[[vv]], f=span)
         smfun <- function(x) approx(smoothed, xout=x)$y
         switch(msmooth,
                smoothed = {
@@ -194,12 +220,23 @@ movStats <- function(formula, stat=NULL, eps, xlim=NULL, xinc=NULL,
     setnames(R, 'tx', v[2])
   }
   if(melt) {
+    if(sec) v[1] <- 'incidence'
     # Exclude N if present or would mess up melt
     if('N' %in% names(R)) R[, N := NULL]
     R <- melt(R, id.vars=v[2], variable.name='Statistic',
               value.name=v[1])
-    R[, Type      := sub(' .*', '', Statistic)]
-    R[, Statistic := sub('.* ', '', Statistic)]
+    if(sec) {
+      addlab <- function(x) {
+        label(x) <- 'Cumulative Incidence'
+        x
+      }
+      R[, incidence := addlab(incidence)]
+    }
+    
+    R[, Type      := sub (' .*', '', Statistic)]
+    R[, Statistic := sub ('.* ', '', Statistic)]
+    R[, Type      := gsub('~', ' ',  Type)]
+    R[, Statistic := gsub('~', ' ',  Statistic)]
     }
   R
   }
