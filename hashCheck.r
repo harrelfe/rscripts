@@ -1,20 +1,23 @@
-## Given an RDS file name and a list of objects, does the following
-## * makes a vector of hashes, one for each object
-##   function objects are run through deparse so environment of function
-##   will not be considered
-## * see if the file exists; if not, return a list with result=NULL,
-##   hash = new vector of hashes, changed='All'
-## * if the file exists, read the file and its hash attribute as prevhash
-## * if prevhash is not identical to hash:
-##     if .print.=TRUE (default), print to console a summary of what's changed
-##     return a list with result=NULL, hash = new hash vector, changed
-## * if prevhash = hash, return a list with result=file object, hash=new hash,
-##   changed=''
-##
-## Set options(debughash=TRUE) to trace results in /tmp/debughash.txt
-## Pass .names. as vector of names of original arguments if not calling
-## hashCheck directly
-
+##' Check for Changes in List of Objects
+##'
+##' Given an RDS file name and a list of objects, does the following:
+##' * makes a vector of hashes, one for each object.  Function objects are run through `deparse` so that the environment of the function will not be considered.
+##' * see if the file exists; if not, return a list with result=NULL, `hash` = new vector of hashes, `changed='All'`
+##' * if the file exists, read the file and its hash attribute as `prevhash`
+##' * if `prevhash` is not identical to hash:
+##'     if `.print.=TRUE` (default), print to console a summary of what's changed
+##'     return a list with result=NULL, `hash` = new hash vector, changed
+##' * if `prevhash = hash`, return a list with result=file object, `hash`=new hash,  changed=''
+##'
+##' Set `options(debughash=TRUE)` to trace results in `/tmp/debughash.txt`
+##' @title hashCheck
+##' @param ... a list of objects including data frames, vectors, functions, and all other types of R objects that represent dependencies of a certain calculation
+##' @param file name of file in which results are stored
+##' @param .print. set to `FALSE` to suppress printing information messages about what has changed
+##' @param .names. vector of names of original arguments if not calling `hashCheck` directly
+##' @return 
+##' @author Frank Harrell
+##' @md
 hashCheck <- function(..., file, .print.=TRUE, .names.=NULL) {
   .d.      <- list(...)
   .nam.    <- if(length(.names.)) .names. else as.character(sys.call())[-1]
@@ -77,39 +80,38 @@ hashCheck <- function(..., file, .print.=TRUE, .names.=NULL) {
   list(result=NULL, hash=.hash., changed=.s.)
 }
 
-## Uses hashCheck to run a function and save the results if specified
-## inputs have changed, otherwise to retrieve results from a file.
-## The file name is taken as the chunk name appended with .rds unless
-## it is given as file=.  fun has no arguments.
-## Set .inclfun.=FALSE to not include fun in the hash check (for legacy uses)
-##
-## Typical workflow:
-##
-## Read the source code for the hashCheck and runifChanged functions from
-## https://github.com/harrelfe/rscripts/blob/master/hashCheck.r
-## This makes it easy to see if any objects changed that require re-running
-## a simulation, and reports on any changes
-## getRs('hashCheck.r', put='source')   # getRs is in Hmisc
-##
-## f <- function(       ) {
-## . . . do the real work with multiple function calls ...
-## }
-## seed <- 3
-## set.seed(seed)
-## w <- runifChanged(f, seed, obj1, obj2, ....)
-##
-## seed, obj1, obj2, ... are all the objects that f() uses that if changed
-## would give a different result of f().  This can include functions such as
-## those in a package, and f will be re-run if any of the function's code
-## changes.  f is also re-run if the code inside f changes.
-##
-## The result of f is stored with saveRDS by default in file named xxx.rds
-## where xxx is the label for the current chunk.  To control this use instead
-## file=xxx.rds add the file argument to runifChanged(...).  If nothing has
-## changed and the file already exists, the file is read to create the result
-## object (e.g., w above).  If f() needs to be run, the hashed input objects
-## are saved as a hash​ attribute to the result before it's written to the file.
 
+##' Re-run Code if an Input Changed
+##'
+##' Uses `hashCheck` to run a function and save the results if specified inputs have changed, otherwise to retrieve results from a file.  This makes it easy to see if any objects changed that require re-running a long simulation, and reports on any changes.  The file name is taken as the chunk name appended with `.rds` unless it is given as `file=`.  `fun` has no arguments.  Set `.inclfun.=FALSE` to not include `fun` in the hash check (for legacy uses).  The typical workflow is as follows.
+##' ```
+##' f <- function(       ) {
+##' # . . . do the real work with multiple function calls ...
+##' }
+##' seed <- 3
+##' set.seed(seed)
+##' w <- runifChanged(f, seed, obj1, obj2, ....)
+##' ```
+##' `seed, obj1, obj2`, ... are all the objects that `f()` uses that if changed
+##' would give a different result of `f()`.  This can include functions such as
+##' those in a package, and `f` will be re-run if any of the function's code
+##' changes.  `f` is also re-run if the code inside `f` changes.
+##' The result of `f` is stored with `saveRDS` by default in file named `xxx.rds`
+##' where `xxx` is the label for the current chunk.  To control this use instead
+##' `file=xxx.rds` add the file argument to `runifChanged(...)`.  If nothing has
+##' changed and the file already exists, the file is read to create the result
+##' object (e.g., `w` above).  If `f()` needs to be run, the hashed input objects
+##' are stored as attributes for the result then the enhanced result is written to the file.
+##' 
+##' @title runifChanged
+##' @param fun the (usually slow) function to run
+##' @param ... input objects the result of running the function is dependent on
+##' @param file file in which to store the result of `fun` augmented by attributes containing hash digests
+##' @param .print. set to `TRUE` to list which objects changed that neessitated re-running `f`
+##' @param .inclfun. set to `FALSE` to not include `fun` in the hash digest, i.e., to not require re-running `fun` if only `fun` itself has changed 
+##' @return 
+##' @author Frank Harrell
+##' @md
 runifChanged <- function(fun, ..., file=NULL, .print.=TRUE, .inclfun.=TRUE) {
   if(! length(file)) {
     file <- knitr::opts_current$get('label')

@@ -1,39 +1,38 @@
-## Function to compute moving averages and other statistics as a function
-## of a continuous variable, possibly stratified by another variable
-## Estimates are made by creating overlapping moving windows and
-## computing the statistics defined in the stat function for each window.
-## By default estimates are made at the 10th smallest to the 10th largest
-## observed values of the x variable to avoid extrapolation and to
-## help getting the moving statistics off on an adequate start for
-## the left tail.
-## eps is the half-width of each interval
-## When melt=TRUE you can feed the result into ggplot like this:
-## ggplot(w, aes(x=age, y=crea, col=Type)) + geom_line() +
-##   facet_wrap(~ Statistic)
-##
-## Usage:
-##  movStat(formula, stat, eps, xlim, xinc, data=...)
-##
-## formula: a formula with the analysis variable on the left and the
-##          x-variable on the right, following by an optional stratification
-##          variable
-## stat: function of one argument that returns a named list of
-##       computed values.  Defaults to computing mean and quartiles + N
-##       except when y is binary in which case it computes moving proportions
-## eps:  tolerance for window (half width of window)
-## xlim: 2-vector of limits to evaluate (default is 10th to 10th)
-## xinc:  increment in x to evaluate stats, default is xlim range/100
-## trans:transformation to apply to x
-## itrans:inverse transformation
-## loess:set to TRUE to also compute loess estimates
-## ols  :set to TRUE to include rcspline estimate of mean using ols
-## qreg :set to TRUE to include quantile regression estimates w rcspline
-## lrm  :set to TRUE to include logistic regression estimates w rcspline
-## k    :number of knots to use for ols and/or qreg rcspline
-## tau  :quantile numbers to estimate with quantile regression
-## melt :set to TRUE to melt data table and derive Type and Statistic
-## data: data.table or data.frame, default is calling frame
-
+##' Moving Estimates Using Overlapping Fixed-width Windows
+##' 
+##' Function to compute moving averages and other statistics as a function
+##' of a continuous variable, possibly stratified by another variable
+##' Estimates are made by creating overlapping moving windows and
+##' computing the statistics defined in the stat function for each window.
+##' By default estimates are made at the 10th smallest to the 10th largest
+##' observed values of the x variable to avoid extrapolation and to
+##' help getting the moving statistics off on an adequate start for
+##' the left tail.
+##' When `melt=TRUE` you can feed the result into `ggplot` like this:
+##' `ggplot(w, aes(x=age, y=crea, col=Type)) + geom_line() +`
+##'   `facet_wrap(~ Statistic)`
+##'
+##' See [here](https://www.fharrell.com/post/rflow#descriptively-relating-one-variable-to-another) for examples
+##'
+##' @title movStats
+##' @author Frank Harrell
+##' @md
+##' @param formula a formula with the analysis variable on the left and the x-variable on the right, following by an optional stratification variable
+##' @param stat function of one argument that returns a named list of computed values.  Defaults to computing mean and quartiles + N except when y is binary in which case it computes moving proportions
+##' @param eps tolerance for window (half width of window)
+##' @param xlim 2-vector of limits to evaluate (default is 10th to 10th)
+##' @param xinc  increment in x to evaluate stats, default is xlim range/100
+##' @param trans transformation to apply to x
+##' @param itrans inverse transformation
+##' @param loess set to TRUE to also compute loess estimates
+##' @param ols   set to TRUE to include rcspline estimate of mean using ols
+##' @param qreg  set to TRUE to include quantile regression estimates w rcspline
+##' @param lrm   set to TRUE to include logistic regression estimates w rcspline
+##' @param k     number of knots to use for ols and/or qreg rcspline
+##' @param tau   quantile numbers to estimate with quantile regression
+##' @param melt  set to TRUE to melt data table and derive Type and Statistic
+##' @param data: data.table or data.frame, default is calling frame
+##' 
 movStats <- function(formula, stat=NULL, eps, xlim=NULL, xinc=NULL,
                      trans=function(x) x, itrans=function(x) x,
                      loess=FALSE, ols=FALSE, qreg=FALSE, lrm=FALSE,
