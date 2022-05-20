@@ -7,7 +7,7 @@
 ##' By default estimates are made at the 10th smallest to the 10th largest
 ##' observed values of the x variable to avoid extrapolation and to
 ##' help getting the moving statistics off on an adequate start for
-##' the left tail.
+##' the left tail.  Also by default the moving estimates are smoothed using `lowess`.
 ##' When `melt=TRUE` you can feed the result into `ggplot` like this:
 ##' `ggplot(w, aes(x=age, y=crea, col=Type)) + geom_line() +`
 ##'   `facet_wrap(~ Statistic)`
@@ -22,6 +22,7 @@
 ##' @param eps tolerance for window (half width of window)
 ##' @param xlim 2-vector of limits to evaluate (default is 10th to 10th)
 ##' @param xinc  increment in x to evaluate stats, default is xlim range/100
+##' @param msmooth set to `'smoothed'` or `'both'` to compute `lowess`-smooth moving estimates. `msmooth='both'` will display both.  `'raw'` will display only the moving statistics.  `msmooth='smoothed'` (the default) will display only he smoothed moving estimates.
 ##' @param trans transformation to apply to x
 ##' @param itrans inverse transformation
 ##' @param loess set to TRUE to also compute loess estimates
@@ -36,6 +37,7 @@
 ##' @param data: data.table or data.frame, default is calling frame
 ##' 
 movStats <- function(formula, stat=NULL, eps, xlim=NULL, xinc=NULL,
+                     msmooth=c('smoothed', 'raw', 'both'),
                      trans=function(x) x, itrans=function(x) x,
                      loess=FALSE,
                      ols=FALSE, qreg=FALSE, lrm=FALSE,
@@ -44,6 +46,7 @@ movStats <- function(formula, stat=NULL, eps, xlim=NULL, xinc=NULL,
                      data=environment(formula)) {
   require(data.table)
   if(ols || qreg || lrm) require(rms)
+  msmooth <- match.arg(msmooth)
 
   .knots. <<- k   # make a global copy
 
@@ -116,6 +119,22 @@ movStats <- function(formula, stat=NULL, eps, xlim=NULL, xinc=NULL,
     m <- m[! is.na(tx), ]
 
     w <- m[, stat(y), by=tx]
+    if(msmooth != 'raw') {
+      computed <- setdiff(names(w), c('tx', 'N'))
+      for(vv in computed) {
+        smoothed <- lowess(w[, tx], w[[vv]])
+        smfun <- function(x) approx(smoothed, xout=x)$y
+        switch(msmooth,
+               smoothed = {
+                 w[, (vv) := smfun(tx)]
+               },
+               both = {
+                 newname <- paste0('Smoothed/', vv)
+                 w[, (newname) := smfun(tx)]
+               }
+               )
+        }
+    }
 
     ## Also compute loess estimates
     dat <- data.frame(x=xseq)
