@@ -25,6 +25,8 @@
 ##' @param times vector of times for evaluating one minus Kaplan-Meier estimates
 ##' @param tunits time units when `times` is given
 ##' @param msmooth set to `'smoothed'` or `'both'` to compute `lowess`-smooth moving estimates. `msmooth='both'` will display both.  `'raw'` will display only the moving statistics.  `msmooth='smoothed'` (the default) will display only he smoothed moving estimates.
+##' @param tsmooth defaults to the super-smoother `'supsmu'` for after-moving smoothing.  Use `tsmooth='lowess'` to instead use `lowess`.
+##' @param bass the `supsmu` `bass` parameter used to smooth the moving statistics if `tsmooth='supsmu'`
 ##' @param span the `lowess` `span` used to smooth the moving statistics
 ##' @param trans transformation to apply to x
 ##' @param itrans inverse transformation
@@ -41,7 +43,9 @@
 ##' 
 movStats <- function(formula, stat=NULL, eps, xlim=NULL, xinc=NULL,
                      times=NULL, tunits='year',
-                     msmooth=c('smoothed', 'raw', 'both'), span=1/4,
+                     msmooth=c('smoothed', 'raw', 'both'),
+                     tsmooth=c('supsmu', 'lowess'),
+                     bass=0, span=1/4,
                      trans=function(x) x, itrans=function(x) x,
                      loess=FALSE,
                      ols=FALSE, qreg=FALSE, lrm=FALSE,
@@ -51,6 +55,7 @@ movStats <- function(formula, stat=NULL, eps, xlim=NULL, xinc=NULL,
   require(data.table)
   if(ols || qreg || lrm) require(rms)
   msmooth <- match.arg(msmooth)
+  tsmooth <- match.arg(tsmooth)
 
   .knots. <<- k   # make a global copy
 
@@ -71,7 +76,7 @@ movStats <- function(formula, stat=NULL, eps, xlim=NULL, xinc=NULL,
 
   X  <- trans(mf[[2]])
   bythere <- length(v) > 2
-  By <- if(bythere) mv[[3]] else rep(1, length(X))
+  By <- if(bythere) mf[[3]] else rep(1, length(X))
   i  <- is.na(X) | is.na(Y) | is.na(Y2) | is.na(By)
   if(any(i)) {
     i  <- ! i
@@ -96,7 +101,7 @@ movStats <- function(formula, stat=NULL, eps, xlim=NULL, xinc=NULL,
             else if(sec)
               function(y, y2) {
                 z <- 1. - km.quick(Surv(y, y2), times)   # in Hmisc
-                names(z) <- paste0(times, '-', tunits)
+                names(z) <- paste0('Moving ', times, '-', tunits)
                 as.list(z)
               }
              else 
@@ -148,7 +153,9 @@ movStats <- function(formula, stat=NULL, eps, xlim=NULL, xinc=NULL,
     if(msmooth != 'raw') {
       computed <- setdiff(names(w), c('tx', 'N'))
       for(vv in computed) {
-        smoothed <- lowess(w[, tx], w[[vv]], f=span)
+        smoothed <- switch(tsmooth,
+                           lowess = lowess(w[, tx], w[[vv]], f=span),
+                           supsmu = supsmu(w[, tx], w[[vv]], bass=bass))
         smfun <- function(x) approx(smoothed, xout=x)$y
         switch(msmooth,
                smoothed = {
@@ -223,7 +230,7 @@ movStats <- function(formula, stat=NULL, eps, xlim=NULL, xinc=NULL,
     if(sec) v[1] <- 'incidence'
     # Exclude N if present or would mess up melt
     if('N' %in% names(R)) R[, N := NULL]
-    R <- melt(R, id.vars=v[2], variable.name='Statistic',
+    R <- melt(R, id.vars=v[-1], variable.name='Statistic',
               value.name=v[1])
     if(sec) {
       addlab <- function(x) {
