@@ -28,6 +28,8 @@
 ##' @param tsmooth defaults to the super-smoother `'supsmu'` for after-moving smoothing.  Use `tsmooth='lowess'` to instead use `lowess`.
 ##' @param bass the `supsmu` `bass` parameter used to smooth the moving statistics if `tsmooth='supsmu'`
 ##' @param span the `lowess` `span` used to smooth the moving statistics
+##' @param penalty passed to `hare`, default is to use BIC.  Specify 2 to use AIC.
+##' @param maxdim passed to `hare`, default is 6
 ##' @param trans transformation to apply to x
 ##' @param itrans inverse transformation
 ##' @param loess set to TRUE to also compute loess estimates
@@ -35,6 +37,7 @@
 ##' @param qreg  set to TRUE to include quantile regression estimates w rcspline
 ##' @param lrm   set to TRUE to include logistic regression estimates w rcspline
 ##' @param orm   set to TRUE to include ordinal logistic regression estimates w rcspline (mean + quantiles in `tau`)
+##' @param hare  set to TRUE to include hazard regression estimtes of incidence at `times`, using the `polspline` package
 ##' @param family link function for ordinal regression (see `rms::orm`)
 ##' @param k     number of knots to use for ols and/or qreg rcspline
 ##' @param tau   quantile numbers to estimate with quantile regression
@@ -45,11 +48,11 @@ movStats <- function(formula, stat=NULL, eps, xlim=NULL, xinc=NULL,
                      times=NULL, tunits='year',
                      msmooth=c('smoothed', 'raw', 'both'),
                      tsmooth=c('supsmu', 'lowess'),
-                     bass=0, span=1/4,
+                     bass=0, span=1/4, maxdim=6, penalty=NULL,
                      trans=function(x) x, itrans=function(x) x,
                      loess=FALSE,
                      ols=FALSE, qreg=FALSE, lrm=FALSE,
-                     orm=FALSE, family='logistic',
+                     orm=FALSE, hare=FALSE, family='logistic',
                      k=5, tau=(1:3)/4, melt=FALSE,
                      data=environment(formula)) {
   require(data.table)
@@ -64,12 +67,13 @@ movStats <- function(formula, stat=NULL, eps, xlim=NULL, xinc=NULL,
   Y    <- mf[[1]]
   sec  <- NCOL(Y) == 2
   if(sec && ! length(times))
-    stop('when dependent variable has two columns you must specified times')
+    stop('when dependent variable has two columns you must specify times')
   if(sec && (loess || ols || qreg || lrm || orm))
     stop('loess, ols, qreg, lrm, orm do not apply when dependent variable has two columns')
   
   if(sec) {
     require(survival)
+    if(hare) require(polspline)
     Y2 <- Y[, 2]
     Y  <- Y[, 1]
     } else Y2 <- rep(1, nrow(mf))
@@ -214,7 +218,19 @@ movStats <- function(formula, stat=NULL, eps, xlim=NULL, xinc=NULL,
         w[, qrest := pc]
         cta <- qformat(ta)
         setnames(w, 'qrest', paste('QR', cta))
-        }
+      }
+
+    if(hare) {
+      f <- if(length(penalty))
+             hare(y, y2, x, maxdim=maxdim, penalty=penalty)
+           else
+             hare(y, y2, x, maxdim=maxdim)
+      for(ti in times) {
+        inc <- phare(ti, xseq, f)
+        newname <- paste0('HARE ', ti, '-', tunits)
+        w[, (newname) := inc]
+      }
+    }
 
     w[, by := by]
     R <- rbind(R, w)
