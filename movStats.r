@@ -44,7 +44,7 @@
 ##' @param tau   quantile numbers to estimate with quantile regression
 ##' @param melt  set to TRUE to melt data table and derive Type and Statistic
 ##' @param data: data.table or data.frame, default is calling frame
-##' @return a data table, with attribute `infon` which is a data frame with rows corresponding to strata and columns `Nmean`, `Nmin`, `Nmax` if `stat` computed `N`.  These summarize the number of observations used in the windows.  If `varyeps=TRUE` there is an additional column `eps` with the computed per-stratum `eps`.  An additional attribute `info` is a ready-to-use character string version of `infon`.  For `ggplot2` use for example `labs(caption=attr(result, 'info')) + theme(plot.caption=element_text(family='mono', size=7))`.
+##' @return a data table, with attribute `infon` which is a data frame with rows corresponding to strata and columns `N`, `Wmean`, `Wmin`, `Wmax` if `stat` computed `N`.  These summarize the number of observations used in the windows.  If `varyeps=TRUE` there is an additional column `eps` with the computed per-stratum `eps`.  When `space='n'` and `xinc` is not given, the computed `xinc` also appears as a column.  An additional attribute `info` is a ready-to-use character string version of `infon`.  For `ggplot2` use for example `labs(caption=attr(result, 'info')) + theme(plot.caption=element_text(family='mono', size=7))`.
 ##' 
 movStats <- function(formula, stat=NULL, space=c('n', 'x'),
                      eps =if(space=='n') 75, varyeps=FALSE,
@@ -137,8 +137,12 @@ movStats <- function(formula, stat=NULL, space=c('n', 'x'),
   Xinc <- xinc
 
   uby  <- if(is.factor(By)) levels(By) else sort(unique(By))
-  info <- matrix(NA, nrow=length(uby), ncol=4,
-                 dimnames=list(uby, c('Nmean', 'Nmin', 'Nmax', 'eps')))
+  needxinc <- space == 'n' && ! length(Xinc)
+  info <- matrix(NA,
+                 nrow=length(uby),
+                 ncol=5 + needxinc,
+                 dimnames=list(uby, c('N', 'Wmean', 'Wmin', 'Wmax',
+                                      'eps', if(needxinc) 'xinc')))
   
   for(by in uby) {
     j <- By == by
@@ -170,7 +174,10 @@ movStats <- function(formula, stat=NULL, space=c('n', 'x'),
              y    <- y [i]
              y2   <- y2[i]
              xinc <- Xinc
-             if(! length(xinc)) xinc <- max(floor(n / 200.), 1)
+             if(! length(xinc)) {
+               xinc <- max(floor(n / 200.), 1)
+               info[by, 'xinc'] <- xinc
+               }
              xseq <- seq(10, n - 10 + 1, by=xinc)
              xv   <- 1 : n
              } )
@@ -196,9 +203,10 @@ movStats <- function(formula, stat=NULL, space=c('n', 'x'),
     ## Non-equi join adds observations tx=NA
     m <- m[! is.na(tx), ]
     w <- m[, statx(y, y2, x), by=tx]
+    info[by, 'N'] <- n
     if('N' %in% names(w)) {
       N <- w[, N]
-      info[by, 1:3] <- c(round(mean(N), 1), min(N), max(N))
+      info[by, 2:4] <- c(round(mean(N), 1), min(N), max(N))
       }
 
     if(space == 'n') {
@@ -317,12 +325,23 @@ movStats <- function(formula, stat=NULL, space=c('n', 'x'),
     R[, Type      := gsub('~', ' ',  Type)]
     R[, Statistic := gsub('~', ' ',  Statistic)]
   }
-
-  if(all(is.na(info[, 'eps']))) info <- info[, -4]
+  
+  if('eps' %in% colnames(info) && all(is.na(info[, 'eps'])))
+    info <- info[, setdiff(colnames(info), 'eps'), drop=FALSE]
   if(! bythere) row.names(info) <- NULL
-  infoc <- paste(capture.output(print(info)), collapse='\n')
-  attr(R, 'infon') <- info
-  attr(R, 'info')  <- infoc
+  infon <- info
+  i <- data.frame(matrix('', nrow=nrow(info), ncol=ncol(info)))
+  for(j in 1 : ncol(info)) i[, j] <- format(info[, j])
+  cnames <- colnames(info)
+  majornames <- ifelse(grepl('^W', cnames), 'Window', '')
+  cnames <- sub('^Wm', 'M', cnames)
+  i <- rbind(cnames, i)
+  colnames(i) <- majornames
+  if(bythere) rownames(i) <- c('', rownames(infon))
+
+  info <- paste(capture.output(print(i, row.names=bythere)), collapse='\n')
+  attr(R, 'infon') <- infon
+  attr(R, 'info')  <- info
   
   R
   }
