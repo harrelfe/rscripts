@@ -21,7 +21,7 @@
 ##' @param stat function of one argument that returns a named list of computed values.  Defaults to computing mean and quartiles + N except when y is binary in which case it computes moving proportions.  If y has two columns the default statistics are Kaplan-Meier estimates of cumulative incidence at a vector of `times`.
 ##' @param eps tolerance for window (half width of window).  For `space='x'` is in data units, otherwise is the sample size for half the window.
 ##' @param varyeps applies to `space='n'` and causes a smaller `eps` to be used in strata with fewer than `` observations so as to arrive at three x points
-##' @param xinc  increment in x to evaluate stats, default is xlim range/100 for `space='x'`.  For `space='n'` `xinc` defaults to 5, meaning 5 observations.
+##' @param xinc  increment in x to evaluate stats, default is xlim range/100 for `space='x'`.  For `space='n'` `xinc` defaults to m observations, where m = max(n/200, 1).
 ##' @param xlim 2-vector of limits to evaluate if `space='x'` (default is 10th to 10th)
 ##' @param times vector of times for evaluating one minus Kaplan-Meier estimates
 ##' @param tunits time units when `times` is given
@@ -47,7 +47,7 @@
 ##' 
 movStats <- function(formula, stat=NULL, space=c('n', 'x'),
                      eps =if(space=='n') 75, varyeps=FALSE,
-                     xinc=if(space=='n')  5, xlim=NULL,
+                     xinc=NULL, xlim=NULL,
                      times=NULL, tunits='year',
                      msmooth=c('smoothed', 'raw', 'both'),
                      tsmooth=c('supsmu', 'lowess'),
@@ -162,6 +162,8 @@ movStats <- function(formula, stat=NULL, space=c('n', 'x'),
              x    <- x [i]
              y    <- y [i]
              y2   <- y2[i]
+             xinc <- Xinc
+             if(! length(xinc)) xinc <- max(floor(n / 200.), 1)
              xseq <- seq(10, n - 10 + 1, by=xinc)
              xv   <- 1 : n
              } )
