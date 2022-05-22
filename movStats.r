@@ -44,7 +44,7 @@
 ##' @param tau   quantile numbers to estimate with quantile regression
 ##' @param melt  set to TRUE to melt data table and derive Type and Statistic
 ##' @param data: data.table or data.frame, default is calling frame
-##' @return a data table, with attribute `infon` which is a data frame with rows corresponding to strata and columns `N`, `Wmean`, `Wmin`, `Wmax` if `stat` computed `N`.  These summarize the number of observations used in the windows.  If `varyeps=TRUE` there is an additional column `eps` with the computed per-stratum `eps`.  When `space='n'` and `xinc` is not given, the computed `xinc` also appears as a column.  An additional attribute `info` is a ready-to-use character string version of `infon`.  For `ggplot2` use for example `labs(caption=attr(result, 'info')) + theme(plot.caption=element_text(family='mono', size=7))`.
+##' @return a data table, with attribute `infon` which is a data frame with rows corresponding to strata and columns `N`, `Wmean`, `Wmin`, `Wmax` if `stat` computed `N`.  These summarize the number of observations used in the windows.  If `varyeps=TRUE` there is an additional column `eps` with the computed per-stratum `eps`.  When `space='n'` and `xinc` is not given, the computed `xinc` also appears as a column.  An additional attribute `info` is a `kable` object ready for printing to describe the window characteristics.
 ##' 
 movStats <- function(formula, stat=NULL, space=c('n', 'x'),
                      eps =if(space=='n') 75, varyeps=FALSE,
@@ -64,6 +64,9 @@ movStats <- function(formula, stat=NULL, space=c('n', 'x'),
   space   <- match.arg(space)
   msmooth <- match.arg(msmooth)
   tsmooth <- match.arg(tsmooth)
+
+  require(knitr)
+  require(kableExtra)
 
   .knots. <<- k   # make a global copy
 
@@ -330,16 +333,17 @@ movStats <- function(formula, stat=NULL, space=c('n', 'x'),
     info <- info[, setdiff(colnames(info), 'eps'), drop=FALSE]
   if(! bythere) row.names(info) <- NULL
   infon <- info
-  i <- data.frame(matrix('', nrow=nrow(info), ncol=ncol(info)))
-  for(j in 1 : ncol(info)) i[, j] <- format(info[, j])
-  cnames <- colnames(info)
-  majornames <- ifelse(grepl('^W', cnames), 'Window', '')
-  cnames <- sub('^Wm', 'M', cnames)
-  i <- rbind(cnames, i)
-  colnames(i) <- majornames
-  if(bythere) rownames(i) <- c('', rownames(infon))
 
-  info <- paste(capture.output(print(i, row.names=bythere)), collapse='\n')
+  n <- colnames(info)
+  nam <- .q(N=N, Wmean=Mean, Wmin=Min, Wmax=Max, eps=eps, xinc=xinc)
+  colnames(info) <- nam[n]
+  ghead <- c(if(length(rownames(info))) c(' ' = 1),
+             c(' ' = 1, 'Window Sample Sizes' = 3),
+             if('eps'  %in% n) c(' ' = 1),
+             if('xinc' %in% n) c(' ' = 1))
+
+  info <- kable(info) %>% add_header_above(ghead)
+
   attr(R, 'infon') <- infon
   attr(R, 'info')  <- info
   
