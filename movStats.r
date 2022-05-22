@@ -44,6 +44,7 @@
 ##' @param tau   quantile numbers to estimate with quantile regression
 ##' @param melt  set to TRUE to melt data table and derive Type and Statistic
 ##' @param data: data.table or data.frame, default is calling frame
+##' @return a data table, with attribute `infon` which is a data frame with rows corresponding to strata and columns `Nmean`, `Nmin`, `Nmax` if `stat` computed `N`.  These summarize the number of observations used in the windows.  If `varyeps=TRUE` there is an additional column `eps` with the computed per-stratum `eps`.  An additional attribute `info` is a ready-to-use character string version of `infon`.  For `ggplot2` use for example `labs(caption=attr(result, 'info')) + theme(plot.caption=element_text(family='mono', size=7))`.
 ##' 
 movStats <- function(formula, stat=NULL, space=c('n', 'x'),
                      eps =if(space=='n') 75, varyeps=FALSE,
@@ -106,11 +107,13 @@ movStats <- function(formula, stat=NULL, space=c('n', 'x'),
 
 
   if(! length(stat))
-    stat <- if(ybin) function(y) list('Moving Proportion' = mean(y))
+    stat <- if(ybin) function(y) list('Moving Proportion' = mean(y),
+                                      N = length(y))
             else if(sec)
               function(y, y2) {
-                z <- 1. - km.quick(Surv(y, y2), times)   # in Hmisc
-                names(z) <- paste0('Moving ', times, '-', tunits)
+                # km.quick is in Hmisc
+                z <- c(1. - km.quick(Surv(y, y2), times), length(y))
+                names(z) <- c(paste0('Moving ', times, '-', tunits), 'N')
                 as.list(z)
               }
              else 
@@ -132,8 +135,12 @@ movStats <- function(formula, stat=NULL, space=c('n', 'x'),
 
   R    <- NULL
   Xinc <- xinc
+
+  uby  <- if(is.factor(By)) levels(By) else sort(unique(By))
+  info <- matrix(NA, nrow=length(uby), ncol=4,
+                 dimnames=list(uby, c('Nmean', 'Nmin', 'Nmax', 'eps')))
   
-  for(by in sort(unique(By))) {
+  for(by in uby) {
     j <- By == by
     if(sum(j) < 10) {
       warning(paste('Stratum', by, 'has < 10 observations and is ignored'))
@@ -177,6 +184,7 @@ movStats <- function(formula, stat=NULL, space=c('n', 'x'),
       ## Need difference in these two to be >= 2*xinc
       lowesteps <- floor((max(xseq) - min(xseq) - 2 * xinc) / 2.)
       if(lowesteps < eps) ep <- lowesteps
+      info[by, 'eps'] <- ep
       }
     
     s <- data.table(x, y, y2, xv)
@@ -188,10 +196,14 @@ movStats <- function(formula, stat=NULL, space=c('n', 'x'),
     ## Non-equi join adds observations tx=NA
     m <- m[! is.na(tx), ]
     w <- m[, statx(y, y2, x), by=tx]
+    if('N' %in% names(w)) {
+      N <- w[, N]
+      info[by, 1:3] <- c(round(mean(N), 1), min(N), max(N))
+      }
 
     if(space == 'n') {
-      w[, tx := .xmean.]
-      w[, .xmean. := NULL]
+      w[, tx      := .xmean.]
+      w[, .xmean. := NULL   ]
       }
 
     if(msmooth != 'raw') {
@@ -225,7 +237,7 @@ movStats <- function(formula, stat=NULL, space=c('n', 'x'),
       if(ybin)
         w[, 'Loess Proportion' := pc]
       else
-        w[, `Loess Mean` := pc]
+        w[, `Loess Mean`       := pc]
     }
 
     if(ols) {
@@ -304,6 +316,13 @@ movStats <- function(formula, stat=NULL, space=c('n', 'x'),
     R[, Statistic := sub ('.* ', '', Statistic)]
     R[, Type      := gsub('~', ' ',  Type)]
     R[, Statistic := gsub('~', ' ',  Statistic)]
-    }
+  }
+
+  if(all(is.na(info[, 'eps']))) info <- info[, -4]
+  if(! bythere) row.names(info) <- NULL
+  infoc <- paste(capture.output(print(info)), collapse='\n')
+  attr(R, 'infon') <- info
+  attr(R, 'info')  <- infoc
+  
   R
   }
