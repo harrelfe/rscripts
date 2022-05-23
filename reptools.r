@@ -104,14 +104,14 @@ makecolmarg <- function(x, printargs=list()) {
 ##' Prints an object in a Quarto collapsible note.
 ##' @title makecnote
 ##' @param x an object having a suitable `print` method
-##' @param printargs an optional list of arguments to be passed to `print`
-##' @param label a character string providing a title for the tab.  Default is the name of the argument passed to `makecnote`
+##' @param label a character string providing a title for the tab.  Default is t##' @param printargs an optional list of arguments to be passed to `print`
+he name of the argument passed to `makecnote`
 ##' @return 
 ##' @author Frank Harrell
 ##' @md
 makecnote <- function(x,
-                      printargs=list(),
-                      label=paste0('`', deparse(substitute(x)), '`')) {
+                      label=paste0('`', deparse(substitute(x)), '`'),
+                      printargs=list()) {
   .objcnote.          <<- x
   .objcnoteprintargs. <<- printargs
   cname <- paste0('c', round(100000 * runif(1)))
