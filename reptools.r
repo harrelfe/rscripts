@@ -79,6 +79,15 @@ maketabs <- function(x, labels=names(x), wide=FALSE, initblank=FALSE) {
   cat(knitr::knit(text=knitr::knit_expand(text=k), quiet=TRUE))
 }
 
+makecolmarg <- function(x) {
+  .objcolmarg. <<- x
+  cname <- paste0('c', round(100000 * runif(1)))
+  k <- c('', '::: {.column-margin}', '',
+         paste0('```{r ', cname, ',results="asis",echo=FALSE}'),
+         '.objcolmarg.', '', '```', '', ':::', '')
+  cat(knitr::knit(text=knitr::knit_expand(text=k), quiet=TRUE))
+}
+
 
 
 ##' Convert Objects to HTML and View
