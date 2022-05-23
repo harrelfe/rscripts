@@ -44,7 +44,7 @@
 ##' @param tau   quantile numbers to estimate with quantile regression
 ##' @param melt  set to TRUE to melt data table and derive Type and Statistic
 ##' @param data: data.table or data.frame, default is calling frame
-##' @param pr set to `TRUE` to print window information
+##' @param pr defaults to no printing of window information.  Use `pr='plain'` to print in the ordinary way, `pr='kable` to convert the object to `knitr::kable` and print, or `pr='margin'` to convert to `kable` and place in the `Quarto` right margin.  For the latter two `results='asis'` must be in the chunk header.
 ##' @return a data table, with attribute `infon` which is a data frame with rows corresponding to strata and columns `N`, `Wmean`, `Wmin`, `Wmax` if `stat` computed `N`.  These summarize the number of observations used in the windows.  If `varyeps=TRUE` there is an additional column `eps` with the computed per-stratum `eps`.  When `space='n'` and `xinc` is not given, the computed `xinc` also appears as a column.  An additional attribute `info` is a `kable` object ready for printing to describe the window characteristics.
 ##' 
 movStats <- function(formula, stat=NULL, space=c('n', 'x'),
