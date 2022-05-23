@@ -79,12 +79,20 @@ maketabs <- function(x, labels=names(x), wide=FALSE, initblank=FALSE) {
   cat(knitr::knit(text=knitr::knit_expand(text=k), quiet=TRUE))
 }
 
+##' Print an Object in the Margin
+##'
+##' Prints an object in a Quarto column margin.
+##' @title makecolmarg
+##' @param x an object having a suitable `print` method
+##' @return 
+##' @author Frank Harrell
+##' @md
 makecolmarg <- function(x) {
   .objcolmarg. <<- x
   cname <- paste0('c', round(100000 * runif(1)))
   k <- c('', '::: {.column-margin}', '',
          paste0('```{r ', cname, ',results="asis",echo=FALSE}'),
-         '.objcolmarg.', '', '```', '', ':::', '')
+         'print(.objcolmarg.)', '', '```', '', ':::', '')
   cat(knitr::knit(text=knitr::knit_expand(text=k), quiet=TRUE))
 }
 

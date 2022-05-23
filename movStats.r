@@ -44,6 +44,7 @@
 ##' @param tau   quantile numbers to estimate with quantile regression
 ##' @param melt  set to TRUE to melt data table and derive Type and Statistic
 ##' @param data: data.table or data.frame, default is calling frame
+##' @param pr set to `TRUE` to print window information
 ##' @return a data table, with attribute `infon` which is a data frame with rows corresponding to strata and columns `N`, `Wmean`, `Wmin`, `Wmax` if `stat` computed `N`.  These summarize the number of observations used in the windows.  If `varyeps=TRUE` there is an additional column `eps` with the computed per-stratum `eps`.  When `space='n'` and `xinc` is not given, the computed `xinc` also appears as a column.  An additional attribute `info` is a `kable` object ready for printing to describe the window characteristics.
 ##' 
 movStats <- function(formula, stat=NULL, space=c('n', 'x'),
@@ -58,15 +59,19 @@ movStats <- function(formula, stat=NULL, space=c('n', 'x'),
                      ols=FALSE, qreg=FALSE, lrm=FALSE,
                      orm=FALSE, hare=FALSE, family='logistic',
                      k=5, tau=(1:3)/4, melt=FALSE,
-                     data=environment(formula)) {
-  require(data.table)
-  if(ols || qreg || lrm) require(rms)
+                     data=environment(formula),
+                     pr=c('none', 'kable', 'plain', 'margin')) {
   space   <- match.arg(space)
   msmooth <- match.arg(msmooth)
   tsmooth <- match.arg(tsmooth)
+  pr      <- match.arg(pr)
 
-  require(knitr)
-  require(kableExtra)
+  require(data.table)
+  if(ols || qreg || lrm) require(rms)
+  if(pr %in% c('kable', 'margin')) {
+    require(knitr)
+    require(kableExtra)
+    }
 
   .knots. <<- k   # make a global copy
 
@@ -334,15 +339,23 @@ movStats <- function(formula, stat=NULL, space=c('n', 'x'),
   if(! bythere) row.names(info) <- NULL
   infon <- info
 
-  n <- colnames(info)
-  nam <- .q(N=N, Wmean=Mean, Wmin=Min, Wmax=Max, eps=eps, xinc=xinc)
-  colnames(info) <- nam[n]
-  ghead <- c(if(length(rownames(info))) c(' ' = 1),
-             c(' ' = 1, 'Window Sample Sizes' = 3),
-             if('eps'  %in% n) c(' ' = 1),
-             if('xinc' %in% n) c(' ' = 1))
-
-  info <- kable(info) %>% add_header_above(ghead)
+  if(pr %in% c('kable', 'margin')) {
+    n <- colnames(info)
+    nam <- .q(N=N, Wmean=Mean, Wmin=Min, Wmax=Max, eps=eps, xinc=xinc)
+    colnames(info) <- nam[n]
+    ghead <- c(if(length(rownames(info))) c(' ' = 1),
+               c(' ' = 1, 'Window Sample Sizes' = 3),
+               if('eps'  %in% n) c(' ' = 1),
+               if('xinc' %in% n) c(' ' = 1))
+    info <- kable(info) %>%
+      add_header_above(ghead) %>%
+      kable_styling(font_size=9)
+    }
+    
+  switch(pr,
+         plain  = print(info),
+         kable  = cat(info),
+         margin = makecolmarg(info) )
 
   attr(R, 'infon') <- infon
   attr(R, 'info')  <- info
