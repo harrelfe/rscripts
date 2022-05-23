@@ -19,7 +19,7 @@
 ##' @md
 ##' @param formula a formula with the analysis variable on the left and the x-variable on the right, following by an optional stratification variable
 ##' @param stat function of one argument that returns a named list of computed values.  Defaults to computing mean and quartiles + N except when y is binary in which case it computes moving proportions.  If y has two columns the default statistics are Kaplan-Meier estimates of cumulative incidence at a vector of `times`.
-##' @param eps tolerance for window (half width of window).  For `space='x'` is in data units, otherwise is the sample size for half the window.
+##' @param eps tolerance for window (half width of window).  For `space='x'` is in data units, otherwise is the sample size for half the window, not counting the middle target point.
 ##' @param varyeps applies to `space='n'` and causes a smaller `eps` to be used in strata with fewer than `` observations so as to arrive at three x points
 ##' @param xinc  increment in x to evaluate stats, default is xlim range/100 for `space='x'`.  For `space='n'` `xinc` defaults to m observations, where m = max(n/200, 1).
 ##' @param xlim 2-vector of limits to evaluate if `space='x'` (default is 10th to 10th)
@@ -27,7 +27,7 @@
 ##' @param tunits time units when `times` is given
 ##' @param msmooth set to `'smoothed'` or `'both'` to compute `lowess`-smooth moving estimates. `msmooth='both'` will display both.  `'raw'` will display only the moving statistics.  `msmooth='smoothed'` (the default) will display only he smoothed moving estimates.
 ##' @param tsmooth defaults to the super-smoother `'supsmu'` for after-moving smoothing.  Use `tsmooth='lowess'` to instead use `lowess`.
-##' @param bass the `supsmu` `bass` parameter used to smooth the moving statistics if `tsmooth='supsmu'`
+##' @param bass the `supsmu` `bass` parameter used to smooth the moving statistics if `tsmooth='supsmu'`.  The default of 8 represents quite heavy smoothing.
 ##' @param span the `lowess` `span` used to smooth the moving statistics
 ##' @param penalty passed to `hare`, default is to use BIC.  Specify 2 to use AIC.
 ##' @param maxdim passed to `hare`, default is 6
@@ -48,12 +48,12 @@
 ##' @return a data table, with attribute `infon` which is a data frame with rows corresponding to strata and columns `N`, `Wmean`, `Wmin`, `Wmax` if `stat` computed `N`.  These summarize the number of observations used in the windows.  If `varyeps=TRUE` there is an additional column `eps` with the computed per-stratum `eps`.  When `space='n'` and `xinc` is not given, the computed `xinc` also appears as a column.  An additional attribute `info` is a `kable` object ready for printing to describe the window characteristics.
 ##' 
 movStats <- function(formula, stat=NULL, space=c('n', 'x'),
-                     eps =if(space=='n') 75, varyeps=FALSE,
+                     eps =if(space=='n') 15, varyeps=FALSE,
                      xinc=NULL, xlim=NULL,
                      times=NULL, tunits='year',
                      msmooth=c('smoothed', 'raw', 'both'),
                      tsmooth=c('supsmu', 'lowess'),
-                     bass=2, span=1/4, maxdim=6, penalty=NULL,
+                     bass=8, span=1/4, maxdim=6, penalty=NULL,
                      trans=function(x) x, itrans=function(x) x,
                      loess=FALSE,
                      ols=FALSE, qreg=FALSE, lrm=FALSE,
