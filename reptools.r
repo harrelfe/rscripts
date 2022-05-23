@@ -99,6 +99,29 @@ makecolmarg <- function(x, printargs=list()) {
   cat(knitr::knit(text=knitr::knit_expand(text=k), quiet=TRUE))
 }
 
+##' Print an Object in a Collapsible Note
+##'
+##' Prints an object in a Quarto collapsible note.
+##' @title makecnote
+##' @param x an object having a suitable `print` method
+##' @param label a character string providing a title for the tab.  Default is the name of the argument passed to `makecnote`
+##' @param printargs an optional list of arguments to be passed to `print`
+##' @return 
+##' @author Frank Harrell
+##' @md
+makecnote <- function(x,
+                      label=paste0('`', deparse(substitute(x)), '`'),
+                      printargs=list()) {
+  .objcnote.          <<- x
+  .objcnoteprintargs. <<- printargs
+  cname <- paste0('c', round(100000 * runif(1)))
+  k <- c('', '::: {.callout-note collapse="true"}',
+         paste0('# ', label), 
+         paste0('```{r ', cname, ',results="asis",echo=FALSE}'),
+         'do.call("print", c(list(.objcnote.), .objcnoteprintargs.))',
+         '', '```', '', ':::', '')
+  cat(knitr::knit(text=knitr::knit_expand(text=k), quiet=TRUE))
+}
 
 
 ##' Convert Objects to HTML and View
