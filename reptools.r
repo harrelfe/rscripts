@@ -100,6 +100,7 @@ maketabs <- function(x, labels=names(x),
   for(i in 1 : length(x)) {
     cat(paste('\n##', labels[i]), '\n\n',
         co(x[[i]]), '\n', sep='')
+    cat('\n##', labels[i], '\n\n')
   }
   cat('\n:::\n\n')
   invisible()
@@ -126,9 +127,10 @@ makecolmarg <- function(x, ...) {
   cat(knitr::knit(text=knitr::knit_expand(text=k), quiet=TRUE))
   }
   co <- function(x) paste(capture.output(x), collapse='\n')
-  cat('\n\n::: {.column-margin}\n',
-      co(print(x, ...)),
-      '\n:::\n\n', sep='')
+  cat('\n\n::: {.column-margin}\n')
+  # print(x, ...) will not work
+  cat(co(print(x, ...)))
+  cat('\n:::\n\n', sep='')
   invisible()
 }
 
@@ -157,9 +159,10 @@ makecnote <- function(x,
   cat(knitr::knit(text=knitr::knit_expand(text=k), quiet=TRUE))
   }
   co <- function(x) paste(capture.output(x), collapse='\n')
-  cat('\n\n::: {.callout-note collapse="true"}\n# ', label, '\n',
-      co(print(x, ...)),
-      '\n:::\n\n', sep='')
+  cat('\n\n::: {.callout-note collapse="true"}\n# ', label, '\n')
+  ## print(x, ...) will not work
+  cat(co(print(x, ...)))
+  cat('\n:::\n\n', sep='')
 }
 
 
