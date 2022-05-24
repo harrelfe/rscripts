@@ -61,22 +61,48 @@ kabl <- function(..., caption=NULL, digits=4, col.names=NA, row.names=NA) {
 ##' @param labels optional vector of names for tabs.
 ##' @param wide set to `TRUE` to have `.column-page` Quarto output that is wider than the margins
 ##' @param initblank set to `TRUE` to create an initial tab that is blank.  This keeps any content from showing initially.
+##' @param pmeth method of rendering each element of the `x` list.  Default is to execute a `knitr` chunk.  Other methods, in order, use `knit_print`, `capture.output(print(...))`, or `print()`.
 ##' @return 
 ##' @author Frank Harrell
 ##' @md
-maketabs <- function(x, labels=names(x), wide=FALSE, initblank=FALSE) {
-  yaml <- paste0('.panel-tabset', if(wide) ' .column-page')
-  k <- c('', '::: {', yaml, '}', '')
-  if(initblank) k <- c(k, '', '##   ', '')
-  .objmaketabs. <<- x
-  for(i in 1 : length(x)) {
-    cname <- paste0('c', round(100000 * runif(1)))
-    k <- c(k, '', paste('##', labels[i]), '',
-           paste0('```{r ', cname, ',results="asis",echo=FALSE}'),
-           paste0('.objmaketabs.[[', i, ']]'), '```', '')
+# See https://stackoverflow.com/questions/42631642
+maketabs <- function(x, labels=names(x),
+                     wide=FALSE, initblank=FALSE,
+                     pmeth=c('chunk', 'knit', 'capture', 'print')) {
+
+  pmeth <- match.arg(pmeth)
+  yaml  <- paste0('.panel-tabset', if(wide) ' .column-page')
+  
+  if(pmeth == 'chunk') {
+    k <- c('', '::: {', yaml, '}', '')
+    if(initblank) k <- c(k, '', '##   ', '')
+    .objmaketabs. <<- x
+    for(i in 1 : length(x)) {
+      cname <- paste0('c', round(100000 * runif(1)))
+      k <- c(k, '', paste('##', labels[i]), '',
+             paste0('```{r ', cname, ',results="asis",echo=FALSE}'),
+             paste0('.objmaketabs.[[', i, ']]'), '```', '')
+    }
+    k <- c(k, ':::', '')
+    cat(knitr::knit(text=knitr::knit_expand(text=k), quiet=TRUE))
+    return(invisible())
   }
-  k <- c(k, ':::', '')
-  cat(knitr::knit(text=knitr::knit_expand(text=k), quiet=TRUE))
+  
+  cat('\n::: {', yaml, '}\n', sep='')
+  if(initblank) cat('\n##   \n\n')
+
+  co <- switch(pmeth,
+               knit    = knitr::knit_print,
+               print   = print, 
+               capture = function(x) 
+                 paste(capture.output(print(x)), collapse='\n'))
+
+  for(i in 1 : length(x)) {
+    cat(paste('\n##', labels[i]), '\n\n',
+        co(x[[i]]), '\n', sep='')
+  }
+  cat('\n:::\n\n')
+  invisible()
 }
 
 ##' Print an Object in the Margin
@@ -89,6 +115,7 @@ maketabs <- function(x, labels=names(x), wide=FALSE, initblank=FALSE) {
 ##' @author Frank Harrell
 ##' @md
 makecolmarg <- function(x, printargs=list()) {
+  if(FALSE) {
   .objcolmarg.          <<- x
   .objcolmargprintargs. <<- printargs
   cname <- paste0('c', round(100000 * runif(1)))
@@ -97,6 +124,12 @@ makecolmarg <- function(x, printargs=list()) {
          'do.call("print", c(list(.objcolmarg.), .objcolmargprintargs.))',
          '', '```', '', ':::', '')
   cat(knitr::knit(text=knitr::knit_expand(text=k), quiet=TRUE))
+  }
+  co <- function(x) paste(capture.output(x), collapse='\n')
+  cat('\n\n::: {.column-margin}\n',
+      co(do.call(print, c(list(x), printargs))),
+      '\n:::\n\n', sep='')
+  invisible()
 }
 
 ##' Print an Object in a Collapsible Note
@@ -112,6 +145,7 @@ makecolmarg <- function(x, printargs=list()) {
 makecnote <- function(x,
                       label=paste0('`', deparse(substitute(x)), '`'),
                       printargs=list()) {
+  if(FALSE) {
   .objcnote.          <<- x
   .objcnoteprintargs. <<- printargs
   cname <- paste0('c', round(100000 * runif(1)))
@@ -121,6 +155,11 @@ makecnote <- function(x,
          'do.call("print", c(list(.objcnote.), .objcnoteprintargs.))',
          '', '```', '', ':::', '')
   cat(knitr::knit(text=knitr::knit_expand(text=k), quiet=TRUE))
+  }
+  co <- function(x) paste(capture.output(x), collapse='\n')
+  cat('\n\n::: {.callout-note collapse="true"}\n# ', label, '\n',
+      co(do.call(print, c(list(x), printargs))),
+      '\n:::\n\n', sep='')
 }
 
 
