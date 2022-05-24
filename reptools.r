@@ -110,14 +110,14 @@ maketabs <- function(x, labels=names(x),
 ##' Prints an object in a Quarto column margin.
 ##' @title makecolmarg
 ##' @param x an object having a suitable `print` method
-##' @param printargs an optional list of arguments to be passed to `print`
+##' @param ... an optional list of arguments to be passed to `print`
 ##' @return 
 ##' @author Frank Harrell
 ##' @md
-makecolmarg <- function(x, printargs=list()) {
+makecolmarg <- function(x, ...) {
   if(FALSE) {
   .objcolmarg.          <<- x
-  .objcolmargprintargs. <<- printargs
+  .objcolmargprintargs. <<- list(...)
   cname <- paste0('c', round(100000 * runif(1)))
   k <- c('', '::: {.column-margin}', '',
          paste0('```{r ', cname, ',results="asis",echo=FALSE}'),
@@ -127,7 +127,7 @@ makecolmarg <- function(x, printargs=list()) {
   }
   co <- function(x) paste(capture.output(x), collapse='\n')
   cat('\n\n::: {.column-margin}\n',
-      co(do.call(print, c(list(x), printargs))),
+      co(print(x, ...)),
       '\n:::\n\n', sep='')
   invisible()
 }
