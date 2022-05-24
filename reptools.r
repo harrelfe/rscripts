@@ -138,16 +138,16 @@ makecolmarg <- function(x, ...) {
 ##' @title makecnote
 ##' @param x an object having a suitable `print` method
 ##' @param label a character string providing a title for the tab.  Default is the name of the argument passed to `makecnote`.
-##' @param printargs an optional list of arguments to be passed to `print`
+##' @param ... an optional list of arguments to be passed to `print`
 ##' @return 
 ##' @author Frank Harrell
 ##' @md
 makecnote <- function(x,
                       label=paste0('`', deparse(substitute(x)), '`'),
-                      printargs=list()) {
+                      ...) {
   if(FALSE) {
   .objcnote.          <<- x
-  .objcnoteprintargs. <<- printargs
+  .objcnoteprintargs. <<- lisit(...)
   cname <- paste0('c', round(100000 * runif(1)))
   k <- c('', '::: {.callout-note collapse="true"}',
          paste0('# ', label), 
@@ -158,7 +158,7 @@ makecnote <- function(x,
   }
   co <- function(x) paste(capture.output(x), collapse='\n')
   cat('\n\n::: {.callout-note collapse="true"}\n# ', label, '\n',
-      co(do.call(print, c(list(x), printargs))),
+      co(print(x, ...)),
       '\n:::\n\n', sep='')
 }
 
