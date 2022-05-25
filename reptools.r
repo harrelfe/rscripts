@@ -171,7 +171,8 @@ maketabs <- function(..., wide=FALSE, initblank=FALSE) {
   }
   
   cat(knitr::knit(text=knitr::knit_expand(
-           text=makechunks(.fs., wide, initblank)), quiet=TRUE))
+      text=makechunks(.fs.,
+                      wide=wide, initblank=initblank)), quiet=TRUE))
   return(invisible())
   }
 
