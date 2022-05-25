@@ -133,44 +133,46 @@ maketabs2 <- function(x, labels=names(x),
 ##' @author Frank Harrell
 # See https://stackoverflow.com/questions/42631642
 maketabs <- function(..., wide=FALSE, initblank=FALSE) {
+  .fs. <- list(...)
+  if(length(.fs.) == 1 && 'formula' %nin% class(.fs.[[1]]))
+    .fs. <- .fs.[[1]]   # undo list(...) and get to 1st arg to maketabs
+  
+  makechunks <- function(fs, wide, initblank) {
+    ## Create variables in an environment that will not be seen
+    ## when knitr executes chunks so that no variable name conflicts
+    
+    yaml   <- paste0('.panel-tabset', if(wide) ' .column-page')
 
-  yaml   <- paste0('.panel-tabset', if(wide) ' .column-page')
+    k <- c('', paste0('::: {', yaml, '}'), '')
+    if(initblank) k <- c(k, '', '##   ', '')
 
-  .k. <- c('', paste0('::: {', yaml, '}'), '')
-  if(initblank) .k. <- c(.k., '', '##   ', '')
-
-  .fs.  <- list(...)
-  .form. <- TRUE
-  if(length(.fs.) == 1 && 'formula' %nin% class(.fs.[[1]])) {
-    .form. <- FALSE
-    .fs.   <- .fs.[[1]]
-    .nam.  <- names(.fs.)
-  }
-
-  for(.i. in 1 : length(.fs.)) {
-    .f. <- .fs.[[.i.]]
-    if(.form.) {
-      .v.   <- as.character(attr(terms(.f.), 'variables'))[-1]
-      .y.   <- .v.[1]   # left-hand side
-      .x.   <- .v.[-1]  # right-hand side
-      .raw. <- 'raw' %in% .x.
-      if(.raw.) .x. <- setdiff(.x., 'raw')
-    } else {
-      .raw.  <- FALSE
-      .y.    <- .nam.[.i.]
-      .x.    <- paste0('.fs.[[', .i., ']]')
+    for(i in 1 : length(fs)) {
+      f <- fs[[i]]
+      if('formula' %in% class(f)) {
+        v   <- as.character(attr(terms(f), 'variables'))[-1]
+        y   <- v[1]   # left-hand side
+        x   <- v[-1]  # right-hand side
+        raw <- 'raw' %in% x
+        if(raw) x <- setdiff(x, 'raw')
+      } else {
+        raw  <- FALSE
+        y    <- names(fs)[i]
+        x    <- paste0('.fs.[[', i, ']]')
       }
-    .r. <- paste0('results="',
-                if(.raw.) 'markup' else 'asis',
+    r <- paste0('results="',
+                if(raw) 'markup' else 'asis',
                 '"')
-    .cname. <- paste0('c', round(100000 * runif(1)))
-    .k. <- c(.k., '', paste('##', .y.), '',
-           paste0('```{r ', .cname., ',', .r., ',echo=FALSE}'),
-           .x., '```', '')
+    cname <- paste0('c', round(1000000 * runif(1)))
+    k <- c(k, '', paste('##', y), '',
+           paste0('```{r ', cname, ',', r, ',echo=FALSE}'),
+           x, '```', '')
     }
-  .k. <- c(.k., ':::', '')
-    cat(knitr::knit(text=knitr::knit_expand(text=.k.), quiet=TRUE))
-    return(invisible())
+    c(k, ':::', '')
+  }
+  
+  cat(knitr::knit(text=knitr::knit_expand(
+           text=makechunks(.fs., wide, initblank)), quiet=TRUE))
+  return(invisible())
   }
 
 
