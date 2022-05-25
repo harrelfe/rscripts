@@ -55,8 +55,8 @@ kabl <- function(..., caption=NULL, digits=4, col.names=NA, row.names=NA) {
 ##' a separate `Quarto` tab.  A `wide` argument is used to expand the width
 ##' of the output outside the usual margins.  An `initblank` argument
 ##' creates a first tab that is empty.  This allows one to show nothing
-##' until one of the other tabs is clicked.
-##' @title maketabs 
+##' until one of the other tabs is clicked.  This function is replaced by `maketabs`.
+##' @title maketabs2 
 ##' @param x a named list.  Names become tab names if `labels` is not given.
 ##' @param labels optional vector of names for tabs.
 ##' @param wide set to `TRUE` to have `.column-page` Quarto output that is wider than the margins
@@ -69,7 +69,7 @@ kabl <- function(..., caption=NULL, digits=4, col.names=NA, row.names=NA) {
 ##' @author Frank Harrell
 ##' @md
 # See https://stackoverflow.com/questions/42631642
-maketabs <- function(x, labels=names(x),
+maketabs2 <- function(x, labels=names(x),
                      wide=FALSE, initblank=FALSE,
                      raw=NULL, plot=NULL, plotargs=NULL,
                      pmeth=c('chunk', 'knit', 'capture', 'print')) {
@@ -117,6 +117,49 @@ maketabs <- function(x, labels=names(x),
   cat('\n:::\n\n')
   invisible()
 }
+
+maketabs <- function(..., wide=FALSE, initblank=FALSE) {
+
+  yaml   <- paste0('.panel-tabset', if(wide) ' .column-page')
+
+  .k. <- c('', paste0('::: {', yaml, '}'), '')
+  if(initblank) .k. <- c(.k., '', '##   ', '')
+
+  .fs.  <- list(...)
+  .form. <- TRUE
+  if(length(.fs.) == 1 && 'formula' %nin% class(.fs.[[1]])) {
+    .form. <- FALSE
+    .fs.   <- .fs.[[1]]
+    .nam.  <- names(.fs.)
+  }
+
+  for(.i. in 1 : length(.fs.)) {
+    .f. <- .fs.[[.i.]]
+    if(.form.) {
+      .v.   <- as.character(attr(terms(.f.), 'variables'))[-1]
+      .y.   <- .v.[1]   # left-hand side
+      .x.   <- .v.[-1]  # right-hand side
+      .raw. <- 'raw' %in% .x.
+      if(.raw.) .x. <- setdiff(.x., 'raw')
+    } else {
+      .raw.  <- FALSE
+      .y.    <- .nam.[.i.]
+      .x.    <- paste0('.fs.[[', .i., ']]')
+      }
+    .r. <- paste0('results="',
+                if(.raw.) 'markup' else 'asis',
+                '"')
+    .cname. <- paste0('c', round(100000 * runif(1)))
+    .k. <- c(.k., '', paste('##', .y.), '',
+           paste0('```{r ', .cname., ',', .r., ',echo=FALSE}'),
+           .x., '```', '')
+    }
+  .k. <- c(.k., ':::', '')
+    cat(.k., sep='\n', file='/tmp/z')
+    cat(knitr::knit(text=knitr::knit_expand(text=.k.), quiet=TRUE))
+    return(invisible())
+  }
+
 
 ##' Print an Object in the Margin
 ##'
