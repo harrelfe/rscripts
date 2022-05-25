@@ -49,6 +49,74 @@ kabl <- function(..., caption=NULL, digits=4, col.names=NA, row.names=NA) {
   knitr::kables(w, caption=caption, format=format)
 }
 
+##' Make Tabs for Quarto Documents
+##'
+##' Loops through the elements of a named list and outputs each element into
+##' a separate `Quarto` tab.  A `wide` argument is used to expand the width
+##' of the output outside the usual margins.  An `initblank` argument
+##' creates a first tab that is empty.  This allows one to show nothing
+##' until one of the other tabs is clicked.  This function is replaced by `maketabs`.
+##' @title maketabs2 
+##' @param x a named list.  Names become tab names if `labels` is not given.
+##' @param labels optional vector of names for tabs.
+##' @param wide set to `TRUE` to have `.column-page` Quarto output that is wider than the margins
+##' @param initblank set to `TRUE` to create an initial tab that is blank.  This keeps any content from showing initially.
+##' @param raw vector of subscripts corresponding to elements in `x` defining which if any elements are to be printed in raw form
+##' @param plot vector of subscripts corresponding to `x` definine elements needing deferred `plot`ting
+##' @param plotargs a list of arguments to pass to the `plot` method if `plot` is given
+##' @param pmeth method of rendering each element of the `x` list.  Default is to execute a `knitr` chunk.  Other methods, in order, use `knit_print`, `capture.output(print(...))`, or `print()`.
+##' @return 
+##' @author Frank Harrell
+##' @md
+# See https://stackoverflow.com/questions/42631642
+maketabs2 <- function(x, labels=names(x),
+                     wide=FALSE, initblank=FALSE,
+                     raw=NULL, plot=NULL, plotargs=NULL,
+                     pmeth=c('chunk', 'knit', 'capture', 'print')) {
+
+  pmeth  <- match.arg(pmeth)
+  yaml   <- paste0('.panel-tabset', if(wide) ' .column-page')
+  res    <- rep('asis', length(labels))
+  if(length(raw)) res[raw] <- 'markup'
+  
+  if(pmeth == 'chunk') {
+    k <- c('', '::: {', yaml, '}', '')
+    if(initblank) k <- c(k, '', '##   ', '')
+    .objmaketabs.  <<- x
+    .objmakepargs. <<- plotargs
+    for(i in 1 : length(x)) {
+      r <- paste0('results="', res[i], '"')
+      cname <- paste0('c', round(100000 * runif(1)))
+      renobj <- paste0('.objmaketabs.[[', i, ']]')
+      if(i %in% plot)
+        renobj <- paste0('do.call("plot", c(list(', renobj,
+                         '), .objmakepargs.))')
+      k <- c(k, '', paste('##', labels[i]), '',
+             paste0('```{r ', cname, ',', r, ',echo=FALSE}'),
+             renobj,  '```', '')
+    }
+    k <- c(k, ':::', '')
+    cat(knitr::knit(text=knitr::knit_expand(text=k), quiet=TRUE))
+    return(invisible())
+  }
+  
+  cat('\n::: {', yaml, '}\n', sep='')
+  if(initblank) cat('\n##   \n\n')
+
+  co <- switch(pmeth,
+               knit    = knitr::knit_print,
+               print   = print, 
+               capture = function(x) 
+                 paste(capture.output(print(x)), collapse='\n'))
+
+  for(i in 1 : length(x)) {
+    cat(paste('\n##', labels[i]), '\n\n',
+        co(x[[i]]), '\n', sep='')
+    cat('\n##', labels[i], '\n\n')
+  }
+  cat('\n:::\n\n')
+  invisible()
+}
 
 ##' Make Quarto Tabs
 ##'
