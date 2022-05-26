@@ -49,74 +49,144 @@ kabl <- function(..., caption=NULL, digits=4, col.names=NA, row.names=NA) {
   knitr::kables(w, caption=caption, format=format)
 }
 
-##' Make Tabs for Quarto Documents
-##'
-##' Loops through the elements of a named list and outputs each element into
-##' a separate `Quarto` tab.  A `wide` argument is used to expand the width
-##' of the output outside the usual margins.  An `initblank` argument
-##' creates a first tab that is empty.  This allows one to show nothing
-##' until one of the other tabs is clicked.  This function is replaced by `maketabs`.
-##' @title maketabs2 
-##' @param x a named list.  Names become tab names if `labels` is not given.
-##' @param labels optional vector of names for tabs.
-##' @param wide set to `TRUE` to have `.column-page` Quarto output that is wider than the margins
-##' @param initblank set to `TRUE` to create an initial tab that is blank.  This keeps any content from showing initially.
-##' @param raw vector of subscripts corresponding to elements in `x` defining which if any elements are to be printed in raw form
-##' @param plot vector of subscripts corresponding to `x` definine elements needing deferred `plot`ting
-##' @param plotargs a list of arguments to pass to the `plot` method if `plot` is given
-##' @param pmeth method of rendering each element of the `x` list.  Default is to execute a `knitr` chunk.  Other methods, in order, use `knit_print`, `capture.output(print(...))`, or `print()`.
-##' @return 
-##' @author Frank Harrell
-##' @md
-# See https://stackoverflow.com/questions/42631642
-maketabs2 <- function(x, labels=names(x),
-                     wide=FALSE, initblank=FALSE,
-                     raw=NULL, plot=NULL, plotargs=NULL,
-                     pmeth=c('chunk', 'knit', 'capture', 'print')) {
+makecodechunk <- function(cmd, results='asis') {
+  if(! length(cmd) || (is.character(cmd) && length(cmd) == 1 &&
+            cmd %in% c('', ' ', "` `"))) return('')
 
-  pmeth  <- match.arg(pmeth)
-  yaml   <- paste0('.panel-tabset', if(wide) ' .column-page')
-  res    <- rep('asis', length(labels))
-  if(length(raw)) res[raw] <- 'markup'
-  
-  if(pmeth == 'chunk') {
-    k <- c('', '::: {', yaml, '}', '')
-    if(initblank) k <- c(k, '', '##   ', '')
-    .objmaketabs.  <<- x
-    .objmakepargs. <<- plotargs
-    for(i in 1 : length(x)) {
-      r <- paste0('results="', res[i], '"')
-      cname <- paste0('c', round(100000 * runif(1)))
-      renobj <- paste0('.objmaketabs.[[', i, ']]')
-      if(i %in% plot)
-        renobj <- paste0('do.call("plot", c(list(', renobj,
-                         '), .objmakepargs.))')
-      k <- c(k, '', paste('##', labels[i]), '',
-             paste0('```{r ', cname, ',', r, ',echo=FALSE}'),
-             renobj,  '```', '')
+  r <- paste0('results="', results, '"')
+  cname <- paste0('c', round(1000000 * runif(1)))
+  c('',
+    paste0('```{r ', cname, ',', r, ',echo=FALSE}'),
+    cmd, '```', '')
     }
-    k <- c(k, ':::', '')
-    cat(knitr::knit(text=knitr::knit_expand(text=k), quiet=TRUE))
+
+## If type=print x is the object to put in print() otherwise is
+## a character string representing command to run
+## if x is a formula, 
+makecallout <- function(...) {
+
+  ## Define internal function to keep new variables from clashing
+  ## with knitted code
+
+  build <- function(x, callout=NULL, label=NULL,
+                    type=NULL, now=TRUE, results='asis',
+                    close=length(callout), ...) {
+  if(! length(type)) type <- 'print'
+  k  <- character(0)
+
+  if('formula' %in% class(x)) {
+    v         <- as.character(attr(terms(x), 'variables'))[-1]
+    if(! attr(terms(x), 'response')) {  # no left side variable
+      label <- NULL
+      x     <- v
+      } else {
+        ## Get left hand side and remove leading/training backticks
+        left  <- sub('`$', '', sub('^`', '', v[1]))
+        label <- paste('##', left)  # left-hand side
+        x     <- v[-1]              # right-hand side
+        }
+    raw       <- 'raw' %in% x
+    if(raw) x <- setdiff(x, 'raw')
+    type      <- 'run'
+    now       <- TRUE
+    results   <- if(raw) 'markup' else 'asis'
+  }
+
+  if(length(callout))
+    k <- c('', paste0('::: {', callout, '}'),
+           if(! length(label)) '', label)
+
+  res <- if(is.character(x) && length(x) == 1 &&
+            all(x %in% c('', ' ', "` `"))) ' '
+         else
+           if(type == 'print') capture.output(print(x, ...))
+         else
+           makecodechunk(x, results=results)
+  k <- c(k, res, if(close) c(':::', ''))
+  list(k=k, now=now, type=type)
+  }
+  .z. <- build(...)
+  .k. <- .z.$k
+  if(.z.$now) {
+    switch(.z.$type,
+           print = cat(.k., sep='\n'),
+           run   = cat(knitr::knit(text=knitr::knit_expand(text=.k.),
+                               quiet=TRUE)))
     return(invisible())
   }
-  
-  cat('\n::: {', yaml, '}\n', sep='')
-  if(initblank) cat('\n##   \n\n')
+  .k.
+}
 
-  co <- switch(pmeth,
-               knit    = knitr::knit_print,
-               print   = print, 
-               capture = function(x) 
-                 paste(capture.output(print(x)), collapse='\n'))
-
-  for(i in 1 : length(x)) {
-    cat(paste('\n##', labels[i]), '\n\n',
-        co(x[[i]]), '\n', sep='')
-    cat('\n##', labels[i], '\n\n')
-  }
-  cat('\n:::\n\n')
+makecnote <- function(x,
+                      label=paste0('`', deparse(substitute(x)), '`'),
+                      wide=FALSE,
+                      type=c('print', 'run'),
+                      ...) {
+  type <- match.arg(type)
+  co <- paste('.callout-note', if(wide) '.column-page', 'collapse="true"')
+  makecallout(x, callout=co,
+              label=paste('#', label), type=type, ...)
   invisible()
 }
+
+makecolmarg <- function(x, type=c('print', 'run'), ...) {
+  type <- match.arg(type)
+  makecallout(x, callout='.column-margin', type=type, ...)
+  invisible()
+}
+
+maketabs <- function(..., wide=FALSE, initblank=FALSE) {
+  .fs. <- list(...)
+  if(length(.fs.) == 1 && 'formula' %nin% class(.fs.[[1]]))
+    .fs. <- .fs.[[1]]   # undo list(...) and get to 1st arg to maketabs
+  
+  makechunks <- function(fs, wide, initblank) {
+    ## Create variables in an environment that will not be seen
+    ## when knitr executes chunks so that no variable name conflicts
+    
+    yaml   <- paste0('.panel-tabset', if(wide) ' .column-page')
+
+    k <- c('', paste0('::: {', yaml, '}'), '')
+    if(initblank) k <- c(k, '', '##   ', '')
+
+    for(i in 1 : length(fs)) {
+      f <- fs[[i]]
+      if('formula' %in% class(f)) {
+        v   <- as.character(attr(terms(f), 'variables'))[-1]
+        y   <- v[1]   # left-hand side
+        x   <- v[-1]  # right-hand side
+        raw <- 'raw' %in% x
+        if(raw) x <- setdiff(x, 'raw')
+      } else {
+        raw  <- FALSE
+        y    <- names(fs)[i]
+        x    <- paste0('.fs.[[', i, ']]')
+      }
+      r <- paste0('results="',
+                  if(raw) 'markup' else 'asis',
+                  '"')
+      cname <- paste0('c', round(1000000 * runif(1)))
+      k <- c(k, '', paste('##', y), '',
+             makecodechunk(x, results=if(raw) 'markup' else 'asis'))
+    }
+    c(k, ':::', '')
+  }
+  cat(knitr::knit(text=knitr::knit_expand(
+      text=makechunks(.fs.,
+                      wide=wide, initblank=initblank)), quiet=TRUE))
+  return(invisible())
+  }
+
+
+
+
+
+
+
+
+
+
+
 
 ##' Make Quarto Tabs
 ##'
@@ -132,7 +202,7 @@ maketabs2 <- function(x, labels=names(x),
 ##' @return 
 ##' @author Frank Harrell
 # See https://stackoverflow.com/questions/42631642
-maketabs <- function(..., wide=FALSE, initblank=FALSE) {
+if(FALSE)maketabs <- function(..., wide=FALSE, initblank=FALSE) {
   .fs. <- list(...)
   if(length(.fs.) == 1 && 'formula' %nin% class(.fs.[[1]]))
     .fs. <- .fs.[[1]]   # undo list(...) and get to 1st arg to maketabs
@@ -186,7 +256,7 @@ maketabs <- function(..., wide=FALSE, initblank=FALSE) {
 ##' @return 
 ##' @author Frank Harrell
 ##' @md
-makecolmarg <- function(x, ...) {
+if(FALSE)makecolmarg <- function(x, ...) {
   if(FALSE) {
   .objcolmarg.          <<- x
   .objcolmargprintargs. <<- list(...)
@@ -215,7 +285,7 @@ makecolmarg <- function(x, ...) {
 ##' @return 
 ##' @author Frank Harrell
 ##' @md
-makecnote <- function(x,
+if(FALSE)makecnote <- function(x,
                       label=paste0('`', deparse(substitute(x)), '`'),
                       ...) {
   if(FALSE) {
