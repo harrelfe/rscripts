@@ -47,7 +47,8 @@
 ##' @param pr defaults to no printing of window information.  Use `pr='plain'` to print in the ordinary way, `pr='kable` to convert the object to `knitr::kable` and print, or `pr='margin'` to convert to `kable` and place in the `Quarto` right margin.  For the latter two `results='asis'` must be in the chunk header.
 ##' @return a data table, with attribute `infon` which is a data frame with rows corresponding to strata and columns `N`, `Wmean`, `Wmin`, `Wmax` if `stat` computed `N`.  These summarize the number of observations used in the windows.  If `varyeps=TRUE` there is an additional column `eps` with the computed per-stratum `eps`.  When `space='n'` and `xinc` is not given, the computed `xinc` also appears as a column.  An additional attribute `info` is a `kable` object ready for printing to describe the window characteristics.
 ##' 
-movStats <- function(formula, stat=NULL, space=c('n', 'x'),
+movStats <- function(formula, stat=NULL, discrete=FALSE,
+                     space=c('n', 'x'),
                      eps =if(space=='n') 15, varyeps=FALSE,
                      xinc=NULL, xlim=NULL,
                      times=NULL, tunits='year',
@@ -63,6 +64,7 @@ movStats <- function(formula, stat=NULL, space=c('n', 'x'),
                      pr=c('none', 'kable', 'plain', 'margin')) {
   space   <- match.arg(space)
   msmooth <- match.arg(msmooth)
+  if(discrete) msmooth <- 'raw'
   tsmooth <- match.arg(tsmooth)
   pr      <- match.arg(pr)
 
@@ -73,7 +75,7 @@ movStats <- function(formula, stat=NULL, space=c('n', 'x'),
     require(kableExtra)
     }
 
-  .knots. <<- k   # make a global copy
+  if(! discrete) .knots. <<- k   # make a global copy
 
   mf   <- model.frame(formula, data=data)
   v    <- names(mf)
@@ -137,7 +139,7 @@ movStats <- function(formula, stat=NULL, space=c('n', 'x'),
 
   statx <- function(y, y2, x) {
     s <- if(sec) stat(y, y2) else stat(y)
-    if(space == 'n') s$.xmean. <- mean(x)
+    if(! discrete && space == 'n') s$.xmean. <- mean(x)
     s
   }
 
@@ -146,11 +148,16 @@ movStats <- function(formula, stat=NULL, space=c('n', 'x'),
 
   uby  <- if(is.factor(By)) levels(By) else sort(unique(By))
   needxinc <- space == 'n' && ! length(Xinc)
-  info <- matrix(NA,
-                 nrow=length(uby),
-                 ncol=5 + needxinc,
-                 dimnames=list(uby, c('N', 'Wmean', 'Wmin', 'Wmax',
-                                      'eps', if(needxinc) 'xinc')))
+  info <- if(discrete) matrix(NA, nrow=length(uby), ncol=1,
+                              dimnames=list(uby, 'N'))
+          else
+            matrix(NA,
+                   nrow=length(uby),
+                   ncol=5 + needxinc,
+                   dimnames=list(uby, c('N', 'Wmean', 'Wmin', 'Wmax',
+                                        'eps', if(needxinc) 'xinc')))
+  
+  if(discrete) xlev <- if(is.factor(X)) levels(X) else sort(unique(X))
   
   for(by in uby) {
     j <- By == by
@@ -163,7 +170,12 @@ movStats <- function(formula, stat=NULL, space=c('n', 'x'),
     y2 <- Y2[j]
     n  <- length(x)
 
-    switch(space,
+    if(discrete) {
+      xv   <- x
+      xseq <- xlev
+    }
+    else
+      switch(space,
            x = {
              xl <- xlim
              if(! length(xl)) {
@@ -202,10 +214,13 @@ movStats <- function(formula, stat=NULL, space=c('n', 'x'),
       info[by, 'eps'] <- ep
       }
     
-    s <- data.table(x, y, y2, xv)
-    a <- data.table(tx=xseq, key='tx')     # target xs for estimation
-    a[, .q(lo, hi) := .(tx - ep, tx + ep)] # define all windows
-    m <- a[s, on=.(lo <= xv, hi >= xv)]    # non-equi join
+    if(discrete) m <- data.table(x, y, y2, tx=xv)
+    else {
+      s <- data.table(x, y, y2, xv)
+      a <- data.table(tx=xseq, key='tx')     # target xs for estimation
+      a[, .q(lo, hi) := .(tx - ep, tx + ep)] # define all windows
+      m <- a[s, on=.(lo <= xv, hi >= xv)]    # non-equi join
+      }
     setkey(m, tx)
 
     ## Non-equi join adds observations tx=NA
@@ -214,10 +229,10 @@ movStats <- function(formula, stat=NULL, space=c('n', 'x'),
     info[by, 'N'] <- n
     if('N' %in% names(w)) {
       N <- w[, N]
-      info[by, 2:4] <- c(round(mean(N), 1), min(N), max(N))
+      if(! discrete) info[by, 2:4] <- c(round(mean(N), 1), min(N), max(N))
       }
 
-    if(space == 'n') {
+    if(! discrete && space == 'n') {
       w[, tx      := .xmean.]
       w[, .xmean. := NULL   ]
       }
@@ -347,9 +362,11 @@ movStats <- function(formula, stat=NULL, space=c('n', 'x'),
                c(' ' = 1, 'Window Sample Sizes' = 3),
                if('eps'  %in% n) c(' ' = 1),
                if('xinc' %in% n) c(' ' = 1))
-    info <- kable(info) %>%
-      add_header_above(ghead) %>%
-      kable_styling(font_size=9)
+    info <- if(discrete) kable(info)
+            else
+              info <- kable(info) %>%
+                add_header_above(ghead) %>%
+                kable_styling(font_size=9)
     }
     
   switch(pr,
