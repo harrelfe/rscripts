@@ -48,21 +48,46 @@ kabl <- function(..., caption=NULL, digits=4, col.names=NA, row.names=NA) {
   w <- lapply(w, function(x) knitr::kable(tr(x), digits=digits, format=format))
   knitr::kables(w, caption=caption, format=format)
 }
-
-makecodechunk <- function(cmd, results='asis') {
+##' Create Text for Running Code Chunk
+##'
+##' Creates text strings suitable for running through `knitr`.  The chunk is given a random name because certain operations are not allowed by `knitr` without it.
+##' @title makecodechunk
+##' @param cmd character string vector of commands to run inside chunk
+##' @param results format of results, default is `'asis'`.  May specify `results='markup'`.
+##' @param callout an optional Quarto callout to include after `#|` after the chunk header that affects how the result appears, e.g. `callout='column: margin'`
+##' @param h, w optional height and width to place after the chunk header after `#|`
+##' @return character vector 
+##' @author Frank Harrell
+makecodechunk <- function(cmd, results='asis',
+                          callout=NULL, h=NULL, w=NULL) {
   if(! length(cmd) || (is.character(cmd) && length(cmd) == 1 &&
             cmd %in% c('', ' ', "` `"))) return('')
 
   r <- paste0('results="', results, '"')
   cname <- paste0('c', round(1000000 * runif(1)))
+  if(length(callout)) callout <- paste('#|', callout)
+  if(length(h)) h <- paste('#| fig.height:', h)
+  if(length(w)) w <- paste('#| fig.width:', w)
   c('',
     paste0('```{r ', cname, ',', r, ',echo=FALSE}'),
-    cmd, '```', '')
+    cmd, callout, h, w, '```', '')
     }
 
-## If type=print x is the object to put in print() otherwise is
-## a character string representing command to run
-## if x is a formula, 
+##' General Case Handling of Quarto Callouts
+##'
+##' This function generates and optionally runs markdown/R code that runs Quarto callouts such as collapsible notes or marginal notes.
+##' @title makecallout
+##' @param x object to print (if `type='print'`), or one or more formulas whose right hand sides are to be run.  Left side provides labels if needed by the particular callout, and if `raw` is included on the right side any R code chunk run will have `results='asis'` in the chunk header.
+##' @param callout character string giving the Quarto callout
+##' @param label character string label if needed and if not obtained from the left side of a formula
+##' @param type defaults to `'print'` to print an object.  Set to `'run'` to run a chunk.
+##' @param now set to `FALSE` to return code instead of running it
+##' @param results if not using formulas, specifies the formatting option to code in the code header, either `'asis'` (the default) or `'markup'`
+##' @param close specifies whether to close the callout or to leave it open for future calls
+##' @param ... parameters passed to `print`
+##' @return if code is not executed, returns a character vector with the code to run
+##' @md
+##' @author Frank Harrell
 makecallout <- function(...) {
 
   ## Define internal function to keep new variables from clashing
@@ -117,6 +142,16 @@ makecallout <- function(...) {
   .k.
 }
 
+##' Print an Object in a Collapsible Note
+##'
+##' Prints an object in a Quarto collapsible note.
+##' @title makecnote
+##' @param x an object having a suitable `print` method
+##' @param label a character string providing a title for the tab.  Default is the name of the argument passed to `makecnote`.
+##' @param ... an optional list of arguments to be passed to `print`
+##' @return 
+##' @author Frank Harrell
+##' @md
 makecnote <- function(x,
                       label=paste0('`', deparse(substitute(x)), '`'),
                       wide=FALSE,
@@ -129,12 +164,35 @@ makecnote <- function(x,
   invisible()
 }
 
+##' Put an Object in the Margin
+##'
+##' Prints an object in a Quarto column margin.
+##' @title makecolmarg
+##' @param x an object having a suitable `print` method
+##' @param ... an optional list of arguments to be passed to `print`
+##' @return 
+##' @author Frank Harrell
+##' @md
 makecolmarg <- function(x, type=c('print', 'run'), ...) {
   type <- match.arg(type)
   makecallout(x, callout='.column-margin', type=type, ...)
   invisible()
 }
 
+##' Make Quarto Tabs
+##'
+##' Loops through a series of formulas or elements of a named list and outputs each element into
+##' a separate `Quarto` tab.  A `wide` argument is used to expand the width
+##' of the output outside the usual margins.  An `initblank` argument
+##' creates a first tab that is empty, or you can specify a formula `` `` ~ `` ``.  This allows one to show nothing
+##' until one of the other tabs is clicked.  Multiple commands can be run in one chunk by including multiple right hand terms in a formula.  A chunk can be marked for producing raw output by including a term `raw` somewhere in the formula's right side.
+##' @title maketabs
+##' @param ... a series of formulas or a single named list.  For formulas the left side is the tab label (if multiple words or other illegal R expressions enclose in backticks) and the right hand side has expressions to evaluate during chunk execution, plus an optional `raw` option.
+##' @param wide 
+##' @param initblank 
+##' @return 
+##' @author Frank Harrell
+# See https://stackoverflow.com/questions/42631642
 maketabs <- function(..., wide=FALSE, initblank=FALSE) {
   .fs. <- list(...)
   if(length(.fs.) == 1 && 'formula' %nin% class(.fs.[[1]]))
@@ -176,135 +234,6 @@ maketabs <- function(..., wide=FALSE, initblank=FALSE) {
                       wide=wide, initblank=initblank)), quiet=TRUE))
   return(invisible())
   }
-
-
-
-
-
-
-
-
-
-
-
-
-##' Make Quarto Tabs
-##'
-##' Loops through a series of formulas or elements of a named list and outputs each element into
-##' a separate `Quarto` tab.  A `wide` argument is used to expand the width
-##' of the output outside the usual margins.  An `initblank` argument
-##' creates a first tab that is empty, or you can specify a formula `` `` ~ `` ``.  This allows one to show nothing
-##' until one of the other tabs is clicked.  Multiple commands can be run in one chunk by including multiple right hand terms in a formula.  A chunk can be marked for producing raw output by including a term `raw` somewhere in the formula's right side.
-##' @title maketabs
-##' @param ... a series of formulas or a single named list.  For formulas the left side is the tab label (if multiple words or other illegal R expressions enclose in backticks) and the right hand side has expressions to evaluate during chunk execution, plus an optional `raw` option.
-##' @param wide 
-##' @param initblank 
-##' @return 
-##' @author Frank Harrell
-# See https://stackoverflow.com/questions/42631642
-if(FALSE)maketabs <- function(..., wide=FALSE, initblank=FALSE) {
-  .fs. <- list(...)
-  if(length(.fs.) == 1 && 'formula' %nin% class(.fs.[[1]]))
-    .fs. <- .fs.[[1]]   # undo list(...) and get to 1st arg to maketabs
-  
-  makechunks <- function(fs, wide, initblank) {
-    ## Create variables in an environment that will not be seen
-    ## when knitr executes chunks so that no variable name conflicts
-    
-    yaml   <- paste0('.panel-tabset', if(wide) ' .column-page')
-
-    k <- c('', paste0('::: {', yaml, '}'), '')
-    if(initblank) k <- c(k, '', '##   ', '')
-
-    for(i in 1 : length(fs)) {
-      f <- fs[[i]]
-      if('formula' %in% class(f)) {
-        v   <- as.character(attr(terms(f), 'variables'))[-1]
-        y   <- v[1]   # left-hand side
-        x   <- v[-1]  # right-hand side
-        raw <- 'raw' %in% x
-        if(raw) x <- setdiff(x, 'raw')
-      } else {
-        raw  <- FALSE
-        y    <- names(fs)[i]
-        x    <- paste0('.fs.[[', i, ']]')
-      }
-    r <- paste0('results="',
-                if(raw) 'markup' else 'asis',
-                '"')
-    cname <- paste0('c', round(1000000 * runif(1)))
-    k <- c(k, '', paste('##', y), '',
-           paste0('```{r ', cname, ',', r, ',echo=FALSE}'),
-           x, '```', '')
-    }
-    c(k, ':::', '')
-  }
-  
-  cat(knitr::knit(text=knitr::knit_expand(
-      text=makechunks(.fs.,
-                      wide=wide, initblank=initblank)), quiet=TRUE))
-  return(invisible())
-  }
-
-
-##' Print an Object in the Margin
-##'
-##' Prints an object in a Quarto column margin.
-##' @title makecolmarg
-##' @param x an object having a suitable `print` method
-##' @param ... an optional list of arguments to be passed to `print`
-##' @return 
-##' @author Frank Harrell
-##' @md
-if(FALSE)makecolmarg <- function(x, ...) {
-  if(FALSE) {
-  .objcolmarg.          <<- x
-  .objcolmargprintargs. <<- list(...)
-  cname <- paste0('c', round(100000 * runif(1)))
-  k <- c('', '::: {.column-margin}', '',
-         paste0('```{r ', cname, ',results="asis",echo=FALSE}'),
-         'do.call("print", c(list(.objcolmarg.), .objcolmargprintargs.))',
-         '', '```', '', ':::', '')
-  cat(knitr::knit(text=knitr::knit_expand(text=k), quiet=TRUE))
-  }
-  co <- function(x) paste(capture.output(x), collapse='\n')
-  cat('\n\n::: {.column-margin}\n')
-  # print(x, ...) will not work
-  cat(co(print(x, ...)))
-  cat('\n:::\n\n', sep='')
-  invisible()
-}
-
-##' Print an Object in a Collapsible Note
-##'
-##' Prints an object in a Quarto collapsible note.
-##' @title makecnote
-##' @param x an object having a suitable `print` method
-##' @param label a character string providing a title for the tab.  Default is the name of the argument passed to `makecnote`.
-##' @param ... an optional list of arguments to be passed to `print`
-##' @return 
-##' @author Frank Harrell
-##' @md
-if(FALSE)makecnote <- function(x,
-                      label=paste0('`', deparse(substitute(x)), '`'),
-                      ...) {
-  if(FALSE) {
-  .objcnote.          <<- x
-  .objcnoteprintargs. <<- lisit(...)
-  cname <- paste0('c', round(100000 * runif(1)))
-  k <- c('', '::: {.callout-note collapse="true"}',
-         paste0('# ', label), 
-         paste0('```{r ', cname, ',results="asis",echo=FALSE}'),
-         'do.call("print", c(list(.objcnote.), .objcnoteprintargs.))',
-         '', '```', '', ':::', '')
-  cat(knitr::knit(text=knitr::knit_expand(text=k), quiet=TRUE))
-  }
-  co <- function(x) paste(capture.output(x), collapse='\n')
-  cat('\n\n::: {.callout-note collapse="true"}\n# ', label, '\n')
-  ## print(x, ...) will not work
-  cat(co(print(x, ...)))
-  cat('\n:::\n\n', sep='')
-}
 
 
 ##' Convert Objects to HTML and View
