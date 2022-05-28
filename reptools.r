@@ -446,3 +446,149 @@ scplot <- function(command, cap=NULL, scap=NULL, w=5, h=4, id=NULL) {
   invisible()
 }
 
+
+missChk <- function(d, use=NULL, exclude=NULL,
+                    maxpat=15, maxcomb=25, excl1pat=TRUE,
+                    sortpatterns=TRUE,
+                    prednmiss=FALSE, omitpred=NULL, ...) {
+  setDT(d)
+  if(length(use)) {
+    if(inherits(use, 'formula')) use <- all.vars(use)
+    d <- d[, (use)]
+  }
+  if(length(exclude)) {
+    if(inherits(exclude, 'formula')) exclude <- all.vars(exclude)
+    use <- setdiff(names(d), exclude)
+    d <- d[, (use)]
+  }
+  
+  p <- ncol(d)
+  nna <- sapply(d, function(x) sum(is.na(x)))
+
+  kao <- function(...) knitr::asis_output(paste(unlist(list(...)), sep=''))
+  
+  if(all(nna == 0)) 
+    return(kao('No NAs on any of the',
+               p, ' variables examined.'))
+
+  surrq <- function(x) paste0('`', x, '`')
+
+  vmiss <- names(nna)[nna > 0]
+  dm    <- d[, .SD, .SDcols=vmiss]
+  pm    <- length(vmiss)
+
+  cat('\n', p - pm, 'variables have no NAs and', pm,
+      'variables have NAs\n\n')
+  
+  if(pm < max(20, maxpat)) {
+    nap <- na.pattern(dm)
+    nap <- matrix(nap, ncol=1, dimnames=list(names(nap), 'Count'))
+    n1  <- sum(nap[,1] == 1)
+    patex <- ''
+    if(excl1pat && n1 > 0) {
+      patex <- paste(n1,
+                     'patterns with frequency of 1 not listed\n')
+      nap <- nap[nap[,1] > 1, 1, drop=FALSE]
+      }
+      
+    if(nrow(nap) <= maxpat) {
+      cat('Frequency counts of all combinations of NAs\n\n',
+          'Variables in column order are:',
+          paste(surrq(vmiss), collapse=', '), '\n\n', patex,
+          sep='')
+      if(sortpatterns) {
+        i   <- order(- nap[, 1])
+        nap <- nap[i, , drop=FALSE]
+        }
+      print(kabl(nap))
+      return(invisible())
+    }
+  }
+ 
+  .naclus. <<- naclus(dm)
+  abb <- pm > 40
+  ptypes <- c('na per var' = 'NAs/var',
+              'na per obs' = 'NAs/obs',
+              'mean na'    = 'Mean # var NA when other var NA',
+              'na per var vs mean na' =
+                'NAs/var vs mean # other variables NA',
+              'clus'       = 'Clustering of missingness')
+  tabs <- vector('list', length(ptypes))
+  for(i in seq(ptypes)) {
+    lab <- surrq(ptypes[i])
+    f <- if(i < 5) paste0(lab, ' ~ ',
+                          'naplot(.naclus., which="', names(ptypes[i]),
+                          '")')
+         else
+           paste0(lab, ' ~ ', 'plot(.naclus., abbrev=', abb, ')')
+    tabs[[i]] <- as.formula(f)
+  }
+
+  dm <- dm[, lapply(.SD, is.na)]
+  ## Produce combination plot for the right number of variables with NAs
+  if(pm <= maxcomb) {
+    .misscombdata. <<- list(data=dm)
+    .misscombArgs. <<- c(list(maxcomb=maxcomb), list(...))
+    tabs <- c(tabs,
+              `NA combinations` ~ do.call('combplotp',
+                                          c(.misscombdata., .misscombArgs.)))
+  }
+
+  if(prednmiss && (pm < p)) {
+    ## Predict using ordinal regression the number of missing variables
+    ## from all the non-missing variables
+    ## Compute the number of missing variables per observation
+    dm    <- as.matrix(dm)
+    Nna   <- apply(dm, 1, sum)
+    preds <- names(nna)[nna == 0]
+    if(length(omitpred)) {
+      omitv <- if(is.character(omitpred)) omitpred
+               else
+                 all.vars(omitpred)
+      preds <- setdiff(preds, omitv)
+      }
+    form <- paste('Nna ~', paste(preds, collapse=' + '))
+    f <- rms::lrm(as.formula(form), data=d)
+    if(f$fail)
+      cat('prednmiss=TRUE led to failure of ordinal model to fit\n\n')
+    else {
+      .misschkanova. <<- anova(f)
+      .misschkfit.   <<- f
+      prtype <- .Options$prType
+      options(prType='html')
+      tabs <- c(tabs,
+                `Predicting # NAs per obs` ~ print(.misschkfit., coefs=FALSE) +
+                                             plot(.misschkanova.))
+      }
+ }
+  
+  do.call(maketabs, c(list(initblank=TRUE), list(tabs)))
+  options(prType=prtype)
+}
+
+varType <- function(data, include=NULL, exclude=NULL,
+                    ndistinct=10, nnonnum=20) {
+  # include: vector of variables in data to attend to
+  # exclude: attend to all variables in data except those in exclude
+  # include and exclude can be vectors or formulas with only right sides
+  if(length(include) && ! is.character(include))
+    include <- all.vars(include)
+  if(length(exclude) && ! is.character(exclude))
+    exclude <- all.vars(exclude)
+  v <- if(length(include)) include else setdiff(names(data), exclude)
+  g <- function(x) {
+    nnum <- is.character(x) || is.factor(x)
+    lu   <- length(unique(x))
+    fcase(nnum && lu > nnonnum, 'nonnumeric',
+          nnum,                 'discrete',
+          default = 'continuous')
+  }
+  
+  s <- sapply(if(is.data.table(data)) data[, ..v] else data[v], g)
+  split(names(s), s)
+}
+
+conVars <- function(...) varType(...)$continuous
+disVars <- function(...) varType(...)$discrete
+asForm  <- function(x) as.formula(paste('~', paste(x, collapse=' + ')))
+
