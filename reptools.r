@@ -58,18 +58,19 @@ kabl <- function(..., caption=NULL, digits=4, col.names=NA, row.names=NA) {
 ##' @param h, w optional height and width to place after the chunk header after `#|`
 ##' @return character vector 
 ##' @author Frank Harrell
-makecodechunk <- function(cmd, results='asis',
+makecodechunk <- function(cmd, results='asis', lang='r',
                           callout=NULL, h=NULL, w=NULL) {
   if(! length(cmd) || (is.character(cmd) && length(cmd) == 1 &&
             cmd %in% c('', ' ', "` `"))) return('')
 
   r <- paste0('results="', results, '"')
-  cname <- paste0('c', round(1000000 * runif(1)))
+  if(lang == 'r') cname <- paste0('c', round(1000000 * runif(1)))
   if(length(callout)) callout <- paste('#|', callout)
   if(length(h)) h <- paste('#| fig.height:', h)
   if(length(w)) w <- paste('#| fig.width:', w)
   c('',
-    paste0('```{r ', cname, ',', r, ',echo=FALSE}'),
+    if(lang == 'r') paste0('```{r ', cname, ',', r, ',echo=FALSE}')
+    else            paste0('```{', lang, '}'),
     cmd, callout, h, w, '```', '')
     }
 
@@ -571,11 +572,7 @@ varType <- function(data, include=NULL, exclude=NULL,
   # include: vector of variables in data to attend to
   # exclude: attend to all variables in data except those in exclude
   # include and exclude can be vectors or formulas with only right sides
-  if(length(include) && ! is.character(include))
-    include <- all.vars(include)
-  if(length(exclude) && ! is.character(exclude))
-    exclude <- all.vars(exclude)
-  v <- if(length(include)) include else setdiff(names(data), exclude)
+
   g <- function(x) {
     nnum <- is.character(x) || is.factor(x)
     lu   <- length(unique(x))
@@ -583,6 +580,14 @@ varType <- function(data, include=NULL, exclude=NULL,
           nnum,                 'discrete',
           default = 'continuous')
   }
+  
+  if(! is.data.frame(data)) return(g(data))
+
+  if(length(include) && ! is.character(include))
+    include <- all.vars(include)
+  if(length(exclude) && ! is.character(exclude))
+    exclude <- all.vars(exclude)
+  v <- if(length(include)) include else setdiff(names(data), exclude)
   
   s <- sapply(if(is.data.table(data)) data[, ..v] else data[v], g)
   split(names(s), s)
@@ -592,3 +597,175 @@ conVars <- function(...) varType(...)$continuous
 disVars <- function(...) varType(...)$discrete
 asForm  <- function(x) as.formula(paste('~', paste(x, collapse=' + ')))
 
+
+makemermaid <- function(.object., ...) {
+  x <- strsplit(.object., '\n')[[1]]
+  code <- makecodechunk(x, lang='mermaid')
+  ki <- knitr::knit_expand
+  cat(knitr::knit(text=do.call('ki', c(list(text=code), list(...))),
+                  quiet=TRUE))
+  invisible()
+}
+
+
+vClus <- function(d, exclude=NULL, fracmiss=0.2, maxlevels=10, minprev=0.05,
+                  horiz=FALSE, print=TRUE) {
+  w <- as.data.frame(d)  # needed by dataframeReduce
+  if(length(exclude)) w <- w[setdiff(names(w), exclude)]
+  w <- dataframeReduce(w, fracmiss=fracmiss, maxlevels=maxlevels,
+                       minprev=minprev, print=print)
+  form <- as.formula(paste('~', paste(names(w), collapse=' + ')))
+  v <- varclus(form, data=w)
+  if(horiz) plot(as.dendrogram(v$hclust), horiz=TRUE)
+  else plot(v)
+}
+
+dataOverview <- function(d, d2=NULL, id=NULL,
+                         plot=c('scatter', 'dot', 'none'),
+                         print=nvar <= 30, which=1, dec=3) {
+  nam1 <-                deparse(substitute(d ))
+  nam2 <- if(length(d2)) deparse(substitute(d2))
+  plot <- match.arg(plot)
+
+  if(which == 2 && ! length(d2))
+    stop('which=2 only applies when second dataset is provided')
+  
+  d <- copy(d)
+  setDT(d)
+  if(length(d2)) {
+    d2 <- copy(d2)
+    setDT(d2)
+  }
+
+  lun <- function(x) length(unique(x))
+  
+  id1 <- id2 <- FALSE
+  ids1 <- ids2 <- NULL
+  idv <- if(length(id)) all.vars(id)
+  
+  nid <- if(length(idv) == 1) paste('ID variable', idv)
+         else
+           paste('ID variables', paste(idv, collapse=' '))
+
+  if(length(id)) {
+    id1 <- all(idv %in% names(d))
+    if(id1)
+      ids1 <- unique(d[, do.call(paste0, .SD), .SDcols=idv])
+    if(length(d2)) {
+      id2 <- all(idv %in% names(d2))
+      if(id2) ids2 <- unique(d2[, do.call(paste0, .SD), .SDcols=idv])
+      }
+  }
+
+  cat(nam1, 'has', nrow(d), 'observations and', ncol(d), 'variables')
+  if(length(d2)) {
+    vcommon <- sum(names(d) %in% names(d2))
+    cat(' of which', vcommon, 'are in', nam2, '\n')
+    } else cat('\n')
+  if(id1) {
+    cat('There are', length(ids1), 'unique values of', nid, 'in', nam1)
+    if(length(d2) && id2) {
+      ncommon <- sum(ids1 %in% ids2)
+      cat(' with', ncommon, 'unique IDs also found in', nam2)
+    }
+    cat('\n')
+  }
+  if(length(d2)) {
+    cat(nam2, 'has', nrow(d2), 'observations and', ncol(d2), 'variables')
+    vcommon <- sum(names(d2) %in% names(d))
+    cat(' of which', vcommon, 'are in', nam1, '\n')
+    if(id2) {
+      cat('There are', length(ids2), 'unique values of', nid, 'in', nam2, '\n')
+      if(id1) {
+        ncommon <- sum(ids2 %in% ids1)
+        cat(ncommon, 'unique IDs are found in', nam1, '\n\n')
+      }
+    } 
+  }
+  
+  ## Get variables types
+  w <- switch(which, d, d2)
+  nvar <- ncol(w)
+  vtypes <- varType(w)
+  types  <- character(ncol(w))
+  names(types) <- names(w)
+  types[vtypes$continuous] <- 'Continuous'
+  types[vtypes$discrete]   <- 'Discrete'
+  types[vtypes$nonnumeric] <- 'Non-numeric'
+
+  g <- function(x) {
+    type <- varType(x)
+    if(is.numeric(x)) x <- round(x, dec)
+    tab  <- table(x)
+    low  <- which.min(tab)
+    hi   <- which.max(tab)
+                  
+    list(type       = varType(x),
+         distinct   = lun(x),
+         NAs        = sum(is.na(x)),
+         mincat     = names(tab)[low],
+         mincatfreq = unname(tab[low]),
+         maxcat     = names(tab)[hi],
+         maxcatfreq = unname(tab[hi]))
+  }
+
+  z <- lapply(w, g)
+  r <- NULL
+  for(i in 1 : length(z))
+    r <- rbind(r, as.data.frame(z[[i]]))
+  r$variable <- names(w)
+  setDT(r)
+  if(print) print(r)
+
+  if(plot == 'none') return(invisible())
+  
+  breaks <- function(mf) {
+    br  <- pretty(c(0, mf), 10)
+    mbr <- c(0, 10, 20, 30, 40, 50, 100, if(mf >= 200) seq(200, mf, by=100))
+    mbr <- mbr[mbr < mf]
+    mbr <- setdiff(mbr, br)
+    list(br=br, mbr=mbr)
+    }
+    
+  if(plot == 'dot') {
+    r <- r[, .(variable, type, distinct, NAs, mincatfreq, maxcatfreq)]
+    m <- melt(r, id.vars=c('variable', 'type'),
+            variable.name='what', value.name='Freq')
+    s <- split(m, m$type)
+    b <- breaks(max(m$Freq))
+    br <- b$br; mbr <- b$mbr
+    gg <- function(data)
+      ggplot(data, aes(y=variable, x=Freq, col=what)) + geom_point() +
+        scale_x_continuous(trans='sqrt', breaks=br, 
+                           minor_breaks=mbr) +
+        xlab('') + ylab('Frequency') +
+        guides(color=guide_legend(title='')) +
+        theme(legend.position='bottom')
+    g <- lapply(s, gg)
+  } else if(plot == 'scatter') {
+    r[, txt := paste(variable,
+                     paste('distinct values:', distinct),
+                     paste('NAs:', NAs),
+                     paste0('lowest frequency (', mincatfreq, ') value:',
+                            mincat),
+                     paste0('highest frequency (', maxcatfreq, ') value:',
+                            maxcat), sep='<br>')]
+
+    b <- breaks(max(r$distinct))
+    br <- b$br; mbr <- b$mbr
+
+    gg <- function(data)
+      ggplotlyr(
+      ggplot(data, aes(x=distinct, y=maxcatfreq,
+                       col=cut2(NAs, g=12), label=txt)) +
+        scale_x_continuous(trans='sqrt', breaks=br, 
+                           minor_breaks=mbr) +
+        geom_point() + xlab('Number of Distinct Values') +
+        ylab('Frequency of Modal Value') +
+        guides(color=guide_legend(title='NAs'))  )
+#        theme(legend.position='bottom'))
+    s <- split(r, r$type)
+    g <- lapply(s, gg)
+  }
+  maketabs(g, initblank=TRUE)
+}
