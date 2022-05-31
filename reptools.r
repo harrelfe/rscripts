@@ -695,10 +695,10 @@ dataOverview <- function(d, d2=NULL, id=NULL,
   nvar <- ncol(w)
 
   g <- function(x) {
-    type <- upFirst(varType(x))
+    type <- varType(x)
     info <- NA
     distinct <- lun(x)
-    if(is.numeric(x)) {
+    if(type == 'continuous') {
       sym <- distSym(x, na.rm=TRUE)
       x <- round(x, dec)
     }
@@ -706,12 +706,12 @@ dataOverview <- function(d, d2=NULL, id=NULL,
     tab <- table(x)
     n   <- sum(tab)
     fp  <- tab / n
-    if(! is.numeric(x)) sym <- 1. - mean(abs(fp - 1. / length(tab)))
+    if(type != 'continuous') sym <- 1. - mean(abs(fp - 1. / length(tab)))
     info <- if(distinct < 2) 0 else (1 - sum(fp ^ 3)) / (1 - 1 / n / n)
     low  <- which.min(tab)
     hi   <- which.max(tab)
                   
-    list(type       = varType(x),
+    list(type       = upFirst(type),
          distinct   = distinct,
          info       = info,
          symmetry   = sym,
@@ -765,20 +765,24 @@ dataOverview <- function(d, d2=NULL, id=NULL,
     b <- breaks(max(r$distinct))
     br <- b$br; mbr <- b$mbr
 
-    gg <- function(data)
+    gg <- function(data) {
+      cap <- paste(nrow(data), 'variables and', nrow(w),
+                   'observations\nNumber of NAs is color coded')
       ggplotlyr(
       ggplot(data, aes(x=distinct, y=symmetry,
-                       color=as.integer(.type.), label=txt)) +
+                       color=as.integer(.nna.), label=txt)) +
         scale_x_continuous(trans='sqrt', breaks=br, 
                            minor_breaks=mbr) +
         scale_color_gradientn(colors=viridis::viridis(10),
-                              breaks=1 : length(levels(data$.type.)),
-                              labels=levels(data$.type.)) +
+                              breaks=1 : length(levels(data$.nna.)),
+                              labels=levels(data$.nna.)) +
         geom_point() + xlab('Number of Distinct Values') +
         ylab('Symmetry') +
+        labs(caption=cap) +
         guides(color=guide_legend(title='NAs'))  )
-        #        theme(legend.position='bottom'))
-    r[, .type. := cut2(NAs, g=12)]
+        #        theme(legend.position='bottom')
+      }
+    r[, .nna. := cut2(NAs, g=12)]
     s <- split(r, r$type)
     g <- lapply(s, gg)
   }
@@ -791,5 +795,3 @@ asisOut <- function(...) {
   x <- if(length(x) > 1) paste0(unlist(x)) else x[[1]]
   knitr::asis_output(x)
   }
-
-  
