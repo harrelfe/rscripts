@@ -689,7 +689,7 @@ dataOverview <- function(d, d2=NULL, id=NULL,
                caption='Frequency distribution of number of NAs per variable'))
     tab <- table(na.per.obs)
     print(kabl(tab,
-               caption='Frequency ditribution of number of NA variables per observation'))
+               caption='Frequency ditribution of number of incomplete variables per observation'))
   }
   
   if(id1) {
@@ -816,6 +816,8 @@ dataOverview <- function(d, d2=NULL, id=NULL,
     s <- split(r, r$type)
     g <- lapply(s, gg)
   }
+  print(kabl(r[, paste(levels(.nna.), collapse=' ')],
+       'Intervals of frequencies of NAs used for color-coding plots'))
   maketabs(g, initblank=TRUE)
   invisible()
 }
