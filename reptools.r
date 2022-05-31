@@ -670,27 +670,26 @@ dataOverview <- function(d, d2=NULL, id=NULL,
   na.per.obs <- apply(na, 1, sum)
 
   cat(nam1, ' has ', nrow(d), ' observations (', sum(na.per.obs == 0),
-      ' complete) and ', ncol(d), ' variables (', sum(na.per.var == 0),
-      ' complete)', sep='')
+              ' complete) and ', ncol(d), ' variables (', sum(na.per.var == 0),
+              ' complete)', sep='')
   if(length(d2)) {
     vcommon <- sum(names(d) %in% names(d2))
-    cat(' of which', vcommon, 'variables are in', nam2, '\n')
+    cat(' of which', vcommon, 'variables are in', nam2)
   } else cat('\n')
-
+  
   if(sum(na) > 0) {
-    cat('\nNumber of NAs\n')
     z <- data.frame(Minimum=c(min(na.per.var), min(na.per.obs)),
                     Maximum=c(max(na.per.var), max(na.per.obs)),
                     Mean   =round(c(mean(na.per.var), mean(na.per.obs)), 1),
                     row.names=c('Per variable', 'Per observation'))
-    print(z)
+    print(kabl(z, caption='Number of NAs'))
     
-    cat('\nFrequency distribution of number of NAs per variable\n')
-    tab <- table(na.per.var); names(dimnames(tab)) <- ''
-    print(tab)
-    cat('\nFrequency distribution of number of NA variables per observation\n')
-    tab <- table(na.per.obs); names(dimnames(tab)) <- ''
-    print(tab)
+    tab <- table(na.per.var)
+    print(kabl(tab,
+               caption='Frequency distribution of number of NAs per variable'))
+    tab <- table(na.per.obs)
+    print(kabl(tab,
+               caption='Frequency ditribution of number of NA variables per observation'))
   }
   
   if(id1) {
