@@ -747,8 +747,15 @@ dataOverview <- function(d, d2=NULL, id=NULL,
 
   z <- lapply(w, g)
   r <- rbindlist(z, idcol='variable')
-  if(pr) print(kabl(r, digits=3))
-
+  if(pr) {
+    s <- copy(r)
+    setnames(s, .q(variable, type, distinct, info, symmetry, NAs, mincat,
+                   mincatfreq, maxcat, maxcatfreq),
+             .q(Variable, Type, Distinct, Info, Symmetry, NAs, "Rarest Value",
+                "Frequency of Rarest Value", Mode, "Frequency of Mode"))
+    print(kabl(s, digits=3))
+  }
+  
   if(plot == 'none') return(invisible())
   
   breaks <- function(mf) {
