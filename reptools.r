@@ -574,9 +574,9 @@ varType <- function(data, include=NULL, exclude=NULL,
   g <- function(x) {
     nnum <- is.character(x) || is.factor(x)
     lu   <- length(unique(x))
-    fcase(nnum && lu > nnonnum, 'nonnumeric',
-          nnum,                 'discrete',
-          default = 'continuous')
+    fcase(! nnum && lu >= ndistinct, 'continuous',
+          nnum && lu > nnonnum,      'nonnumeric',
+          default = 'discrete')
   }
   
   if(! is.data.frame(data)) return(g(data))
@@ -620,7 +620,7 @@ vClus <- function(d, exclude=NULL, fracmiss=0.2, maxlevels=10, minprev=0.05,
 
 dataOverview <- function(d, d2=NULL, id=NULL,
                          plot=c('scatter', 'dot', 'none'),
-                         print=nvar <= 50, which=1, dec=3) {
+                         pr=nvar <= 50, which=1, dec=3) {
   nam1 <-                deparse(substitute(d ))
   nam2 <- if(length(d2)) deparse(substitute(d2))
   plot <- match.arg(plot)
@@ -664,11 +664,35 @@ dataOverview <- function(d, d2=NULL, id=NULL,
       }
   }
 
-  cat(nam1, 'has', nrow(d), 'observations and', ncol(d), 'variables')
+  ismiss <- function(x) if(is.character(x)) is.na(x) | x=='' else is.na(x) 
+  na         <- sapply(d, ismiss) * 1
+  na.per.var <- apply(na, 2, sum)
+  na.per.obs <- apply(na, 1, sum)
+
+  cat(nam1, ' has ', nrow(d), ' observations (', sum(na.per.obs == 0),
+      ' complete) and ', ncol(d), ' variables (', sum(na.per.var == 0),
+      ' complete)', sep='')
   if(length(d2)) {
     vcommon <- sum(names(d) %in% names(d2))
-    cat(' of which', vcommon, 'are in', nam2, '\n')
-    } else cat('\n')
+    cat(' of which', vcommon, 'variables are in', nam2, '\n')
+  } else cat('\n')
+
+  if(sum(na) > 0) {
+    cat('\nNumber of NAs\n')
+    z <- data.frame(Minimum=c(min(na.per.var), min(na.per.obs)),
+                    Maximum=c(max(na.per.var), max(na.per.obs)),
+                    Mean   =round(c(mean(na.per.var), mean(na.per.obs)), 1),
+                    row.names=c('Per variable', 'Per observation'))
+    print(z)
+    
+    cat('\nFrequency distribution of number of NAs per variable\n')
+    tab <- table(na.per.var); names(dimnames(tab)) <- ''
+    print(tab)
+    cat('\nFrequency distribution of number of NA variables per observation\n')
+    tab <- table(na.per.obs); names(dimnames(tab)) <- ''
+    print(tab)
+  }
+  
   if(id1) {
     cat('There are', length(ids1), 'unique values of', nid, 'in', nam1)
     if(length(d2) && id2) {
@@ -724,7 +748,7 @@ dataOverview <- function(d, d2=NULL, id=NULL,
 
   z <- lapply(w, g)
   r <- rbindlist(z, idcol='variable')
-  if(print) print(kabl(r))
+  if(pr) print(kabl(r, digits=3))
 
   if(plot == 'none') return(invisible())
   
