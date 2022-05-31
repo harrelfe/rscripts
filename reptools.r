@@ -466,11 +466,9 @@ missChk <- function(d, use=NULL, exclude=NULL,
   p <- ncol(d)
   nna <- sapply(d, function(x) sum(is.na(x)))
 
-  kao <- function(...) knitr::asis_output(paste(unlist(list(...)), sep=''))
-  
   if(all(nna == 0)) 
-    return(kao('No NAs on any of the',
-               p, ' variables examined.'))
+    return(asisOut('No NAs on any of the',
+                   p, ' variables examined.'))
 
   surrq <- function(x) paste0('`', x, '`')
 
@@ -622,7 +620,7 @@ vClus <- function(d, exclude=NULL, fracmiss=0.2, maxlevels=10, minprev=0.05,
 
 dataOverview <- function(d, d2=NULL, id=NULL,
                          plot=c('scatter', 'dot', 'none'),
-                         print=nvar <= 30, which=1, dec=3) {
+                         print=nvar <= 50, which=1, dec=3) {
   nam1 <-                deparse(substitute(d ))
   nam2 <- if(length(d2)) deparse(substitute(d2))
   plot <- match.arg(plot)
@@ -635,6 +633,15 @@ dataOverview <- function(d, d2=NULL, id=NULL,
   if(length(d2)) {
     d2 <- copy(d2)
     setDT(d2)
+  }
+
+  ## From rmsb package:
+  distSym <- function(x, prob=0.9, na.rm=FALSE) {
+    if(na.rm) x <- x[! is.na(x)]
+    a <- (1. - prob) / 2.
+    w <- quantile(x, probs=c(a / 2., 1. - a / 2.))
+    xbar <- mean(x)
+    as.vector((w[2] - xbar) / (xbar - w[1]))
   }
 
   lun <- function(x) length(unique(x))
@@ -686,22 +693,28 @@ dataOverview <- function(d, d2=NULL, id=NULL,
   ## Get variables types
   w <- switch(which, d, d2)
   nvar <- ncol(w)
-  vtypes <- varType(w)
-  types  <- character(ncol(w))
-  names(types) <- names(w)
-  types[vtypes$continuous] <- 'Continuous'
-  types[vtypes$discrete]   <- 'Discrete'
-  types[vtypes$nonnumeric] <- 'Non-numeric'
 
   g <- function(x) {
-    type <- varType(x)
-    if(is.numeric(x)) x <- round(x, dec)
-    tab  <- table(x)
+    type <- upFirst(varType(x))
+    info <- NA
+    distinct <- lun(x)
+    if(is.numeric(x)) {
+      sym <- distSym(x, na.rm=TRUE)
+      x <- round(x, dec)
+    }
+    
+    tab <- table(x)
+    n   <- sum(tab)
+    fp  <- tab / n
+    if(! is.numeric(x)) sym <- 1. - mean(abs(fp - 1. / length(tab)))
+    info <- if(distinct < 2) 0 else (1 - sum(fp ^ 3)) / (1 - 1 / n / n)
     low  <- which.min(tab)
     hi   <- which.max(tab)
                   
     list(type       = varType(x),
-         distinct   = lun(x),
+         distinct   = distinct,
+         info       = info,
+         symmetry   = sym,
          NAs        = sum(is.na(x)),
          mincat     = names(tab)[low],
          mincatfreq = unname(tab[low]),
@@ -710,12 +723,8 @@ dataOverview <- function(d, d2=NULL, id=NULL,
   }
 
   z <- lapply(w, g)
-  r <- NULL
-  for(i in 1 : length(z))
-    r <- rbind(r, as.data.frame(z[[i]]))
-  r$variable <- names(w)
-  setDT(r)
-  if(print) print(r)
+  r <- rbindlist(z, idcol='variable')
+  if(print) print(kabl(r))
 
   if(plot == 'none') return(invisible())
   
@@ -746,6 +755,8 @@ dataOverview <- function(d, d2=NULL, id=NULL,
     r[, txt := paste(variable,
                      paste('distinct values:', distinct),
                      paste('NAs:', NAs),
+                     paste('Info:', round(info, 3)),
+                     paste('Symmetry:', round(symmetry, 3)),
                      paste0('lowest frequency (', mincatfreq, ') value:',
                             mincat),
                      paste0('highest frequency (', maxcatfreq, ') value:',
@@ -756,16 +767,29 @@ dataOverview <- function(d, d2=NULL, id=NULL,
 
     gg <- function(data)
       ggplotlyr(
-      ggplot(data, aes(x=distinct, y=maxcatfreq,
-                       col=cut2(NAs, g=12), label=txt)) +
+      ggplot(data, aes(x=distinct, y=symmetry,
+                       color=as.integer(.type.), label=txt)) +
         scale_x_continuous(trans='sqrt', breaks=br, 
                            minor_breaks=mbr) +
+        scale_color_gradientn(colors=viridis::viridis(10),
+                              breaks=1 : length(levels(data$.type.)),
+                              labels=levels(data$.type.)) +
         geom_point() + xlab('Number of Distinct Values') +
-        ylab('Frequency of Modal Value') +
+        ylab('Symmetry') +
         guides(color=guide_legend(title='NAs'))  )
-#        theme(legend.position='bottom'))
+        #        theme(legend.position='bottom'))
+    r[, .type. := cut2(NAs, g=12)]
     s <- split(r, r$type)
     g <- lapply(s, gg)
   }
   maketabs(g, initblank=TRUE)
+  invisible()
 }
+
+asisOut <- function(...) {
+  x <- list(...)
+  x <- if(length(x) > 1) paste0(unlist(x)) else x[[1]]
+  knitr::asis_output(x)
+  }
+
+  
