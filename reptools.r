@@ -64,13 +64,13 @@ makecodechunk <- function(cmd, results='asis', lang='r',
             cmd %in% c('', ' ', "` `"))) return('')
 
   r <- paste0('results="', results, '"')
-  if(lang == 'r') cname <- paste0('c', round(1000000 * runif(1)))
+  cname <- paste0('c', round(1000000 * runif(1)))
   if(length(callout)) callout <- paste('#|', callout)
   if(length(h)) h <- paste('#| fig.height:', h)
   if(length(w)) w <- paste('#| fig.width:', w)
   c('',
     if(lang == 'r') paste0('```{r ', cname, ',', r, ',echo=FALSE}')
-    else            paste0('```{', lang, '}'),
+    else            paste0('```{', lang, ' ', cname, '}'),
     cmd, callout, h, w, '```', '')
     }
 
@@ -596,12 +596,13 @@ disVars <- function(...) varType(...)$discrete
 asForm  <- function(x) as.formula(paste('~', paste(x, collapse=' + ')))
 
 
-makemermaid <- function(.object., ...) {
+makemermaid <- function(.object., ..., debug=FALSE) {
   x <- strsplit(.object., '\n')[[1]]
   code <- makecodechunk(x, lang='mermaid')
   ki <- knitr::knit_expand
-  cat(knitr::knit(text=do.call('ki', c(list(text=code), list(...))),
-                  quiet=TRUE))
+  etext <- do.call('ki', c(list(text=code), list(...)))
+  if(debug) cat(etext, sep='\n', file='/tmp/z')
+  cat(knitr::knit(text=etext, quiet=TRUE))
   invisible()
 }
 
