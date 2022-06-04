@@ -81,7 +81,7 @@ makecodechunk <- function(cmd, results='asis', lang='r',
 ##' @param x object to print (if `type='print'`), or one or more formulas whose right hand sides are to be run.  Left side provides labels if needed by the particular callout, and if `raw` is included on the right side any R code chunk run will have `results='asis'` in the chunk header.
 ##' @param callout character string giving the Quarto callout
 ##' @param label character string label if needed and if not obtained from the left side of a formula
-##' @param type defaults to `'print'` to print an object.  Set to `'run'` to run a chunk.
+##' @param type defaults to `'print'` to print an object.  Set to `'run'` to run a chunk or `'cat'` to use `cat()` to render.
 ##' @param now set to `FALSE` to return code instead of running it
 ##' @param results if not using formulas, specifies the formatting option to code in the code header, either `'asis'` (the default) or `'markup'`
 ##' @param close specifies whether to close the callout or to leave it open for future calls
@@ -127,6 +127,8 @@ makecallout <- function(...) {
          else
            if(type == 'print') capture.output(print(x, ...))
          else
+           if(type == 'cat') x
+         else
            makecodechunk(x, results=results)
   k <- c(k, res, if(close) c(':::', ''))
   list(k=k, now=now, type=type)
@@ -135,7 +137,8 @@ makecallout <- function(...) {
   .k. <- .z.$k
   if(.z.$now) {
     switch(.z.$type,
-           print = cat(.k., sep='\n'),
+           print = cat(.k., sep='\n'),  # already print()'d
+           cat   = cat(.k., sep='\n'),
            run   = cat(knitr::knit(text=knitr::knit_expand(text=.k.),
                                quiet=TRUE)))
     return(invisible())
@@ -156,7 +159,7 @@ makecallout <- function(...) {
 makecnote <- function(x,
                       label=paste0('`', deparse(substitute(x)), '`'),
                       wide=FALSE,
-                      type=c('print', 'run'),
+                      type=c('print', 'run', 'cat'),
                       ...) {
   type <- match.arg(type)
   co <- paste('.callout-note', if(wide) '.column-page', 'collapse="true"')
@@ -174,7 +177,7 @@ makecnote <- function(x,
 ##' @return 
 ##' @author Frank Harrell
 ##' @md
-makecolmarg <- function(x, type=c('print', 'run'), ...) {
+makecolmarg <- function(x, type=c('print', 'run', 'cat'), ...) {
   type <- match.arg(type)
   makecallout(x, callout='.column-margin', type=type, ...)
   invisible()
@@ -596,9 +599,9 @@ disVars <- function(...) varType(...)$discrete
 asForm  <- function(x) as.formula(paste('~', paste(x, collapse=' + ')))
 
 
-makemermaid <- function(.object., ..., debug=FALSE) {
+makemermaid <- function(.object., ..., callout=NULL, debug=FALSE) {
   x <- strsplit(.object., '\n')[[1]]
-  code <- makecodechunk(x, lang='mermaid')
+  code <- makecodechunk(x, lang='mermaid', callout=callout)
   ki <- knitr::knit_expand
   etext <- do.call('ki', c(list(text=code), list(...)))
   if(debug) cat(etext, sep='\n', file='/tmp/z')
