@@ -451,23 +451,39 @@ scplot <- function(command, cap=NULL, scap=NULL, w=5, h=4, id=NULL) {
 }
 
 
-missChk <- function(d, use=NULL, exclude=NULL,
+missChk <- function(data, use=NULL, exclude=NULL,
+                    type=c('report', 'seq'),
                     maxpat=15, maxcomb=25, excl1pat=TRUE,
                     sortpatterns=TRUE,
                     prednmiss=FALSE, omitpred=NULL, ...) {
+  type <- match.arg(type)
+  d    <- copy(data)
   setDT(d)
   if(length(use)) {
     if(inherits(use, 'formula')) use <- all.vars(use)
-    d <- d[, (use)]
+    d <- d[, ..use]
   }
   if(length(exclude)) {
     if(inherits(exclude, 'formula')) exclude <- all.vars(exclude)
     use <- setdiff(names(d), exclude)
-    d <- d[, (use)]
+    d <- d[, ..use]
   }
   
   p <- ncol(d)
-  nna <- sapply(d, function(x) sum(is.na(x)))
+
+  ismiss <- function(x)
+    if(is.character(x)) is.na(x) | trimws(x) == ''
+    else is.na(x)
+
+  ## Replace each variable with missingness indicator
+  d <- d[, lapply(.SD, ismiss)]
+  
+  ## Hierarchical exclusions
+
+  exc <- d[, do.call('seqFreq', c(.SD, list(noneNA=TRUE)))]
+  if(type == 'seq') return(exc)
+
+  nna <- sapply(d, sum)
 
   if(all(nna == 0)) 
     return(asisOut('No NAs on any of the',
@@ -525,6 +541,15 @@ missChk <- function(d, use=NULL, exclude=NULL,
            paste0(lab, ' ~ ', 'plot(.naclus., abbrev=', abb, ')')
     tabs[[i]] <- as.formula(f)
   }
+
+  ## Add tab for sequential NA exclusions
+  .seqmisstab. <- table(exc)
+  .pseqmiss.   <- function() {
+    cat('Sequential frequency-ordered exclusions due to NAs\n\n')
+    print(.seqmisstab.)
+    }
+  
+  tabs <- c(tabs, Sequential ~ .pseqmiss.())
 
   dm <- dm[, lapply(.SD, is.na)]
   ## Produce combination plot for the right number of variables with NAs
@@ -668,7 +693,8 @@ dataOverview <- function(d, d2=NULL, id=NULL,
       }
   }
 
-  ismiss <- function(x) if(is.character(x)) is.na(x) | x=='' else is.na(x) 
+  ismiss <- function(x)
+    if(is.character(x)) is.na(x) | x %in% c('', ' ') else is.na(x) 
   na         <- sapply(d, ismiss) * 1
   na.per.var <- apply(na, 2, sum)
   na.per.obs <- apply(na, 1, sum)
