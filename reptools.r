@@ -480,7 +480,8 @@ missChk <- function(data, use=NULL, exclude=NULL,
   
   ## Hierarchical exclusions
 
-  exc <- di[, do.call('seqFreq', c(.SD, list(noneNA=TRUE)))]
+###  exc <- di[, do.call('seqFreq', c(.SD, list(noneNA=TRUE)))]
+  exc <- do.call('seqFreq', c(di, list(noneNA=TRUE)))
   if(type == 'seq') return(exc)
 
   nna <- sapply(di, sum)
@@ -492,7 +493,8 @@ missChk <- function(data, use=NULL, exclude=NULL,
   surrq <- function(x) paste0('`', x, '`')
 
   vmiss <- names(nna)[nna > 0]
-  dm    <- d[, .SD, .SDcols=vmiss]
+#####  dm    <- d[, .SD, .SDcols=vmiss]
+  dm    <- d[, ..vmiss]
   pm    <- length(vmiss)
 
   cat('\n', p - pm, 'variables have no NAs and', pm,
@@ -543,8 +545,8 @@ missChk <- function(data, use=NULL, exclude=NULL,
   }
 
   ## Add tab for sequential NA exclusions
-  .seqmisstab. <- table(exc)
-  .pseqmiss.   <- function() {
+  .seqmisstab. <<- table(exc)
+  .pseqmiss.   <<- function() {
     cat('Sequential frequency-ordered exclusions due to NAs\n\n')
     print(.seqmisstab.)
     }
