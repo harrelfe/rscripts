@@ -456,6 +456,7 @@ missChk <- function(data, use=NULL, exclude=NULL,
                     maxpat=15, maxcomb=25, excl1pat=TRUE,
                     sortpatterns=TRUE,
                     prednmiss=FALSE, omitpred=NULL, ...) {
+
   type <- match.arg(type)
   d    <- copy(data)
   setDT(d)
@@ -480,7 +481,6 @@ missChk <- function(data, use=NULL, exclude=NULL,
   
   ## Hierarchical exclusions
 
-###  exc <- di[, do.call('seqFreq', c(.SD, list(noneNA=TRUE)))]
   exc <- do.call('seqFreq', c(di, list(noneNA=TRUE)))
   if(type == 'seq') return(exc)
 
@@ -493,7 +493,6 @@ missChk <- function(data, use=NULL, exclude=NULL,
   surrq <- function(x) paste0('`', x, '`')
 
   vmiss <- names(nna)[nna > 0]
-#####  dm    <- d[, .SD, .SDcols=vmiss]
   dm    <- d[, ..vmiss]
   pm    <- length(vmiss)
 
@@ -510,12 +509,12 @@ missChk <- function(data, use=NULL, exclude=NULL,
                      'patterns with frequency of 1 not listed\n')
       nap <- nap[nap[,1] > 1, 1, drop=FALSE]
       }
-      
+
     if(nrow(nap) <= maxpat) {
       cat('Frequency counts of all combinations of NAs\n\n',
           'Variables in column order are:',
           paste(surrq(vmiss), collapse=', '), '\n\n', patex,
-          sep='')
+                sep='')
       if(sortpatterns) {
         i   <- order(- nap[, 1])
         nap <- nap[i, , drop=FALSE]
@@ -546,12 +545,10 @@ missChk <- function(data, use=NULL, exclude=NULL,
 
   ## Add tab for sequential NA exclusions
   .seqmisstab. <<- table(exc)
-  .pseqmiss.   <<- function() {
-    cat('Sequential frequency-ordered exclusions due to NAs\n\n')
-    print(.seqmisstab.)
-    }
   
-  tabs <- c(tabs, Sequential ~ .pseqmiss.())
+  tabs <- c(tabs, Sequential ~
+                    kabl(.seqmisstab.,
+                         caption='Sequential frequency-ordered exclusions due to NAs'))
 
   dm <- dm[, lapply(.SD, is.na)]
   ## Produce combination plot for the right number of variables with NAs
