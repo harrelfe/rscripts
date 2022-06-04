@@ -872,7 +872,7 @@ seqFreq <- function(..., labels=NULL, noneNA=FALSE) {
 j <- j[j != 0]
 x <- if(noneNA) factor(w, j, nam[j]) else
                 factor(w, c(0, j), c('none', nam[j]))
-attr(x, 'cond.per.obs') <- cond
+attr(x, 'obs.per.numcond') <- cond
 x
 }
 
