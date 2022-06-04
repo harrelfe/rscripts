@@ -476,14 +476,14 @@ missChk <- function(data, use=NULL, exclude=NULL,
     else is.na(x)
 
   ## Replace each variable with missingness indicator
-  dm <- d[, lapply(.SD, ismiss)]
+  di <- d[, lapply(.SD, ismiss)]
   
   ## Hierarchical exclusions
 
-  exc <- dm[, do.call('seqFreq', c(.SD, list(noneNA=TRUE)))]
+  exc <- di[, do.call('seqFreq', c(.SD, list(noneNA=TRUE)))]
   if(type == 'seq') return(exc)
 
-  nna <- sapply(dm, sum)
+  nna <- sapply(di, sum)
 
   if(all(nna == 0)) 
     return(asisOut('No NAs on any of the',
