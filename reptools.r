@@ -71,7 +71,7 @@ makecodechunk <- function(cmd, results='asis', lang='r',
   c('',
     if(lang == 'r') paste0('```{r ', cname, ',', r, ',echo=FALSE}')
     else            paste0('```{', lang, ' ', cname, '}'),
-    cmd, callout, h, w, '```', '')
+    callout, cmd, h, w, '```', '')
     }
 
 ##' General Case Handling of Quarto Callouts
