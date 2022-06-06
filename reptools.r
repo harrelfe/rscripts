@@ -931,3 +931,12 @@ addCap <- function(label=NULL, cap=NULL, scap=NULL) {
                        data.frame(label=label, cap=cap, scap=scap))
   invisible(list(label=label, cap=cap, scap=scap))
 }
+
+printCap <- function() {
+  cap <- .captions.[c('label', 'scap')]
+  cap$label <- paste0('@', cap$label)
+  names(cap) <- c('Figure', 'Short Caption')
+  knitr::kable(cap, format='html')
+}
+
+
