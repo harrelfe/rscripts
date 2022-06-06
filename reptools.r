@@ -923,8 +923,8 @@ addCap <- function(label=NULL, cap=NULL, scap=NULL) {
   if(! length(label)) label <- g('label')
   if(! length(label))              return(invisible(list(NULL, NULL, NULL)))
   if(is.logical(label) && ! label) return(invisible(list(NULL, NULL, NULL)))
-  cap   <- g('fig.cap')
-  if(! length(cap))  cap <- scap
+  if(! length(cap))  cap  <- g('fig.cap')
+  if(! length(cap))  cap  <- scap
   if(! length(scap)) scap <- cap
   if(! exists('.captions.')) .captions. <<- NULL
   .captions. <<- rbind(.captions.,
