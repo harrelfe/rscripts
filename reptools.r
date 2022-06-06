@@ -916,3 +916,18 @@ w <- seqFreq(bigx1=x1 > .5, x2 == 'a', x3 == 'A')
 table(w)
 attributes(w)
 }
+
+
+addCap <- function(label=NULL, cap=NULL, scap=NULL) {
+  g <- knitr::opts_current$get
+  if(! length(label)) label <- g('label')
+  if(! length(label))              return(invisible(list(NULL, NULL, NULL)))
+  if(is.logical(label) && ! label) return(invisible(list(NULL, NULL, NULL)))
+  cap   <- g('fig.cap')
+  if(! length(cap))  cap <- scap
+  if(! length(scap)) scap <- cap
+  if(! exists('.captions.')) .captions. <<- NULL
+  .captions. <<- rbind(.captions.,
+                       data.frame(label=label, cap=cap, scap=scap))
+  invisible(list(label=label, cap=cap, scap=scap))
+}
