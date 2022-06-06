@@ -936,7 +936,7 @@ printCap <- function() {
   cap <- .captions.[c('label', 'scap')]
   cap$label <- paste0('@', cap$label)
   names(cap) <- c('Figure', 'Short Caption')
-  knitr::kable(cap, format='html')
+  knitr::kable(cap, format='html', row.names=FALSE)
 }
 
 
