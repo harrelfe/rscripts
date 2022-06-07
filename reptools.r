@@ -571,13 +571,9 @@ missChk <- function(data, use=NULL, exclude=NULL,
   dm <- dm[, lapply(.SD, is.na)]
   ## Produce combination plot for the right number of variables with NAs
   if(pm <= maxcomb) {
-#    .misscombdata. <<- list(data=dm)
-#    .misscombArgs. <<- c(list(maxcomb=maxcomb), cargs)
     .combplotp. <<- do.call('combplotp', c(list(data=dm, maxcomb=maxcomb), cargs))
      tabs <- c(tabs,
                `NA combinations` ~ .combplotp.)
-#                 do.call('combplotp',
-#                                          c(.misscombdata., .misscombArgs.)))
   }
 
   if(prednmiss && (pm < p)) {
@@ -949,7 +945,12 @@ attributes(w)
 
 addCap <- function(label=NULL, cap=NULL, scap=NULL) {
   g <- knitr::opts_current$get
-  if(! length(label)) label <- g('label')
+  h <- function() {
+    lab <- g('label')
+    if(length(lab) && ! grepl('^fig-', lab)) lab <- paste0('fig-', lab)
+    lab
+    }
+  if(! length(label)) label <- h()
   if(! length(label))              return(invisible(list(NULL, NULL, NULL)))
   if(is.logical(label) && ! label) return(invisible(list(NULL, NULL, NULL)))
   if(! length(cap))  cap  <- g('fig.cap')
