@@ -193,19 +193,23 @@ makecolmarg <- function(x, type=c('print', 'run', 'cat'), ...) {
 ##' @title maketabs
 ##' @param ... a series of formulas or a single named list.  For formulas the left side is the tab label (if multiple words or other illegal R expressions enclose in backticks) and the right hand side has expressions to evaluate during chunk execution, plus an optional `raw` option.
 ##' @param wide 
-##' @param initblank 
+##' @param initblank
+##' @param baselabel a one-word character string that provides the base name of `label`s for tabs with figure captions.  The sequential tab number is appended to `baselabel` to obtain the full figure label.
+##' @param cap a vector of character strings providing captions for figures, corresponding to the tabs in order.  Set a string to `''` for tabs that don't contain figures.  You must also specify `baselabel` for `cap` to be used.  If `baselabel` is given but `cap` is not, captions will be set to a single dash and short captions will be recorded as tab names.
 ##' @return 
 ##' @author Frank Harrell
 # See https://stackoverflow.com/questions/42631642
-maketabs <- function(..., wide=FALSE, initblank=FALSE) {
+maketabs <- function(..., wide=FALSE, initblank=FALSE,
+                     baselabel=NULL, cap=NULL, debug=FALSE) {
   .fs. <- list(...)
   if(length(.fs.) == 1 && 'formula' %nin% class(.fs.[[1]]))
     .fs. <- .fs.[[1]]   # undo list(...) and get to 1st arg to maketabs
   
-  makechunks <- function(fs, wide, initblank) {
+  makechunks <- function(fs, wide, initblank, baselabel, cap) {
     ## Create variables in an environment that will not be seen
     ## when knitr executes chunks so that no variable name conflicts
-    
+
+    if(length(baselabel) && ! length(cap)) cap <- rep('-', length(fs))
     yaml   <- paste0('.panel-tabset', if(wide) ' .column-page')
 
     k <- c('', paste0('::: {', yaml, '}'), '')
@@ -216,6 +220,7 @@ maketabs <- function(..., wide=FALSE, initblank=FALSE) {
       if('formula' %in% class(f)) {
         v   <- as.character(attr(terms(f), 'variables'))[-1]
         y   <- v[1]   # left-hand side
+        y   <- gsub('`', '', y)
         x   <- v[-1]  # right-hand side
         raw <- 'raw' %in% x
         if(raw) x <- setdiff(x, 'raw')
@@ -228,14 +233,25 @@ maketabs <- function(..., wide=FALSE, initblank=FALSE) {
                   if(raw) 'markup' else 'asis',
                   '"')
       cname <- paste0('c', round(1000000 * runif(1)))
+      callout <- addcmd <- NULL
+      if(length(baselabel) && cap[i] != '') {
+        lab <- paste0('fig-', baselabel, i)
+        callout <- c(paste0('label: ', lab),
+                     paste0('fig-cap: "', cap[i], '"') )
+        addcmd <- paste0('addCap(label="', lab,
+                         '", "', cap[i], '", scap="', y, '")')
+      }
       k <- c(k, '', paste('##', y), '',
-             makecodechunk(x, results=if(raw) 'markup' else 'asis'))
+             makecodechunk(c(addcmd, x), callout=callout,
+                           results=if(raw) 'markup' else 'asis'))
     }
     c(k, ':::', '')
   }
-  cat(knitr::knit(text=knitr::knit_expand(
-      text=makechunks(.fs.,
-                      wide=wide, initblank=initblank)), quiet=TRUE))
+  
+  .k. <- makechunks(.fs., wide=wide, initblank=initblank,
+                    baselabel=baselabel, cap=cap)
+  if(debug) cat(.k., sep='\n', file='/tmp/z', append=TRUE)
+  cat(knitr::knit(text=.k., quiet=TRUE))
   return(invisible())
   }
 
@@ -455,9 +471,12 @@ missChk <- function(data, use=NULL, exclude=NULL,
                     type=c('report', 'seq'),
                     maxpat=15, maxcomb=25, excl1pat=TRUE,
                     sortpatterns=TRUE,
-                    prednmiss=FALSE, omitpred=NULL, ...) {
+                    prednmiss=FALSE, omitpred=NULL,
+                    baselabel=NULL, ...) {
 
   type <- match.arg(type)
+  cargs <- list(...)
+  
   d    <- copy(data)
   setDT(d)
   if(length(use)) {
@@ -549,15 +568,16 @@ missChk <- function(data, use=NULL, exclude=NULL,
   tabs <- c(tabs, Sequential ~
                     kabl(.seqmisstab.,
                          caption='Sequential frequency-ordered exclusions due to NAs'))
-
   dm <- dm[, lapply(.SD, is.na)]
   ## Produce combination plot for the right number of variables with NAs
   if(pm <= maxcomb) {
-    .misscombdata. <<- list(data=dm)
-    .misscombArgs. <<- c(list(maxcomb=maxcomb), list(...))
-    tabs <- c(tabs,
-              `NA combinations` ~ do.call('combplotp',
-                                          c(.misscombdata., .misscombArgs.)))
+#    .misscombdata. <<- list(data=dm)
+#    .misscombArgs. <<- c(list(maxcomb=maxcomb), cargs)
+    .combplotp. <<- do.call('combplotp', c(list(data=dm, maxcomb=maxcomb), cargs))
+     tabs <- c(tabs,
+               `NA combinations` ~ .combplotp.)
+#                 do.call('combplotp',
+#                                          c(.misscombdata., .misscombArgs.)))
   }
 
   if(prednmiss && (pm < p)) {
@@ -587,8 +607,11 @@ missChk <- function(data, use=NULL, exclude=NULL,
                                              plot(.misschkanova.))
       }
  }
-  
-  do.call(maketabs, c(list(initblank=TRUE), list(tabs)))
+
+  cap <- c(rep('-', 5), '', if(pm <= maxcomb) '-', if(prednmiss & (pm < p)) '')
+  do.call(maketabs, c(list(initblank=TRUE, baselabel=baselabel,
+                           cap=cap),
+                      list(tabs)))
   options(prType=prtype)
 }
 
@@ -623,12 +646,12 @@ disVars <- function(...) varType(...)$discrete
 asForm  <- function(x) as.formula(paste('~', paste(x, collapse=' + ')))
 
 
-makemermaid <- function(.object., ..., callout=NULL, debug=FALSE) {
+makemermaid <- function(.object., ..., callout=NULL, file=NULL) {
   x <- strsplit(.object., '\n')[[1]]
   code <- makecodechunk(x, lang='mermaid', callout=callout)
   ki <- knitr::knit_expand
   etext <- do.call('ki', c(list(text=code), list(...)))
-  if(debug) cat(etext, sep='\n', file='/tmp/z')
+  if(length(file)) cat(etext, sep='\n', file=file)
   cat(knitr::knit(text=etext, quiet=TRUE))
   invisible()
 }
@@ -648,7 +671,7 @@ vClus <- function(d, exclude=NULL, fracmiss=0.2, maxlevels=10, minprev=0.05,
 
 dataOverview <- function(d, d2=NULL, id=NULL,
                          plot=c('scatter', 'dot', 'none'),
-                         pr=nvar <= 50, which=1, dec=3) {
+                         pr=nvar <= 50, which=1, dec=3, baselabel=NULL) {
   nam1 <-                deparse(substitute(d ))
   nam2 <- if(length(d2)) deparse(substitute(d2))
   plot <- match.arg(plot)
@@ -846,8 +869,14 @@ dataOverview <- function(d, d2=NULL, id=NULL,
     g <- lapply(s, gg)
   }
   print(kabl(r[, paste(levels(.nna.), collapse=' ')],
-       'Intervals of frequencies of NAs used for color-coding plots'))
-  maketabs(g, initblank=TRUE)
+             'Intervals of frequencies of NAs used for color-coding plots'))
+  if(plot == 'scatter' && length(baselabel)) {
+    cap <- paste('Plot of the degree of symmetry of the distribution of a',
+                 c('continuous', 'discrete'),
+                 'variable (value of 1.0 is most symmetric) vs. the number of distinct values of the variable.  Hover over a point to see the variable name and detailed characteristics.')
+    maketabs(g, initblank=TRUE, baselabel=baselabel, cap=cap)
+    }
+  else maketabs(g, initblank=TRUE)
   invisible()
 }
 
