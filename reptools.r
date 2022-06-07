@@ -959,7 +959,7 @@ addCap <- function(label=NULL, cap=NULL, scap=NULL) {
   if(! length(cap))  cap  <- scap
   if(! length(scap)) scap <- cap
   if(! exists('.captions.')) .captions. <<- NULL
-  info <- data.frame(label=label, cap=cap, scap=scal)
+  info <- data.frame(label=label, cap=cap, scap=scap)
   if(deb) prn(info, fi='/tmp/z')
   .captions. <<- rbind(.captions., info)
   invisible(list(label=label, cap=cap, scap=scap))
