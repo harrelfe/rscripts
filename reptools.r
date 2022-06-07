@@ -951,14 +951,17 @@ addCap <- function(label=NULL, cap=NULL, scap=NULL) {
     lab
     }
   if(! length(label)) label <- h()
+  deb <- .Options$debugaddCap; deb <- length(deb) && deb
+  if(deb) cat('label:', label, '\n', file='/tmp/z', append=TRUE)
   if(! length(label))              return(invisible(list(NULL, NULL, NULL)))
   if(is.logical(label) && ! label) return(invisible(list(NULL, NULL, NULL)))
   if(! length(cap))  cap  <- g('fig.cap')
   if(! length(cap))  cap  <- scap
   if(! length(scap)) scap <- cap
   if(! exists('.captions.')) .captions. <<- NULL
-  .captions. <<- rbind(.captions.,
-                       data.frame(label=label, cap=cap, scap=scap))
+  info <- data.frame(label=label, cap=cap, scap=scal)
+  if(deb) prn(info, fi='/tmp/z')
+  .captions. <<- rbind(.captions., info)
   invisible(list(label=label, cap=cap, scap=scap))
 }
 
