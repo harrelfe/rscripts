@@ -1020,31 +1020,41 @@ ebpcomp <- function(x, qref=c(.5, .25, .75),
   return(list(segments=Segs, lines=Lines, points=Mean))
   }
 
-ebplayers <- function(g, data, ylim, by='variable', value='value', frac=0.05) {
+ebplayers <- function(g, data, ylim, by='variable', value='value',
+                      frac=0.065, pos=c('bottom', 'top'), includeN=TRUE) {
+  pos <- match.arg(pos)
   d <- copy(data)
   setDT(d)
   setnames(d, c(by, value), c('.by.', '.value.'))
-  Lines <- Segments <- Points <- list()
+  Lines <- Segments <- Points <- Ns <- list()
   vars <- d[, unique(.by.)]
-  prn(vars)
   for(v in vars) {
-    w <- ebpcomp(d[.by. == v, .value.])
-    Lines[[v]]    <- w$lines
+    .val. <- d[.by. == v, .value.]
+    w <- ebpcomp(.val.)
+    Lines   [[v]] <- w$lines
     Segments[[v]] <- w$segments
-    Points[[v]]   <- w$points
+    Points  [[v]] <- w$points
+    Ns      [[v]] <- list(N=sum(! is.na(.val.)))
   }
   Lines    <- rbindlist(Lines,    idcol=by)
   Segments <- rbindlist(Segments, idcol=by)
   Points   <- rbindlist(Points,   idcol=by)
+  Ns       <- rbindlist(Ns,       idcol=by)
 
   ## Transform y from ebpcomp which has y in [-1, 1]
   ## -->  ylim[1] + (y + 1.) * diff(ylim) * frac / 2.
   b <- diff(ylim) * frac / 2.
-  a <- ylim[1] + b
+  a <- switch(pos,
+              bottom = ylim[1] + b,
+              top    = ylim[2] - b)
 
-  g +
+  g <- g +
   geom_path(aes(x=x, y=a + b * y), data=Lines) +
   geom_segment(aes(x=x, xend=x, y=a + b * y1, yend=a + b * y2), data=Segments) +
   geom_point(aes(x=x, y=a + b * y), data=Points)
+  if(includeN && length(unique(Ns[, N])) > 1)
+    g <- g + geom_text(aes(x=Inf, y=Inf, label=paste0('N=', N),
+                           hjust=1, vjust=1, size=I(2)), data=Ns)
+  g
   }
   
