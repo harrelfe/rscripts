@@ -973,3 +973,78 @@ printCap <- function() {
 }
 
 
+meltData <- function(formula, data, vnames=c('labels', 'names')) {
+  vnames <- match.arg(vnames)
+  if(! is.data.table(data))
+    stop('data must be a data table')
+  v <- all.vars(formula)
+  y <- v[1]
+  x <- v[-1]
+  s <- data[, ..v]
+  labs <- sapply(s, label)
+  labs <- ifelse(labs == '', names(labs), labs)
+  ## data.table wants all variables to be melted to have the same type
+  s <- s[, lapply(.SD, as.double)]
+  m <- melt(s, id.var=y)
+  if(vnames == 'labels')
+    m[, variable := labs[as.character(variable)]]
+  m
+}
+
+ebpcomp <- function(x, qref=c(.5, .25, .75),
+                    probs= c(.05, .125, .25, .375)) {
+  w <- 1.
+
+  x <- x[! is.na(x)]
+  probs2 <- sort(c(probs, 1. - probs))
+
+  m  <- length(probs)
+  m2 <- length(probs2)
+  j  <- c(1, sort(rep(2 : m2, 2)), - sort(- rep(1 : (m2 - 1),2)))
+  z  <- c(sort(rep(probs, 2)),     - sort(- rep(probs[1 : (m - 1)], 2)))
+  z  <- c(z, -z, probs[1])
+  k  <- max(z)
+  k  <- if(k > .48) .5 else k
+  
+  if(length(qref)) {
+    size.qref <- pmin(qref, 1 - qref)
+    size.qref[qref == .5] <- k
+  }
+  
+  q <- quantile(x, c(probs2, qref))
+  Segs <- if(length(qref)) list(x=q[-(1 : m2)],
+                                y1= -w * size.qref / k,
+                                y2=  w * size.qref / k)
+  Lines <- list(x=q[j], y=w * z / k)
+  Mean  <- list(x=mean(x), y=0)
+  return(list(segments=Segs, lines=Lines, points=Mean))
+  }
+
+ebplayers <- function(g, data, ylim, by='variable', value='value', frac=0.05) {
+  d <- copy(data)
+  setDT(d)
+  setnames(d, c(by, value), c('.by.', '.value.'))
+  Lines <- Segments <- Points <- list()
+  vars <- d[, unique(.by.)]
+  prn(vars)
+  for(v in vars) {
+    w <- ebpcomp(d[.by. == v, .value.])
+    Lines[[v]]    <- w$lines
+    Segments[[v]] <- w$segments
+    Points[[v]]   <- w$points
+  }
+  Lines    <- rbindlist(Lines,    idcol=by)
+  Segments <- rbindlist(Segments, idcol=by)
+  Points   <- rbindlist(Points,   idcol=by)
+
+  ## Transform y from ebpcomp which has y in [-1, 1]
+  ## -->  ylim[1] + (y + 1.) * diff(ylim) * frac / 2.
+  b <- diff(ylim) * frac / 2.
+  a <- ylim[1] + b
+
+  g +
+  geom_path(aes(x=x, y=a + b * y), data=Lines) +
+  geom_segment(aes(x=x, xend=x, y=a + b * y1, yend=a + b * y2), data=Segments) +
+  geom_point(aes(x=x, y=a + b * y), data=Points)
+  }
+  
