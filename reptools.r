@@ -1022,7 +1022,8 @@ ebpcomp <- function(x, qref=c(.5, .25, .75),
   return(list(segments=Segs, lines=Lines, points=Mean, extreme=Extreme))
   }
 
-ebplayers <- function(g, data, ylim, by='variable', value='value',
+ebplayers <- function(g, data, ylim=layer_scales(g)$y$get_limits(),
+                      by='variable', value='value',
                       frac=0.065, pos=c('bottom', 'top'), showN=TRUE) {
   pos <- match.arg(pos)
   d <- copy(data)
