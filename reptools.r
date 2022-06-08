@@ -1019,47 +1019,80 @@ ebpcomp <- function(x, qref=c(.5, .25, .75),
   Lines <- list(x=q[j], y=w * z / k)
   Mean  <- list(x=mean(x), y=0, N=length(x))
   Extreme <- list(x=qo, y=0)
-  return(list(segments=Segs, lines=Lines, points=Mean, extreme=Extreme))
-  }
+  return(list(segments=Segs, lines=Lines, points=Mean, points2=Extreme))
+}
 
-ebplayers <- function(g, data, ylim=layer_scales(g)$y$get_limits(),
-                      by='variable', value='value',
-                      frac=0.065, pos=c('bottom', 'top'), showN=TRUE) {
-  pos <- match.arg(pos)
-  d <- copy(data)
+spikecomp <- function(x) {
+  x <- x[! is.na(x)]
+  n.unique <- length(unique(x))
+  if(n.unique >= 100 ||
+     (n.unique > 20 && 
+      min(diff(sort(unique(x)))) < diff(range(x)) / 500)) {
+    pret <- pretty(x, if(n.unique >= 100) 100 else 500)
+    dist <- pret[2] - pret[1]
+    r    <- range(pret)
+    x     <- r[1] + dist * round((x - r[1]) / dist)
+  }
+  f <- table(x)
+  x <- as.numeric(names(f))
+  y <- unname(f / max(f))
+  list(segments=list(x=x, y1=0, y2=y))
+  }
+  
+
+addggLayers <- function(g, data,
+                        type=c('ebp', 'spike'),
+                        ylim=layer_scales(g)$y$get_limits(),
+                        by='variable', value='value',
+                        frac=0.065, pos=c('bottom', 'top'), showN=TRUE) {
+  type <- match.arg(type)
+  pos  <- match.arg(pos)
+  d    <- copy(data)
   setDT(d)
   setnames(d, c(by, value), c('.by.', '.value.'))
-  Lines <- Segments <- Points <- Extreme <- list()
-  vars <- d[, unique(.by.)]
-  for(v in vars) {
-    .val. <- d[.by. == v, .value.]
-    w <- ebpcomp(.val.)
-    Lines   [[v]] <- w$lines
-    Segments[[v]] <- w$segments
-    Points  [[v]] <- w$points
-    Extreme [[v]] <- w$extreme
-  }
-  Lines    <- rbindlist(Lines,    idcol=by)
-  Segments <- rbindlist(Segments, idcol=by)
-  Points   <- rbindlist(Points,   idcol=by)
-  Extreme  <- rbindlist(Extreme , idcol=by)
+
+  comp <- switch(type,
+                 ebp   = ebpcomp,
+                 spike = spikecomp)
   
+  vars <- d[, unique(.by.)]
+  r    <- list()
+  for(v in vars) {
+    x <- d[.by. == v, .value.]
+    r[[v]] <- comp(x)
+  }
+  R <- list()
+  for(n in names(r[[1]]))
+    R[[n]] <- rbindlist(lapply(r, function(z) z[[n]]), idcol=by)
 
   ## Transform y from ebpcomp which has y in [-1, 1]
   ## -->  ylim[1] + (y + 1.) * diff(ylim) * frac / 2.
   b <- diff(ylim) * frac / 2.
-  a <- switch(pos,
-              bottom = ylim[1] + b,
-              top    = ylim[2] - b)
+  switch(type,
+         ebp   = {a <- if(pos == 'bottom') ylim[1] + b else ylim[2] - b},
+         spike = {a <- if(pos == 'bottom') ylim[1] else ylim[2]
+                  if(pos == 'top') b <- - b } )
 
-  g <- g +
-  geom_path(aes(x=x, y=a + b * y, alpha=I(0.6)), data=Lines) +
-  geom_segment(aes(x=x, xend=x, y=a + b * y1, yend=a + b * y2), data=Segments) +
-  geom_point(aes(x=x, y=a + b * y, col=I('blue'), size=I(0.8)), data=Points) +
-  geom_point(aes(x=x, y=a + b * y, size=I(0.2), alpha=I(0.4)),  data=Extreme)
-  if(showN && diff(range((Points[, N]))) > 0.)
+  for(geo in names(R)) {
+    dat <- R[[geo]]
+    g <- g +
+      switch(geo,
+             lines    = geom_path(aes(x=x, y=a + b * y, alpha=I(0.6)),
+                                  data=dat),
+             segments = geom_segment(aes(x=x, xend=x,
+                                         y=a + b * y1, yend=a + b * y2),
+                                     data=dat),
+             points   = geom_point(aes(x=x, y=a + b * y,
+                                       col=I('blue'), size=I(0.8)), data=dat),
+             points2  = geom_point(aes(x=x, y=a + b * y,
+                                       size=I(0.2), alpha=I(0.4)),
+                                   data=dat) )
+  }
+
+  if(showN && 'points' %in% names(R) && 'N' %in% names(R$points) &&
+     diff(range(R$points[, N])) > 0)
     g <- g + geom_text(aes(x=Inf, y=Inf, label=paste0('N=', N),
-                           hjust=1, vjust=1, size=I(2)), data=Points)
+                           hjust=1, vjust=1, size=I(2)), data=R$points)
+
   g
   }
-  
