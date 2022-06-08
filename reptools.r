@@ -1011,22 +1011,24 @@ ebpcomp <- function(x, qref=c(.5, .25, .75),
     size.qref[qref == .5] <- k
   }
   
-  q <- quantile(x, c(probs2, qref))
+  q  <- quantile(x, c(probs2, qref))
+  qo <- quantile(x, c(0.01, 0.99))
   Segs <- if(length(qref)) list(x=q[-(1 : m2)],
                                 y1= -w * size.qref / k,
                                 y2=  w * size.qref / k)
   Lines <- list(x=q[j], y=w * z / k)
-  Mean  <- list(x=mean(x), y=0)
-  return(list(segments=Segs, lines=Lines, points=Mean))
+  Mean  <- list(x=mean(x), y=0, N=length(x))
+  Extreme <- list(x=qo, y=0)
+  return(list(segments=Segs, lines=Lines, points=Mean, extreme=Extreme))
   }
 
 ebplayers <- function(g, data, ylim, by='variable', value='value',
-                      frac=0.065, pos=c('bottom', 'top'), includeN=TRUE) {
+                      frac=0.065, pos=c('bottom', 'top'), showN=TRUE) {
   pos <- match.arg(pos)
   d <- copy(data)
   setDT(d)
   setnames(d, c(by, value), c('.by.', '.value.'))
-  Lines <- Segments <- Points <- Ns <- list()
+  Lines <- Segments <- Points <- Extreme <- list()
   vars <- d[, unique(.by.)]
   for(v in vars) {
     .val. <- d[.by. == v, .value.]
@@ -1034,12 +1036,13 @@ ebplayers <- function(g, data, ylim, by='variable', value='value',
     Lines   [[v]] <- w$lines
     Segments[[v]] <- w$segments
     Points  [[v]] <- w$points
-    Ns      [[v]] <- list(N=sum(! is.na(.val.)))
+    Extreme [[v]] <- w$extreme
   }
   Lines    <- rbindlist(Lines,    idcol=by)
   Segments <- rbindlist(Segments, idcol=by)
   Points   <- rbindlist(Points,   idcol=by)
-  Ns       <- rbindlist(Ns,       idcol=by)
+  Extreme  <- rbindlist(Extreme , idcol=by)
+  
 
   ## Transform y from ebpcomp which has y in [-1, 1]
   ## -->  ylim[1] + (y + 1.) * diff(ylim) * frac / 2.
@@ -1049,12 +1052,13 @@ ebplayers <- function(g, data, ylim, by='variable', value='value',
               top    = ylim[2] - b)
 
   g <- g +
-  geom_path(aes(x=x, y=a + b * y), data=Lines) +
+  geom_path(aes(x=x, y=a + b * y, alpha=I(0.6)), data=Lines) +
   geom_segment(aes(x=x, xend=x, y=a + b * y1, yend=a + b * y2), data=Segments) +
-  geom_point(aes(x=x, y=a + b * y), data=Points)
-  if(includeN && length(unique(Ns[, N])) > 1)
+  geom_point(aes(x=x, y=a + b * y, col=I('blue'), size=I(0.8)), data=Points) +
+  geom_point(aes(x=x, y=a + b * y, size=I(0.2), alpha=I(0.4)),  data=Extreme)
+  if(showN && diff(range((Points[, N]))) > 0.)
     g <- g + geom_text(aes(x=Inf, y=Inf, label=paste0('N=', N),
-                           hjust=1, vjust=1, size=I(2)), data=Ns)
+                           hjust=1, vjust=1, size=I(2)), data=Points)
   g
   }
   
