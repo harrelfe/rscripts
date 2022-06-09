@@ -977,7 +977,7 @@ printCap <- function(book=FALSE) {
   cap <- .captions.[c('label', 'scap')]
   cap$label <- paste0('@', cap$label)
   names(cap) <- c('Figure', 'Short Caption')
-  knitr::kable(cap, format='html', row.names=FALSE)
+  knitr::kable(cap, format=if(book) 'pipe' else 'html', row.names=FALSE)
 }
 
 
