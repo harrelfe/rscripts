@@ -965,7 +965,15 @@ addCap <- function(label=NULL, cap=NULL, scap=NULL) {
   invisible(list(label=label, cap=cap, scap=scap))
 }
 
-printCap <- function() {
+saveCap <- function(basename)
+  saveRDS(.captions., file=paste0(basename, '-captions.rds'), compress='xz')
+                                
+printCap <- function(book=FALSE) {
+  if(book) {
+    files <- list.files(pattern='.*-captions.rds')
+    .captions. <- NULL
+    for(f in files) .captions. <- rbind(.captions., readRDS(f))
+    }
   cap <- .captions.[c('label', 'scap')]
   cap$label <- paste0('@', cap$label)
   names(cap) <- c('Figure', 'Short Caption')
@@ -1044,7 +1052,8 @@ addggLayers <- function(g, data,
                         type=c('ebp', 'spike'),
                         ylim=layer_scales(g)$y$get_limits(),
                         by='variable', value='value',
-                        frac=0.065, pos=c('bottom', 'top'), showN=TRUE) {
+                        frac=0.065, mult=1.,
+                        pos=c('bottom', 'top'), showN=TRUE) {
   type <- match.arg(type)
   pos  <- match.arg(pos)
   d    <- copy(data)
@@ -1067,11 +1076,15 @@ addggLayers <- function(g, data,
 
   ## Transform y from ebpcomp which has y in [-1, 1]
   ## -->  ylim[1] + (y + 1.) * diff(ylim) * frac / 2.
-  b <- diff(ylim) * frac / 2.
+  b <- mult * diff(ylim) * frac / 2.
+
   switch(type,
-         ebp   = {a <- if(pos == 'bottom') ylim[1] + b else ylim[2] - b},
-         spike = {a <- if(pos == 'bottom') ylim[1] else ylim[2]
-                  if(pos == 'top') b <- - b } )
+         ebp   = switch(pos,
+                        bottom = {a <- ylim[1] + b},
+                        top    = {a <- ylim[2] - b} ),
+         spike = switch(pos,
+                        bottom = {a <- ylim[1]},
+                        top    = {a <- ylim[2]; b <- -b} )          )
 
   for(geo in names(R)) {
     dat <- R[[geo]]
