@@ -1097,7 +1097,8 @@ addCap <- function(label=NULL, cap=NULL, scap=NULL) {
 }
 
 saveCap <- function(basename)
-  saveRDS(.captions., file=paste0(basename, '-captions.rds'), compress='xz')
+  if(exists('.captions.'))
+    saveRDS(.captions., file=paste0(basename, '-captions.rds'), compress='xz')
                                 
 printCap <- function(book=FALSE) {
   if(book) {
