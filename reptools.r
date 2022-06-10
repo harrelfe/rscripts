@@ -233,16 +233,15 @@ maketabs <- function(..., wide=FALSE, initblank=FALSE,
                   if(raw) 'markup' else 'asis',
                   '"')
       cname <- paste0('c', round(1000000 * runif(1)))
-      callout <- addcmd <- NULL
+      callout <- NULL
       if(length(baselabel) && cap[i] != '') {
         lab <- paste0('fig-', baselabel, i)
         callout <- c(paste0('label: ', lab),
-                     paste0('fig-cap: "', cap[i], '"') )
-        addcmd <- paste0('addCap(label="', lab,
-                         '", "', cap[i], '", scap="', y, '")')
+                     paste0('fig-cap: "',  cap[i], '"'),
+                     paste0('fig-scap: "', y,      '"'))
       }
       k <- c(k, '', paste('##', y), '',
-             makecodechunk(c(addcmd, x), callout=callout,
+             makecodechunk(x, callout=callout,
                            results=if(raw) 'markup' else 'asis'))
     }
     c(k, ':::', '')
@@ -1086,8 +1085,9 @@ addCap <- function(label=NULL, cap=NULL, scap=NULL) {
   if(! length(label))              return(invisible(list(NULL, NULL, NULL)))
   if(is.logical(label) && ! label) return(invisible(list(NULL, NULL, NULL)))
   if(! length(cap))  cap  <- g('fig.cap')
-  if(! length(cap))  cap  <- scap
-  if(! length(scap)) scap <- cap
+  if(! length(scap)) scap <- g('fig.scap')
+  if(! length(cap) && length(scap))  cap  <- scap
+  if(! length(scap) && length(cap))  scap <- cap
   if(! exists('.captions.')) .captions. <<- NULL
   info <- data.frame(label=label, cap=cap, scap=scap)
   if(deb) prn(info, fi='/tmp/z')
