@@ -943,45 +943,6 @@ attributes(w)
 }
 
 
-addCap <- function(label=NULL, cap=NULL, scap=NULL) {
-  g <- knitr::opts_current$get
-  h <- function() {
-    lab <- g('label')
-    if(length(lab) && ! grepl('^fig-', lab)) lab <- paste0('fig-', lab)
-    lab
-    }
-  if(! length(label)) label <- h()
-  deb <- .Options$debugaddCap; deb <- length(deb) && deb
-  if(deb) cat('label:', label, '\n', file='/tmp/z', append=TRUE)
-  if(! length(label))              return(invisible(list(NULL, NULL, NULL)))
-  if(is.logical(label) && ! label) return(invisible(list(NULL, NULL, NULL)))
-  if(! length(cap))  cap  <- g('fig.cap')
-  if(! length(cap))  cap  <- scap
-  if(! length(scap)) scap <- cap
-  if(! exists('.captions.')) .captions. <<- NULL
-  info <- data.frame(label=label, cap=cap, scap=scap)
-  if(deb) prn(info, fi='/tmp/z')
-  .captions. <<- rbind(.captions., info)
-  invisible(list(label=label, cap=cap, scap=scap))
-}
-
-saveCap <- function(basename)
-  saveRDS(.captions., file=paste0(basename, '-captions.rds'), compress='xz')
-                                
-printCap <- function(book=FALSE) {
-  if(book) {
-    files <- list.files(pattern='.*-captions.rds')
-    .captions. <- NULL
-    for(f in files) .captions. <- rbind(.captions., readRDS(f))
-    }
-  cap <- .captions.[c('label', 'scap')]
-  cap$label <- paste0('@', cap$label)
-  names(cap) <- c('Figure', 'Short Caption')
-  if(book) knitr::kable(cap, row.names=FALSE)
-  else     knitr::kable(cap, row.names=FALSE, format='html')
-}
-
-
 meltData <- function(formula, data, vnames=c('labels', 'names')) {
   vnames <- match.arg(vnames)
   if(! is.data.table(data))
@@ -1110,3 +1071,63 @@ addggLayers <- function(g, data,
 
   g
   }
+
+
+addCap <- function(label=NULL, cap=NULL, scap=NULL) {
+  g <- knitr::opts_current$get
+  h <- function() {
+    lab <- g('label')
+    if(length(lab) && ! grepl('^fig-', lab)) lab <- paste0('fig-', lab)
+    lab
+    }
+  if(! length(label)) label <- h()
+  deb <- .Options$debugaddCap; deb <- length(deb) && deb
+  if(deb) cat('label:', label, '\n', file='/tmp/z', append=TRUE)
+  if(! length(label))              return(invisible(list(NULL, NULL, NULL)))
+  if(is.logical(label) && ! label) return(invisible(list(NULL, NULL, NULL)))
+  if(! length(cap))  cap  <- g('fig.cap')
+  if(! length(cap))  cap  <- scap
+  if(! length(scap)) scap <- cap
+  if(! exists('.captions.')) .captions. <<- NULL
+  info <- data.frame(label=label, cap=cap, scap=scap)
+  if(deb) prn(info, fi='/tmp/z')
+  if(! length(.captions.) || label %nin% .captions.$label)
+    .captions. <<- rbind(.captions., info)
+  invisible(list(label=label, cap=cap, scap=scap))
+}
+
+saveCap <- function(basename)
+  saveRDS(.captions., file=paste0(basename, '-captions.rds'), compress='xz')
+                                
+printCap <- function(book=FALSE) {
+  if(book) {
+    files <- list.files(pattern='.*-captions.rds')
+    .captions. <- NULL
+    for(f in files) .captions. <- rbind(.captions., readRDS(f))
+    }
+  cap <- .captions.[c('label', 'scap')]
+  cap$label <- paste0('@', cap$label)
+  names(cap) <- c('Figure', 'Short Caption')
+  if(book) knitr::kable(cap, row.names=FALSE)
+  else     knitr::kable(cap, row.names=FALSE, format='html')
+}
+
+hookaddcap <- function() {
+  cf <- function(before, options, envir) {
+    if(before) return()
+    label   <- knitr::opts_current$get('label')
+    cap     <- options$fig.cap
+    if(length(cap) && is.call(cap))   cap <- eval(cap)
+    ## Chunk produced a figure if label: fig- and fig-cap were
+    if(! length(cap) || cap == '' || ! grepl('^fig-', label)) return()
+    scap    <- options$fig.scap
+    if(length(scap) && is.call(scap)) scap <- eval(scap)
+    if( ! length(scap) || scap == '') scap <- cap
+    ## addCap will ignore an entry if .captions. already has an entry
+    ## with the same label.  So if use manually put addCap() inside a chunk
+    ## it is likely that a second entry will be avoided
+    addCap(label, cap, scap)
+    }
+  knitr::knit_hooks$set(addcapfile=cf)
+  knitr::opts_chunk$set(addcapfile=TRUE)
+}
