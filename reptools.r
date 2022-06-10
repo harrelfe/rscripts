@@ -1114,7 +1114,7 @@ printCap <- function(book=FALSE) {
 
 hookaddcap <- function() {
   cf <- function(before, options, envir) {
-    if(before) return()
+    if(! before) return()
     label   <- knitr::opts_current$get('label')
     cap     <- options$fig.cap
     if(length(cap) && is.call(cap))   cap <- eval(cap)
