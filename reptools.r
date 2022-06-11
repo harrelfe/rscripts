@@ -208,12 +208,9 @@ maketabs <- function(..., wide=FALSE, initblank=FALSE,
 
   if(! length(baselabel))
     baselabel <- knitr::opts_current$get('label')
-  if(length(baselabel)) {
-    if(baselabel == '') baselabel <- NULL
-    if(length(baselabel) && ! grepl('^fig-', baselabel))
+  else if(baselabel == 'none') baselabel <- NULL
+  if(length(baselabel) && ! grepl('^fig-', baselabel))
       baselabel <- paste0('fig-', baselabel)
-    if(baselabel == 'none') baselabel <- NULL
-    }
   
   makechunks <- function(fs, wide, initblank, baselabel, cap) {
     ## Create variables in an environment that will not be seen
@@ -233,12 +230,12 @@ maketabs <- function(..., wide=FALSE, initblank=FALSE,
       isform <- FALSE
       if('formula' %in% class(f)) {
         isform <- TRUE
-        capt <- NULL
-        v   <- as.character(attr(terms(f), 'variables'))[-1]
-        y   <- v[1]   # left-hand side
+        capt   <- NULL
+        v      <- as.character(attr(terms(f), 'variables'))[-1]
+        y      <- v[1]   # left-hand side
         y   <- gsub('`', '', y)
         x   <- v[-1]  # right-hand side
-        raw <- 'raw' %in% x
+        raw       <- 'raw' %in% x
         if(raw) x <- setdiff(x, 'raw')
         ## process caption(..., ...)
         jc <- grep('caption\\(', x)
@@ -252,7 +249,7 @@ maketabs <- function(..., wide=FALSE, initblank=FALSE,
         raw  <- FALSE
         y    <- names(fs)[i]
         x    <- paste0('.fs.[[', i, ']]')
-        if(i %in% cap) capt <- paste0(basecap, y)
+        if(i %in% cap) capt <- basecap
       }
       r <- paste0('results="',
                   if(raw) 'markup' else 'asis',
@@ -637,7 +634,6 @@ missChk <- function(data, use=NULL, exclude=NULL,
       }
  }
 
-  cap <- c(rep('-', 5), '', if(pm <= maxcomb) '-', if(prednmiss & (pm < p)) '')
   do.call(maketabs, c(list(initblank=TRUE, baselabel=baselabel),
                       list(tabs)))
   options(prType=prtype)
