@@ -898,11 +898,9 @@ dataOverview <- function(d, d2=NULL, id=NULL,
   }
   print(kabl(r[, paste(levels(.nna.), collapse=' ')],
              'Intervals of frequencies of NAs used for color-coding plots'))
-  if(plot == 'scatter' && length(baselabel)) {
-    cap <- paste('Plot of the degree of symmetry of the distribution of a',
-                 c('continuous', 'discrete'),
-                 'variable (value of 1.0 is most symmetric) vs. the number of distinct values of the variable.  Hover over a point to see the variable name and detailed characteristics.')
-    maketabs(g, initblank=TRUE, baselabel=baselabel, cap=cap)
+  if(plot == 'scatter') {
+    cap <- paste('Plot of the degree of symmetry of the distribution of a variable (value of 1.0 is most symmetric) vs. the number of distinct values of the variable.  Hover over a point to see the variable name and detailed characteristics.')
+    maketabs(g, initblank=TRUE, basecap=cap, cap=1)
     }
   else maketabs(g, initblank=TRUE)
   invisible()
