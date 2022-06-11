@@ -189,56 +189,83 @@ makecolmarg <- function(x, type=c('print', 'run', 'cat'), ...) {
 ##' a separate `Quarto` tab.  A `wide` argument is used to expand the width
 ##' of the output outside the usual margins.  An `initblank` argument
 ##' creates a first tab that is empty, or you can specify a formula `` `` ~ `` ``.  This allows one to show nothing
-##' until one of the other tabs is clicked.  Multiple commands can be run in one chunk by including multiple right hand terms in a formula.  A chunk can be marked for producing raw output by including a term `raw` somewhere in the formula's right side.
+##' until one of the other tabs is clicked.  Multiple commands can be run in one chunk by including multiple right hand terms in a formula.  A chunk can be marked for producing raw output by including a term `raw` somewhere in the formula's right side.  If can be marked for constructing a label and caption by including `+ caption(caption string, label string)`.  The tab number is appended to the label string, and if the label is not provided `baselabel` will be used.
 ##' @title maketabs
-##' @param ... a series of formulas or a single named list.  For formulas the left side is the tab label (if multiple words or other illegal R expressions enclose in backticks) and the right hand side has expressions to evaluate during chunk execution, plus an optional `raw` option.
+##' @param ... a series of formulas or a single named list.  For formulas the left side is the tab label (if multiple words or other illegal R expressions enclose in backticks) and the right hand side has expressions to evaluate during chunk execution, plus optional `raw` and `caption` options.
 ##' @param wide 
 ##' @param initblank
-##' @param baselabel a one-word character string that provides the base name of `label`s for tabs with figure captions.  The sequential tab number is appended to `baselabel` to obtain the full figure label.
-##' @param cap a vector of character strings providing captions for figures, corresponding to the tabs in order.  Set a string to `''` for tabs that don't contain figures.  You must also specify `baselabel` for `cap` to be used.  If `baselabel` is given but `cap` is not, captions will be set to a single dash and short captions will be recorded as tab names.
+##' @param baselabel a one-word character string that provides the base name of `label`s for tabs with figure captions.  The sequential tab number is appended to `baselabel` to obtain the full figure label.  If using formulas the figure label may instead come from `caption(.., label)`. If not specified it is taken to be the name of the current chunk with `fig-` prepended.
+##' @param cap applies to the non-formula use of `maketabs` and is an integer vector specifying which tabs are to be given figure labels and captions.
+##' @param basecap a single character string providing the base text for captions if `cap` is specified.
 ##' @return 
 ##' @author Frank Harrell
 # See https://stackoverflow.com/questions/42631642
 maketabs <- function(..., wide=FALSE, initblank=FALSE,
-                     baselabel=NULL, cap=NULL, debug=FALSE) {
+                     baselabel=NULL, cap=NULL, basecap=NULL, debug=FALSE) {
   .fs. <- list(...)
   if(length(.fs.) == 1 && 'formula' %nin% class(.fs.[[1]]))
     .fs. <- .fs.[[1]]   # undo list(...) and get to 1st arg to maketabs
+
+  if(! length(baselabel))
+    baselabel <- knitr::opts_current$get('label')
+  if(length(baselabel)) {
+    if(baselabel == '') baselabel <- NULL
+    if(length(baselabel) && ! grepl('^fig-', baselabel))
+      baselabel <- paste0('fig-', baselabel)
+    if(baselabel == 'none') baselabel <- NULL
+    }
   
   makechunks <- function(fs, wide, initblank, baselabel, cap) {
     ## Create variables in an environment that will not be seen
     ## when knitr executes chunks so that no variable name conflicts
 
-    if(length(baselabel) && ! length(cap)) cap <- rep('-', length(fs))
+    caption <- function(cap, label=NULL) list(label=label, cap=cap)
+
     yaml   <- paste0('.panel-tabset', if(wide) ' .column-page')
 
     k <- c('', paste0('::: {', yaml, '}'), '')
     if(initblank) k <- c(k, '', '##   ', '')
 
     for(i in 1 : length(fs)) {
+      label <- baselabel
+      capt  <- NULL
       f <- fs[[i]]
+      isform <- FALSE
       if('formula' %in% class(f)) {
+        isform <- TRUE
+        capt <- NULL
         v   <- as.character(attr(terms(f), 'variables'))[-1]
         y   <- v[1]   # left-hand side
         y   <- gsub('`', '', y)
         x   <- v[-1]  # right-hand side
         raw <- 'raw' %in% x
         if(raw) x <- setdiff(x, 'raw')
+        ## process caption(..., ...)
+        jc <- grep('caption\\(', x)
+        if(length(jc)) {
+          capt <- eval(parse(text=x[jc]))
+          if(length(capt$label)) label <- capt$label
+          capt   <- capt$cap
+          x <- x[- jc]
+        }
       } else {
         raw  <- FALSE
         y    <- names(fs)[i]
         x    <- paste0('.fs.[[', i, ']]')
+        if(i %in% cap) capt <- paste0(basecap, y)
       }
       r <- paste0('results="',
                   if(raw) 'markup' else 'asis',
                   '"')
       cname <- paste0('c', round(1000000 * runif(1)))
       callout <- NULL
-      if(length(baselabel) && cap[i] != '') {
-        lab <- paste0('fig-', baselabel, i)
+      if(length(label) && length(capt)) {
+        lab <- paste0(label, i)
         callout <- c(paste0('label: ', lab),
-                     paste0('fig-cap: "',  cap[i], '"'),
-                     paste0('fig-scap: "', y,      '"'))
+                     paste0('fig-cap: "',  capt, '"'))
+        ##                     if(! isform)
+        ##                       paste0('fig-scap: "', basecap, y,      '"'))
+        addCap(lab, capt)
       }
       k <- c(k, '', paste('##', y), '',
              makecodechunk(x, callout=callout,
@@ -246,10 +273,10 @@ maketabs <- function(..., wide=FALSE, initblank=FALSE,
     }
     c(k, ':::', '')
   }
-  
-  .k. <- makechunks(.fs., wide=wide, initblank=initblank,
+    
+    .k. <- makechunks(.fs., wide=wide, initblank=initblank,
                     baselabel=baselabel, cap=cap)
-  if(debug) cat(.k., sep='\n', file='/tmp/z', append=TRUE)
+    if(debug) cat(.k., sep='\n', file='/tmp/z', append=TRUE)
   cat(knitr::knit(text=.k., quiet=TRUE))
   return(invisible())
   }
@@ -473,8 +500,11 @@ missChk <- function(data, use=NULL, exclude=NULL,
                     prednmiss=FALSE, omitpred=NULL,
                     baselabel=NULL, ...) {
 
-  type <- match.arg(type)
-  cargs <- list(...)
+  type     <- match.arg(type)
+  cargs    <- list(...)
+  namedata <- deparse(substitute(data))
+  prtype <- .Options$prType
+  
   
   d    <- copy(data)
   setDT(d)
@@ -552,10 +582,15 @@ missChk <- function(data, use=NULL, exclude=NULL,
               'clus'       = 'Clustering of missingness')
   tabs <- vector('list', length(ptypes))
   for(i in seq(ptypes)) {
+    cap <- if(i == 1) paste0('+ caption("Missing data patterns in `',
+                             namedata, '`"',
+                             if(length(baselabel))
+                               paste0(', "', baselabel, '"'),
+                             ')')
     lab <- surrq(ptypes[i])
     f <- if(i < 5) paste0(lab, ' ~ ',
                           'naplot(.naclus., which="', names(ptypes[i]),
-                          '")')
+                          '")', cap)
          else
            paste0(lab, ' ~ ', 'plot(.naclus., abbrev=', abb, ')')
     tabs[[i]] <- as.formula(f)
@@ -595,7 +630,6 @@ missChk <- function(data, use=NULL, exclude=NULL,
     else {
       .misschkanova. <<- anova(f)
       .misschkfit.   <<- f
-      prtype <- .Options$prType
       options(prType='html')
       tabs <- c(tabs,
                 `Predicting # NAs per obs` ~ print(.misschkfit., coefs=FALSE) +
@@ -604,8 +638,7 @@ missChk <- function(data, use=NULL, exclude=NULL,
  }
 
   cap <- c(rep('-', 5), '', if(pm <= maxcomb) '-', if(prednmiss & (pm < p)) '')
-  do.call(maketabs, c(list(initblank=TRUE, baselabel=baselabel,
-                           cap=cap),
+  do.call(maketabs, c(list(initblank=TRUE, baselabel=baselabel),
                       list(tabs)))
   options(prType=prtype)
 }
