@@ -191,7 +191,7 @@ makecolmarg <- function(x, type=c('print', 'run', 'cat'), ...) {
 ##' creates a first tab that is empty, or you can specify a formula `` `` ~ `` ``.  This allows one to show nothing
 ##' until one of the other tabs is clicked.  Multiple commands can be run in one chunk by including multiple right hand terms in a formula.  A chunk can be marked for producing raw output by including a term `raw` somewhere in the formula's right side.  If can be marked for constructing a label and caption by including `+ caption(caption string, label string)`.  The tab number is appended to the label string, and if the label is not provided `baselabel` will be used.
 ##' @title maketabs
-##' @param ... a series of formulas or a single named list.  For formulas the left side is the tab label (if multiple words or other illegal R expressions enclose in backticks) and the right hand side has expressions to evaluate during chunk execution, plus optional `raw` and `caption` options.
+##' @param ... a series of formulas or a single named list.  For formulas the left side is the tab label (if multiple words or other illegal R expressions enclose in backticks) and the right hand side has expressions to evaluate during chunk execution, plus optional `raw`, `caption`, and `fig.size` options.
 ##' @param wide 
 ##' @param initblank
 ##' @param baselabel a one-word character string that provides the base name of `label`s for tabs with figure captions.  The sequential tab number is appended to `baselabel` to obtain the full figure label.  If using formulas the figure label may instead come from `caption(.., label)`. If not specified it is taken to be the name of the current chunk with `fig-` prepended.
@@ -216,7 +216,9 @@ maketabs <- function(..., wide=FALSE, initblank=FALSE,
     ## Create variables in an environment that will not be seen
     ## when knitr executes chunks so that no variable name conflicts
 
-    caption <- function(cap, label=NULL) list(label=label, cap=cap)
+    caption  <- function(cap, label=NULL) list(label=label, cap=cap)
+    fig.size <- function(width=NULL, height=NULL)
+      list(width=width, height=height)
 
     yaml   <- paste0('.panel-tabset', if(wide) ' .column-page')
 
@@ -226,6 +228,7 @@ maketabs <- function(..., wide=FALSE, initblank=FALSE,
     for(i in 1 : length(fs)) {
       label <- baselabel
       capt  <- NULL
+      size  <- NULL
       f <- fs[[i]]
       isform <- FALSE
       if('formula' %in% class(f)) {
@@ -245,6 +248,16 @@ maketabs <- function(..., wide=FALSE, initblank=FALSE,
           capt   <- capt$cap
           x <- x[- jc]
         }
+        ## process fig.size(...)
+        sz <- grep('fig.size\\(', x)
+        if(length(sz)) {
+          siz <- eval(parse(text=x[sz]))
+          if(length(siz$width))
+            size <- paste('fig-width:', siz$width)
+          if(length(siz$height))
+            size <- c(size, paste('fig-height:', siz$height))
+          x <- x[- sz]
+          }
       } else {
         raw  <- FALSE
         y    <- names(fs)[i]
@@ -264,6 +277,8 @@ maketabs <- function(..., wide=FALSE, initblank=FALSE,
         ##                       paste0('fig-scap: "', basecap, y,      '"'))
         addCap(lab, capt)
       }
+      if(length(size)) callout <- c(callout, size)
+      
       k <- c(k, '', paste('##', y), '',
              makecodechunk(x, callout=callout,
                            results=if(raw) 'markup' else 'asis'))
