@@ -217,8 +217,8 @@ maketabs <- function(..., wide=FALSE, initblank=FALSE,
     ## when knitr executes chunks so that no variable name conflicts
 
     caption  <- function(cap, label=NULL) list(label=label, cap=cap)
-    fig.size <- function(width=NULL, height=NULL)
-      list(width=width, height=height)
+    fig.size <- function(width=NULL, height=NULL, column=NULL)
+      list(width=width, height=height, column=column)
 
     yaml   <- paste0('.panel-tabset', if(wide) ' .column-page')
 
@@ -256,6 +256,8 @@ maketabs <- function(..., wide=FALSE, initblank=FALSE,
             size <- paste('fig-width:', siz$width)
           if(length(siz$height))
             size <- c(size, paste('fig-height:', siz$height))
+          if(length(siz$column))
+            size <- c(size, paste('column:', siz$column))
           x <- x[- sz]
           }
       } else {
