@@ -971,12 +971,13 @@ attributes(w)
 
 meltData <- function(formula, data, vnames=c('labels', 'names')) {
   vnames <- match.arg(vnames)
-  if(! is.data.table(data))
-    stop('data must be a data table')
+  s <- copy(data)
+  if(! is.data.table(s)) setDT(s)
+
   v <- all.vars(formula)
   y <- v[1]
   x <- v[-1]
-  s <- data[, ..v]
+  s <- s[, ..v]
   labs <- sapply(s, label)
   labs <- ifelse(labs == '', names(labs), labs)
   ## data.table wants all variables to be melted to have the same type
