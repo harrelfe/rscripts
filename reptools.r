@@ -715,7 +715,8 @@ vClus <- function(d, exclude=NULL, corrmatrix=FALSE,
   if(length(exclude)) w <- w[setdiff(names(w), exclude)]
   w <- dataframeReduce(w, fracmiss=fracmiss, maxlevels=maxlevels,
                        minprev=minprev, print=FALSE)
-  if(print) kabl(attr(w, 'info'))
+  if(print) print(kabl(attr(w, 'info'),
+                       caption='Variables removed or modified'))
   
   form <- as.formula(paste('~', paste(names(w), collapse=' + ')))
   v <- varclus(form, data=w)
