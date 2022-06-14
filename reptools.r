@@ -53,18 +53,29 @@ kabl <- function(..., caption=NULL, digits=4, col.names=NA, row.names=NA) {
 ##' Creates text strings suitable for running through `knitr`.  The chunk is given a random name because certain operations are not allowed by `knitr` without it.
 ##' @title makecodechunk
 ##' @param cmd character string vector of commands to run inside chunk
+##' @param opts optional list of chunk options, e.g. `list(fig.width=6, fig.cap="This is a caption")`.  See <https://yihui.org/knitr/options> for a complete list of options.
 ##' @param results format of results, default is `'asis'`.  May specify `results='markup'`.
 ##' @param callout an optional Quarto callout to include after `#|` after the chunk header that affects how the result appears, e.g. `callout='column: margin'`
 ##' @param h, w optional height and width to place after the chunk header after `#|`
 ##' @return character vector 
 ##' @author Frank Harrell
-makecodechunk <- function(cmd, results='asis', lang='r',
+makecodechunk <- function(cmd, opts=NULL, results='asis', lang='r',
                           callout=NULL, h=NULL, w=NULL) {
   if(! length(cmd) || (is.character(cmd) && length(cmd) == 1 &&
             cmd %in% c('', ' ', "` `"))) return('')
 
   r <- paste0('results="', results, '"')
-  cname <- paste0('c', round(1000000 * runif(1)))
+  if(length(opts))
+    for(oname in names(opts)) {
+      op <- opts[[oname]]
+      if(is.character(op)) op <- paste0('"', op, '"')
+      r <- paste0(r, ',', oname, '=', op)
+      }
+  
+  ## cname <- paste0('c', round(1000000 * runif(1)))
+  if(! exists(.chunknumber.)) .chunknumber. <<- 0
+  .chunknumber. <<- .chunknumber. + 1
+  cname <- paste0('chnk', .chunknumber.)
   if(length(callout)) callout <- paste('#|', callout)
   if(length(h)) h <- paste('#| fig.height:', h)
   if(length(w)) w <- paste('#| fig.width:', w)
@@ -269,7 +280,6 @@ maketabs <- function(..., wide=FALSE, initblank=FALSE,
       r <- paste0('results="',
                   if(raw) 'markup' else 'asis',
                   '"')
-      cname <- paste0('c', round(1000000 * runif(1)))
       callout <- NULL
       if(length(label) && length(capt)) {
         lab <- paste0(label, i)
