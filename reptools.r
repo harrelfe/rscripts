@@ -708,16 +708,37 @@ makemermaid <- function(.object., ..., callout=NULL, file=NULL) {
 }
 
 
-vClus <- function(d, exclude=NULL, fracmiss=0.2, maxlevels=10, minprev=0.05,
-                  horiz=FALSE, print=TRUE) {
+vClus <- function(d, exclude=NULL, corrmatrix=FALSE,
+                  fracmiss=0.2, maxlevels=10, minprev=0.05,
+                  horiz=FALSE, label='fig-varclus', print=TRUE) {
   w <- as.data.frame(d)  # needed by dataframeReduce
   if(length(exclude)) w <- w[setdiff(names(w), exclude)]
   w <- dataframeReduce(w, fracmiss=fracmiss, maxlevels=maxlevels,
-                       minprev=minprev, print=print)
+                       minprev=minprev, print=FALSE)
+  if(print) kabl(attr(w, 'info'))
+  
   form <- as.formula(paste('~', paste(names(w), collapse=' + ')))
   v <- varclus(form, data=w)
-  if(horiz) plot(as.dendrogram(v$hclust), horiz=TRUE)
-  else plot(v)
+  if(! corrmatrix) {
+    if(horiz) plot(as.dendrogram(v$hclust), horiz=TRUE)
+    else plot(v)
+    return()
+  }
+  .varclus. <<- v
+  rho <- varclus(form, data=w, trans='none')$sim
+  .varclus.gg. <<- plotCorrM(rho)[[1]] +
+    theme(axis.text.x = element_text(angle=90, hjust=1))
+  form1 <- `Correlation Matrix` ~ .varclus.gg. +
+    caption('Spearman correlation matrix', label=label) +
+    fig.size(width=8.5, height=8.5)
+  form2 <- `Variable Clustering` ~
+    plot(as.dendrogram(.varclus.$hclus), horiz=TRUE) +
+    fig.size(height=4.5, width=7.5)
+  form3 <- `Variable Clustering` ~ plot(.varclus.) +
+    fig.size(height=5.5, width=7.5)
+  if(horiz) maketabs(form1, form2, initblank=TRUE)
+else
+            maketabs(form1, form3, initblank=TRUE)
 }
 
 dataOverview <- function(d, d2=NULL, id=NULL,
