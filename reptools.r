@@ -73,7 +73,7 @@ makecodechunk <- function(cmd, opts=NULL, results='asis', lang='r',
       }
   
   ## cname <- paste0('c', round(1000000 * runif(1)))
-  if(! exists(.chunknumber.)) .chunknumber. <<- 0
+  if(! exists('.chunknumber.')) .chunknumber. <<- 0
   .chunknumber. <<- .chunknumber. + 1
   cname <- paste0('chnk', .chunknumber.)
   if(length(callout)) callout <- paste('#|', callout)
