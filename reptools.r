@@ -213,9 +213,27 @@ makecolmarg <- function(x, type=c('print', 'run', 'cat'), ...) {
 # See https://stackoverflow.com/questions/42631642
 maketabs <- function(..., wide=FALSE, initblank=FALSE,
                      baselabel=NULL, cap=NULL, basecap=NULL, debug=FALSE) {
-  .fs. <- list(...)
-  if(length(.fs.) == 1 && 'formula' %nin% class(.fs.[[1]]))
-    .fs. <- .fs.[[1]]   # undo list(...) and get to 1st arg to maketabs
+
+  ## Put caption() and fig.size() in parent environment so they can
+  ## be executed in that environment so that their argument values
+  ## may be found there
+  
+  en <- parent.frame()
+  assign(envir = en, 'caption',
+         function(cap, label=NULL) list(label=label, cap=cap)  )
+  assign(envir = en, 'fig.size',
+         function(width=NULL, height=NULL, column=NULL)
+           list(width=width, height=height, column=column)     )
+
+  
+#  .fs. <- list(...)
+#  if(length(.fs.) == 1 && 'formula' %nin% class(.fs.[[1]]))
+#    .fs. <- .fs.[[1]]   # undo list(...) and get to 1st arg to maketabs
+  fs <- list(...)
+  if(length(fs) == 1 && 'formula' %nin% class(fs[[1]])) {
+    fs <- fs[[1]]   # undo list(...) and get to 1st arg to maketabs
+    .fs. <<- fs
+  }
 
   if(! length(baselabel))
     baselabel <- knitr::opts_current$get('label')
@@ -223,13 +241,14 @@ maketabs <- function(..., wide=FALSE, initblank=FALSE,
   if(length(baselabel) && ! grepl('^fig-', baselabel))
       baselabel <- paste0('fig-', baselabel)
   
-  makechunks <- function(fs, wide, initblank, baselabel, cap) {
+  #  makechunks <- function(fs, wide, initblank, baselabel, cap) {
+#  fs <- .fs.
     ## Create variables in an environment that will not be seen
     ## when knitr executes chunks so that no variable name conflicts
 
-    caption  <- function(cap, label=NULL) list(label=label, cap=cap)
-    fig.size <- function(width=NULL, height=NULL, column=NULL)
-      list(width=width, height=height, column=column)
+#    caption  <- function(cap, label=NULL) list(label=label, cap=cap)
+#    fig.size <- function(width=NULL, height=NULL, column=NULL)
+#      list(width=width, height=height, column=column)
 
     yaml   <- paste0('.panel-tabset', if(wide) ' .column-page')
 
@@ -254,7 +273,7 @@ maketabs <- function(..., wide=FALSE, initblank=FALSE,
         ## process caption(..., ...)
         jc <- grep('caption\\(', x)
         if(length(jc)) {
-          capt <- eval(parse(text=x[jc]))
+          capt <- eval(parse(text=x[jc]), en)  ### ???
           if(length(capt$label)) label <- capt$label
           capt   <- capt$cap
           x <- x[- jc]
@@ -262,7 +281,7 @@ maketabs <- function(..., wide=FALSE, initblank=FALSE,
         ## process fig.size(...)
         sz <- grep('fig.size\\(', x)
         if(length(sz)) {
-          siz <- eval(parse(text=x[sz]))
+          siz <- eval(parse(text=x[sz]), en)
           if(length(siz$width))
             size <- paste('fig-width:', siz$width)
           if(length(siz$height))
@@ -295,13 +314,14 @@ maketabs <- function(..., wide=FALSE, initblank=FALSE,
              makecodechunk(x, callout=callout,
                            results=if(raw) 'markup' else 'asis'))
     }
-    c(k, ':::', '')
-  }
+    k <- c(k, ':::', '')
+###  }  ???
     
-    .k. <- makechunks(.fs., wide=wide, initblank=initblank,
-                    baselabel=baselabel, cap=cap)
-    if(debug) cat(.k., sep='\n', file='/tmp/z', append=TRUE)
-  cat(knitr::knit(text=.k., quiet=TRUE))
+#    .k. <- makechunks(.fs., wide=wide, initblank=initblank,
+#                    baselabel=baselabel, cap=cap)
+
+  if(debug) cat(k, sep='\n', file='/tmp/z', append=TRUE)
+  cat(knitr::knit(text=k, quiet=TRUE))
   return(invisible())
   }
 
@@ -727,11 +747,11 @@ vClus <- function(d, exclude=NULL, corrmatrix=FALSE,
   }
   .varclus. <<- v
   rho <- varclus(form, data=w, trans='none')$sim
-  .varclus.gg. <<- plotCorrM(rho)[[1]] +
-    theme(axis.text.x = element_text(angle=90, hjust=1))
-  form1 <- `Correlation Matrix` ~ .varclus.gg. +
-    caption('Spearman correlation matrix', label=label) +
-    fig.size(width=8.5, height=8.5)
+  .varclus.gg. <<- plotCorrM(rho, xangle=90)[[1]]
+###??  .varclus.label. <<- label
+  cap <- 'Spearman rank correlation matrix.  Positive correlations are blue and negative are red.'
+  form1 <- `Correlation Matrix` ~ .varclus.gg. + caption(cap, label=label) +
+    fig.size(width=9.25, height=8.5)
   form2 <- `Variable Clustering` ~
     plot(as.dendrogram(.varclus.$hclus), horiz=TRUE) +
     fig.size(height=4.5, width=7.5)
