@@ -72,7 +72,6 @@ makecodechunk <- function(cmd, opts=NULL, results='asis', lang='r',
       r <- paste0(r, ',', oname, '=', op)
       }
   
-  ## cname <- paste0('c', round(1000000 * runif(1)))
   if(! exists('.chunknumber.')) .chunknumber. <<- 0
   .chunknumber. <<- .chunknumber. + 1
   cname <- paste0('chnk', .chunknumber.)
@@ -226,9 +225,6 @@ maketabs <- function(..., wide=FALSE, initblank=FALSE,
            list(width=width, height=height, column=column)     )
 
   
-#  .fs. <- list(...)
-#  if(length(.fs.) == 1 && 'formula' %nin% class(.fs.[[1]]))
-#    .fs. <- .fs.[[1]]   # undo list(...) and get to 1st arg to maketabs
   fs <- list(...)
   if(length(fs) == 1 && 'formula' %nin% class(fs[[1]])) {
     fs <- fs[[1]]   # undo list(...) and get to 1st arg to maketabs
@@ -241,15 +237,6 @@ maketabs <- function(..., wide=FALSE, initblank=FALSE,
   if(length(baselabel) && ! grepl('^fig-', baselabel))
       baselabel <- paste0('fig-', baselabel)
   
-  #  makechunks <- function(fs, wide, initblank, baselabel, cap) {
-#  fs <- .fs.
-    ## Create variables in an environment that will not be seen
-    ## when knitr executes chunks so that no variable name conflicts
-
-#    caption  <- function(cap, label=NULL) list(label=label, cap=cap)
-#    fig.size <- function(width=NULL, height=NULL, column=NULL)
-#      list(width=width, height=height, column=column)
-
     yaml   <- paste0('.panel-tabset', if(wide) ' .column-page')
 
     k <- c('', paste0('::: {', yaml, '}'), '')
@@ -273,7 +260,7 @@ maketabs <- function(..., wide=FALSE, initblank=FALSE,
         ## process caption(..., ...)
         jc <- grep('caption\\(', x)
         if(length(jc)) {
-          capt <- eval(parse(text=x[jc]), en)  ### ???
+          capt <- eval(parse(text=x[jc]), en)
           if(length(capt$label)) label <- capt$label
           capt   <- capt$cap
           x <- x[- jc]
@@ -304,8 +291,6 @@ maketabs <- function(..., wide=FALSE, initblank=FALSE,
         lab <- paste0(label, i)
         callout <- c(paste0('label: ', lab),
                      paste0('fig-cap: "',  capt, '"'))
-        ##                     if(! isform)
-        ##                       paste0('fig-scap: "', basecap, y,      '"'))
         addCap(lab, capt)
       }
       if(length(size)) callout <- c(callout, size)
@@ -315,10 +300,6 @@ maketabs <- function(..., wide=FALSE, initblank=FALSE,
                            results=if(raw) 'markup' else 'asis'))
     }
     k <- c(k, ':::', '')
-###  }  ???
-    
-#    .k. <- makechunks(.fs., wide=wide, initblank=initblank,
-#                    baselabel=baselabel, cap=cap)
 
   if(debug) cat(k, sep='\n', file='/tmp/z', append=TRUE)
   cat(knitr::knit(text=k, quiet=TRUE))
@@ -748,7 +729,6 @@ vClus <- function(d, exclude=NULL, corrmatrix=FALSE,
   .varclus. <<- v
   rho <- varclus(form, data=w, trans='none')$sim
   .varclus.gg. <<- plotCorrM(rho, xangle=90)[[1]]
-###??  .varclus.label. <<- label
   cap <- 'Spearman rank correlation matrix.  Positive correlations are blue and negative are red.'
   form1 <- `Correlation Matrix` ~ .varclus.gg. + caption(cap, label=label) +
     fig.size(width=9.25, height=8.5)
@@ -1228,4 +1208,18 @@ hookaddcap <- function() {
     }
   knitr::knit_hooks$set(addcapfile=cf)
   knitr::opts_chunk$set(addcapfile=TRUE)
+}
+
+
+latestFile <- function(pattern, verbose=TRUE) {
+  f <- list.files(pattern=pattern)
+  if(length(f) == 1) return(f)
+  if(length(f) == 0) stop(paste('no files matching', pattern, 'were found'))
+
+  i <- file.info(f, extra_cols=FALSE)
+  mtime <- i$mtime
+  j <- order(mtime, decreasing=TRUE)[1]
+  if(verbose) cat('\nLast modified file: ', f[j],
+                  '  (of ', length(f), ' files)\n\n', sep='')
+  f[j]
 }
