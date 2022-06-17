@@ -1199,10 +1199,12 @@ hookaddcap <- function() {
     if(! before) return()
     label   <- knitr::opts_current$get('label')
     cap     <- options$fig.cap
+    if(! length(cap)) cap <- options$cap
     if(length(cap) && is.call(cap))   cap <- eval(cap)
     ## Chunk produced a figure if label: fig- and fig-cap were
     if(! length(cap) || cap == '' || ! grepl('^fig-', label)) return()
     scap    <- options$fig.scap
+    if(! length(scap)) scap <- options$scap
     if(length(scap) && is.call(scap)) scap <- eval(scap)
     if( ! length(scap) || scap == '') scap <- cap
     ## addCap will ignore an entry if .captions. already has an entry
