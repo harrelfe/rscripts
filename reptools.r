@@ -1150,7 +1150,11 @@ addggLayers <- function(g, data,
 
 
 addCap <- function(label=NULL, cap=NULL, scap=NULL) {
-  g <- knitr::opts_current$get
+  g <- function(tag1, tag2) {
+    r <- knitr::opts_current$get(tag1)
+    if(! length(r)) r <- knitr::opts_current$get(tag2)
+    r
+    }
   h <- function() {
     lab <- g('label')
     if(length(lab) && ! grepl('^fig-', lab)) lab <- paste0('fig-', lab)
@@ -1161,8 +1165,8 @@ addCap <- function(label=NULL, cap=NULL, scap=NULL) {
   if(deb) cat('label:', label, '\n', file='/tmp/z', append=TRUE)
   if(! length(label))              return(invisible(list(NULL, NULL, NULL)))
   if(is.logical(label) && ! label) return(invisible(list(NULL, NULL, NULL)))
-  if(! length(cap))  cap  <- g('fig.cap')
-  if(! length(scap)) scap <- g('fig.scap')
+  if(! length(cap))  cap  <- g('fig.cap',  'cap')
+  if(! length(scap)) scap <- g('fig.scap', 'scap')
   if(! length(cap) && length(scap))  cap  <- scap
   if(! length(scap) && length(cap))  scap <- cap
   if(! exists('.captions.')) .captions. <<- NULL
