@@ -1096,6 +1096,10 @@ addggLayers <- function(g, data,
   pos  <- match.arg(pos)
   d    <- copy(data)
   setDT(d)
+  if(by %nin% names(data)) {
+    by <- '.by.'
+    d[, .by. := rep('', .N)]
+    }
   setnames(d, c(by, value), c('.by.', '.value.'))
 
   comp <- switch(type,

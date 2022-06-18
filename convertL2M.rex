@@ -99,28 +99,28 @@ BACKTICKRBACKTICK
 NEWLINEBACKTICKr sound("\1")BACKTICK
 
 \\soundm\{(.*?)\}
-NEWLINEBACKTICKr sound("\1")BACKTICK
+NEWLINEBACKTICKr mrg(sound("\1"))BACKTICK
 
 \\bmovie\{(.*?)\}
-NEWLINEBACKTICKr bmovie(\1)BACKTICK
+NEWLINEBACKTICKr mrg(bmovie(\1))BACKTICK
 
 \\ddisc\{(.*?)\}
-NEWLINEBACKTICKr ddisc(\1)BACKTICK
+NEWLINEBACKTICKr mrg(ddisc(\1))BACKTICK
 
 \\movie\{(.*?)\}
-NEWLINEBACKTICKr movie("\1")BACKTICK
+NEWLINEBACKTICKr mrg(movie("\1"))BACKTICK
 
 \\disc\{(.*?)\}
-NEWLINEBACKTICKr disc("\1")BACKTICK
+NEWLINEBACKTICKr mrg(disc("\1"))BACKTICK
 
 \\blog\{(.*?)\}
-NEWLINEBACKTICKr blog("\1")BACKTICK
+NEWLINEBACKTICKr mrg(blog("\1"))BACKTICK
 
 \\abd\{(.*?)\}
-NEWLINEBACKTICKr abd("\1")BACKTICK
+NEWLINEBACKTICKr mrg(abd("\1"))BACKTICK
 
 \\ems\{(.*?)\}
-NEWLINEBACKTICKr ems("\1")BACKTICK
+NEWLINEBACKTICKr mrg(ems("\1"))BACKTICK
  
 \\ros\{.*?\}
 
@@ -246,7 +246,8 @@ w
 
 
 \\quoteit\{(.*?)\}\{(.*?)\}
-<div id="boxes"><div id="leftbox">\1</div><div id="rightbox">\2</div></div><div class="clear"></div>
+`r quoteit("\1", "\2")`
+
 
 \\ignore\{
 <!--
@@ -261,13 +262,13 @@ w
 
 
 ~*\\ref\{fig:(.*?)\}
- \@ref(fig:\1)
+ \@fig-\1
 
 \\a*label\{(.*?)\}
-<a name="\1"></a>
+{#sec-\1}
 
 ~*\\ref\{(.*?)\}
-<a href="`{r anchorLoc('\1')`">here</a>
+ \@sec-\1
 
 <br>
 \\\\
