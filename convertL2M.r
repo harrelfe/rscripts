@@ -17,7 +17,6 @@
 #  Edit translations from \begin{tabular} to markdown tables to fine tune
 #  Add fig.align='left', lang='markdown' in knitrSet()
 #  Change author names @ref to just @ref
-#  For figure callouts change @ref to \@ref
 # See ~/r/rmarkdown/style.txt (insert in new .Rmd file) and bookfun.r
 # This function uses translation regular expressions in
 # https://github.com/harrelfe/rscripts/blob/master/convertL2M.rex
@@ -33,7 +32,7 @@ convertL2M <- function(file, out='', transtab=NULL) {
   trans <- readLines(transtab)
   n <- length(trans)
   if((n %% 3) != 0)
-    stop('convertL2M.dat has # lines that is not a multiple of 3')
+    stop('convertL2M.rex has # lines that is not a multiple of 3')
   typet <- trans[seq(1, n, by=3)]  # blank or w (warning)
   from  <- trans[seq(2, n, by=3)]
   to    <- trans[seq(3, n, by=3)]
