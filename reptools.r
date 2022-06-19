@@ -1090,7 +1090,7 @@ addggLayers <- function(g, data,
                         type=c('ebp', 'spike'),
                         ylim=layer_scales(g)$y$get_limits(),
                         by='variable', value='value',
-                        frac=0.065, mult=1.,
+                        frac=0.065, mult=1., facet=NULL,
                         pos=c('bottom', 'top'), showN=TRUE) {
   type <- match.arg(type)
   pos  <- match.arg(pos)
@@ -1130,17 +1130,18 @@ addggLayers <- function(g, data,
 
   for(geo in names(R)) {
     dat <- R[[geo]]
+    if(length(facet)) dat[, names(facet) := facet]
     g <- g +
       switch(geo,
-             lines    = geom_path(aes(x=x, y=a + b * y, alpha=I(0.6)),
+             lines    = geom_path(aes(x=x, y=a + b * y), alpha=I(0.6),
                                   data=dat),
              segments = geom_segment(aes(x=x, xend=x,
                                          y=a + b * y1, yend=a + b * y2),
                                      data=dat),
-             points   = geom_point(aes(x=x, y=a + b * y,
-                                       col=I('blue'), size=I(0.8)), data=dat),
-             points2  = geom_point(aes(x=x, y=a + b * y,
-                                       size=I(0.2), alpha=I(0.4)),
+             points   = geom_point(aes(x=x, y=a + b * y),
+                                       col=I('blue'), size=I(0.8), data=dat),
+             points2  = geom_point(aes(x=x, y=a + b * y),
+                                       size=I(0.2), alpha=I(0.4),
                                    data=dat) )
   }
 
