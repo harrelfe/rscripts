@@ -15,8 +15,10 @@
 #  After running:
 #  Edit lines marked with <!-- ?---> and look for closing } to edit
 #  Edit translations from \begin{tabular} to markdown tables to fine tune
+#  Edit \hspace to ~ within equations, edit \textbf
+#  Put $$ on same line as equation
 #  Add fig.align='left', lang='markdown' in knitrSet()
-#  Change author names @ref to just @ref
+#  Change author names @ref ?
 # See ~/r/rmarkdown/style.txt (insert in new .Rmd file) and bookfun.r
 # This function uses translation regular expressions in
 # https://github.com/harrelfe/rscripts/blob/master/convertL2M.rex

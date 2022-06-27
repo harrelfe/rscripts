@@ -1199,7 +1199,7 @@ printCap <- function(book=FALSE) {
   else     knitr::kable(cap, row.names=FALSE, format='html')
 }
 
-hookaddcap <- function() {
+hookaddcap <- function(loc=NULL) {
   cf <- function(before, options, envir) {
     if(! before) return()
     label   <- knitr::opts_current$get('label')
@@ -1219,6 +1219,7 @@ hookaddcap <- function() {
     }
   knitr::knit_hooks$set(addcapfile=cf)
   knitr::opts_chunk$set(addcapfile=TRUE)
+  if(length(loc)) knitr::opts_chunk$set(fig.cap.location=loc)
 }
 
 
@@ -1234,3 +1235,26 @@ latestFile <- function(pattern, verbose=TRUE) {
                   '  (of ', length(f), ' files)\n\n', sep='')
   f[j]
 }
+
+
+spar <-
+  function(mar=if(!axes)
+                 c(2.25+bot-.45*multi,2*(las==1)+2+left,
+                   .5+top+.25*multi, .5+rt) else
+                 c(3.25+bot-.45*multi,2*(las==1)+3.5+left,
+                   .5+top+.25*multi, .5+rt),
+                 lwd = if(multi)1 else 1.75,
+                 mgp = if(!axes) mgp=c(.75, .1, 0) else
+                 if(multi) c(1.5, .365, 0) else c(2.4-.4, 0.475, 0),
+                 tcl = if(multi)-0.25 else -0.4, xpd=FALSE, las=1,
+                 bot=0, left=0, top=0, rt=0, ps=if(multi) 14 else 18,
+                 mfrow=NULL, axes=TRUE, cex.lab=1.15, cex.axis=.8,
+                 ...) {
+  multi <- length(mfrow) > 0
+  par(mar=mar, lwd=lwd, mgp=mgp, tcl=tcl, ps=ps, xpd=xpd,
+      cex.lab=cex.lab, cex.axis=cex.axis, las=las, ...)
+  if(multi) par(mfrow=mfrow)
+}
+
+## For illustrating in-line R codes so back ticks will appear
+rwrap <- function(x) paste0('\\`r ', x, '\\`')

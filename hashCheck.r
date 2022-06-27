@@ -43,7 +43,7 @@ hashCheck <- function(..., file, .print.=TRUE, .names.=NULL) {
 
   R        <- readRDS(file)
   .prevhash. <- attr(R, 'hash')
-  if(! length(.prevhash.)) {
+if(! length(.prevhash.)) {
     if(.print.) cat('\nRe-run because of no previous hash\n\n')
     ct('no previous hash')
     return(list(result=NULL, hash=.hash., changed='No previous hash'))
@@ -54,7 +54,6 @@ hashCheck <- function(..., file, .print.=TRUE, .names.=NULL) {
     ct('no change')
     return(list(result=R, hash=.hash., changed=''))
     }
-
   .s. <- character(0)
 
   if(! samelen) {
@@ -115,7 +114,8 @@ hashCheck <- function(..., file, .print.=TRUE, .names.=NULL) {
 runifChanged <- function(fun, ..., file=NULL, .print.=TRUE, .inclfun.=TRUE) {
   if(! length(file)) {
     file <- knitr::opts_current$get('label')
-    if(! length(file)) stop('attempt to run runifChanged outside a knitr chunk')
+    if(! length(file))
+      stop('attempt to run runifChanged without file= outside a knitr chunk')
     file <- paste0(file, '.rds')
   }
   w <- list(...)
@@ -130,7 +130,7 @@ runifChanged <- function(fun, ..., file=NULL, .print.=TRUE, .inclfun.=TRUE) {
                w$.names. <- .names.
                do.call(hashCheck, w)
                }
-               
+
   hash    <- hashobj$hash
   result  <- hashobj$result
   if(! length(result)) {
@@ -140,4 +140,3 @@ runifChanged <- function(fun, ..., file=NULL, .print.=TRUE, .inclfun.=TRUE) {
   }
   result
 }
-
