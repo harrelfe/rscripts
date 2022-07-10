@@ -1,7 +1,7 @@
 ##' Moving Estimates Using Overlapping Fixed-width Windows
 ##' 
 ##' Function to compute moving averages and other statistics as a function
-##' of a continuous variable, possibly stratified by another variable.
+##' of a continuous variable, possibly stratified by other variables.
 ##' Estimates are made by creating overlapping moving windows and
 ##' computing the statistics defined in the stat function for each window.
 ##' The default method, `space='n'` creates varying-width intervals each having a sample size of `2*eps +1`, and the smooth estimates are made every `xinc` observations.  Outer intervals are not symmetric in sample size (but the mean x in those intervals will reflect that) unless `eps=10`, as outer intervals are centered at observations 10 and n - 10 + 1.  The mean x-variable within each windows is taken to represent that window.  If `trans` and `itrans` are given, x means are computed on the `trans(x)` scale and then `itrans`'d.  For `space='x'`, by default estimates are made on to the 10th smallest to the 10th largest
@@ -17,7 +17,7 @@
 ##' @title movStats
 ##' @author Frank Harrell
 ##' @md
-##' @param formula a formula with the analysis variable on the left and the x-variable on the right, following by an optional stratification variable
+##' @param formula a formula with the analysis variable on the left and the x-variable on the right, following by optional stratification variables
 ##' @param stat function of one argument that returns a named list of computed values.  Defaults to computing mean and quartiles + N except when y is binary in which case it computes moving proportions.  If y has two columns the default statistics are Kaplan-Meier estimates of cumulative incidence at a vector of `times`.
 ##' @param eps tolerance for window (half width of window).  For `space='x'` is in data units, otherwise is the sample size for half the window, not counting the middle target point.
 ##' @param varyeps applies to `space='n'` and causes a smaller `eps` to be used in strata with fewer than `` observations so as to arrive at three x points
@@ -97,7 +97,10 @@ movStats <- function(formula, stat=NULL, discrete=FALSE,
 
   X  <- trans(mf[[2]])
   bythere <- length(v) > 2
-  By <- if(bythere) mf[[3]] else rep(1, length(X))
+  By <- if(bythere)
+          do.call(interaction, c(mf[3:length(mf)], list(sep='::')))
+        else
+          rep(1, length(X))
   i  <- is.na(X) | is.na(Y) | is.na(Y2) | is.na(By)
   if(any(i)) {
     i  <- ! i
@@ -324,7 +327,16 @@ movStats <- function(formula, stat=NULL, discrete=FALSE,
   }
 
   R[, tx := itrans(tx)]
-  if(bythere) setnames(R, c('tx', 'by'), v[2:3])
+  if(bythere) {
+    if(length(v) == 3) setnames(R, c('tx', 'by'), v[2:3])
+    else {
+      splitby <- strsplit(R[, by], split='::')
+      setnames(R, 'tx', v[2])
+      set(R, j='by', value=NULL)   # remove 'by'
+      for(iby in 3 : length(v))
+        set(R, j=v[iby], value=sapply(splitby, function(u) u[[iby - 2]]))
+    }
+  }
   else {
     R[, by := NULL]
     setnames(R, 'tx', v[2])
