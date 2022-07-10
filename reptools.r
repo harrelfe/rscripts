@@ -926,7 +926,7 @@ dataOverview <- function(d, d2=NULL, id=NULL,
                    'observations\nNumber of NAs is color coded')
       lnna <- levels(data$.nna.)
       ggplotlyr(
-        if(any(as.numeric(as.character(data$.nna.)) > 0))
+        if(any(trimws(as.character(data$.nna.)) != '0'))
           ggplot(data, aes(x=distinct, y=symmetry,
                        color=as.integer(.nna.), label=txt)) +
           scale_x_continuous(trans='sqrt', breaks=br, 
