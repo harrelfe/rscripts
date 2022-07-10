@@ -759,9 +759,10 @@ dataOverview <- function(d, d2=NULL, id=NULL,
     setDT(d2)
   }
 
-  ## From rmsb package:
+  ## From rmsb package, augmented to handle dates/times:
   distSym <- function(x, prob=0.9, na.rm=FALSE) {
     if(na.rm) x <- x[! is.na(x)]
+    x <- unclass(x) 
     a <- (1. - prob) / 2.
     w <- quantile(x, probs=c(a / 2., 1. - a / 2.))
     xbar <- mean(x)
@@ -923,18 +924,29 @@ dataOverview <- function(d, d2=NULL, id=NULL,
     gg <- function(data) {
       cap <- paste(nrow(data), 'variables and', nrow(w),
                    'observations\nNumber of NAs is color coded')
+      lnna <- levels(data$.nna.)
       ggplotlyr(
-      ggplot(data, aes(x=distinct, y=symmetry,
+        if(any(as.numeric(as.character(data$.nna.)) > 0))
+          ggplot(data, aes(x=distinct, y=symmetry,
                        color=as.integer(.nna.), label=txt)) +
-        scale_x_continuous(trans='sqrt', breaks=br, 
+          scale_x_continuous(trans='sqrt', breaks=br, 
                            minor_breaks=mbr) +
-        scale_color_gradientn(colors=viridis::viridis(10),
-                              breaks=1 : length(levels(data$.nna.)),
-                              labels=levels(data$.nna.)) +
-        geom_point() + xlab('Number of Distinct Values') +
-        ylab('Symmetry') +
-        labs(caption=cap) +
-        guides(color=guide_legend(title='NAs'))  )
+          scale_color_gradientn(colors=viridis::viridis(min(10, length(lnna))),
+                              breaks=1 : length(lnna),
+                              labels=lnna) +
+          geom_point() + xlab('Number of Distinct Values') +
+          ylab('Symmetry') +
+          labs(caption=cap) +
+          guides(color=guide_legend(title='NAs'))
+        else
+          ggplot(data, aes(x=distinct, y=symmetry,
+                       label=txt)) +
+          scale_x_continuous(trans='sqrt', breaks=br, 
+                           minor_breaks=mbr) +
+          geom_point() + xlab('Number of Distinct Values') +
+          ylab('Symmetry') +
+          labs(caption=cap)
+      )
         #        theme(legend.position='bottom')
       }
     r[, .nna. := cut2(NAs, g=12)]
