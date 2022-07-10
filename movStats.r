@@ -370,7 +370,10 @@ movStats <- function(formula, stat=NULL, discrete=FALSE,
     n <- colnames(info)
     nam <- .q(N=N, Wmean=Mean, Wmin=Min, Wmax=Max, eps=eps, xinc=xinc)
     colnames(info) <- nam[n]
-    ghead <- c(if(length(rownames(info))) c(' ' = 1),
+    ## rownames returns "1" "2" "3" ... even if row names not really there
+    ri   <- rownames(info)
+    rnp  <- length(ri) && ! all(ri == as.character(1 : length(ri)))
+    ghead <- c(if(rnp) c(' ' = 1),
                c(' ' = 1, 'Window Sample Sizes' = 3),
                if('eps'  %in% n) c(' ' = 1),
                if('xinc' %in% n) c(' ' = 1))
