@@ -64,7 +64,11 @@ movStats <- function(formula, stat=NULL, discrete=FALSE,
                      pr=c('none', 'kable', 'plain', 'margin')) {
   space   <- match.arg(space)
   msmooth <- match.arg(msmooth)
-  if(discrete) msmooth <- 'raw'
+  movlab  <- 'Moving '
+  if(discrete) {
+    msmooth <- 'raw'
+    movlab  <- ''
+    }
   tsmooth <- match.arg(tsmooth)
   pr      <- match.arg(pr)
 
@@ -120,24 +124,28 @@ movStats <- function(formula, stat=NULL, discrete=FALSE,
 
 
   if(! length(stat))
-    stat <- if(ybin) function(y) list('Moving Proportion' = mean(y),
-                                      N = length(y))
+    stat <- if(ybin) function(y)
+      if(discrete) list(Proportion = mean(y), N= length(y)) else
+                   list('Moving Proportion' = mean(y), N = length(y))
             else if(sec)
               function(y, y2) {
                 # km.quick is in Hmisc
                 z <- c(1. - km.quick(Surv(y, y2), times), length(y))
-                names(z) <- c(paste0('Moving ', times, '-', tunits), 'N')
+                names(z) <- c(paste0(movlab, times, '-', tunits), 'N')
                 as.list(z)
               }
              else 
               function(y) {
                 if(! length(y)) return(list(Mean=NA, Median=NA, Q1=NA, Q3=NA))
                 qu <- quantile(y, (1:3)/4)
-                list('Moving Mean'   = mean(y),
-                     'Moving Median' = qu[2],
-                     'Moving Q1'     = qu[1],
-                     'Moving Q3'     = qu[3],
+                
+                z <- list('Mean'   = mean(y),
+                     'Median' = qu[2],
+                     'Q1'     = qu[1],
+                     'Q3'     = qu[3],
                      N=length(y))
+                names(z)[1:4] <- paste0(movlab, names(z)[1:4])
+                z
               }
 
   statx <- function(y, y2, x) {
