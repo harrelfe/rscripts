@@ -815,7 +815,7 @@ dataOverview <- function(d, d2=NULL, id=NULL,
                caption='Frequency distribution of number of NAs per variable'))
     tab <- table(na.per.obs)
     print(kabl(tab,
-               caption='Frequency ditribution of number of incomplete variables per observation'))
+               caption='Frequency distribution of number of incomplete variables per observation'))
   }
   
   if(id1) {
