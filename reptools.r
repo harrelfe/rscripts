@@ -546,8 +546,7 @@ missChk <- function(data, use=NULL, exclude=NULL,
   p <- ncol(d)
 
   ismiss <- function(x)
-    if(is.character(x)) is.na(x) | trimws(x) == ''
-    else is.na(x)
+    if(is.character(x)) is.na(x) | trimws(x) == '' else is.na(x)
 
   ## Replace each variable with missingness indicator
   di <- d[, lapply(.SD, ismiss)]
@@ -557,20 +556,40 @@ missChk <- function(data, use=NULL, exclude=NULL,
   exc <- do.call('seqFreq', c(di, list(noneNA=TRUE)))
   if(type == 'seq') return(exc)
 
-  nna <- sapply(di, sum)
+  na.per.var <- apply(di, 2, sum)
+  na.per.obs <- apply(di, 1, sum)
 
-  if(all(nna == 0)) 
+  if(all(na.per.var == 0)) 
     return(asisOut('No NAs on any of the',
                    p, ' variables examined.'))
 
   surrq <- function(x) paste0('`', x, '`')
 
-  vmiss <- names(nna)[nna > 0]
+  vmiss <- names(na.per.var)[na.per.var > 0]
   dm    <- d[, ..vmiss]
   pm    <- length(vmiss)
 
   cat('\n', p - pm, 'variables have no NAs and', pm,
       'variables have NAs\n\n')
+
+  cat(namedata, ' has ', nrow(d), ' observations (', sum(na.per.obs == 0),
+              ' complete) and ', ncol(d), ' variables (', sum(na.per.var == 0),
+              ' complete)\n', sep='')
+  
+  if(sum(na.per.var) > 0) {
+    z <- data.frame(Minimum=c(min(na.per.var), min(na.per.obs)),
+                    Maximum=c(max(na.per.var), max(na.per.obs)),
+                    Mean   =round(c(mean(na.per.var), mean(na.per.obs)), 1),
+                    row.names=c('Per variable', 'Per observation'))
+    print(kabl(z, caption='Number of NAs'))
+    
+    tab <- table(na.per.var)
+    print(kabl(tab,
+               caption='Frequency distribution of number of NAs per variable'))
+    tab <- table(na.per.obs)
+    print(kabl(tab,
+               caption='Frequency distribution of number of incomplete variables per observation'))
+  }
   
   if(pm < max(20, maxpat)) {
     nap <- na.pattern(dm)
@@ -790,7 +809,7 @@ dataOverview <- function(d, d2=NULL, id=NULL,
   }
 
   ismiss <- function(x)
-    if(is.character(x)) is.na(x) | x %in% c('', ' ') else is.na(x) 
+    if(is.character(x)) is.na(x) | trimws(x) == '' else is.na(x) 
   na         <- sapply(d, ismiss) * 1
   na.per.var <- apply(na, 2, sum)
   na.per.obs <- apply(na, 1, sum)
@@ -802,21 +821,6 @@ dataOverview <- function(d, d2=NULL, id=NULL,
     vcommon <- sum(names(d) %in% names(d2))
     cat(' of which', vcommon, 'variables are in', nam2)
   } else cat('\n')
-  
-  if(sum(na) > 0) {
-    z <- data.frame(Minimum=c(min(na.per.var), min(na.per.obs)),
-                    Maximum=c(max(na.per.var), max(na.per.obs)),
-                    Mean   =round(c(mean(na.per.var), mean(na.per.obs)), 1),
-                    row.names=c('Per variable', 'Per observation'))
-    print(kabl(z, caption='Number of NAs'))
-    
-    tab <- table(na.per.var)
-    print(kabl(tab,
-               caption='Frequency distribution of number of NAs per variable'))
-    tab <- table(na.per.obs)
-    print(kabl(tab,
-               caption='Frequency distribution of number of incomplete variables per observation'))
-  }
   
   if(id1) {
     cat('There are', length(ids1), 'unique values of', nid, 'in', nam1)
