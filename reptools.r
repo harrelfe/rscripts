@@ -658,16 +658,18 @@ missChk <- function(data, use=NULL, exclude=NULL,
     ## Predict using ordinal regression the number of missing variables
     ## from all the non-missing variables
     ## Compute the number of missing variables per observation
-    dm    <- as.matrix(dm)
-    Nna   <- apply(dm, 1, sum)
-    preds <- names(nna)[nna == 0]
+    preds <- names(na.per.obs)[na.per.obs == 0]
+    if(! length(preds)) {
+      cat('No variables without NAs to predict number of NAs per observation\n\n')
+      break
+      }
     if(length(omitpred)) {
       omitv <- if(is.character(omitpred)) omitpred
                else
                  all.vars(omitpred)
       preds <- setdiff(preds, omitv)
       }
-    form <- paste('Nna ~', paste(preds, collapse=' + '))
+    form <- paste('na.per.obs ~', paste(preds, collapse=' + '))
     f <- rms::lrm(as.formula(form), data=d)
     if(f$fail)
       cat('prednmiss=TRUE led to failure of ordinal model to fit\n\n')

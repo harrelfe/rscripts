@@ -1,4 +1,16 @@
 
+\\hxref\{.*\}
+
+
+^\\need.*
+
+
+\\ra
+$\\rightarrow$
+
+\\\$
+$
+
 \\begin\{equation\}
 $$
 
@@ -18,22 +30,22 @@ $$
 $$
 
 \\begin\{eqnarray\}
-$$\\begin{array}{ccc}
+NEWLINE\\begin{array}{ccc}
 
 \\end\{eqnarray\}
-\\end{array}$$NEWLINE
+\\end{array}NEWLINE
 
 \\begin\{eqnarray\*\}
-$$\\begin{array}{ccc}
+NEWLINE\\begin{array}{ccc}
 
 \\end\{eqnarray\*\}
-\\end{array}$$NEWLINE
+\\end{array}NEWLINE
 
 \\beqa
-$$\\begin{array}{ccc}
+NEWLINE\\begin{array}{ccc}
 
 \\eeqa
-\\end{array}$$NEWLINE
+\\end{array}NEWLINE
 
 \\begin\{itemize\}
 \\bi
@@ -87,16 +99,16 @@ BACKTICKRBACKTICK
 BACKTICKRBACKTICK
 
 ``(.*?)''
-\\"\1\\"
+"\1"
 
 \\ipacue
  BACKTICKr ipacue()BACKTICK 
 
 \\def\\apacue\{(.*?)\}
-<!--  BACKTICKr apacue <<- \1BACKTICK--->
+
 
 \\sound\{(.*?)\}
-NEWLINEBACKTICKr sound("\1")BACKTICK
+NEWLINEBACKTICKr mrg(sound("\1"))BACKTICK
 
 \\soundm\{(.*?)\}
 NEWLINEBACKTICKr mrg(sound("\1"))BACKTICK
@@ -111,10 +123,13 @@ NEWLINEBACKTICKr mrg(ddisc(\1))BACKTICK
 NEWLINEBACKTICKr mrg(movie("\1"))BACKTICK
 
 \\disc\{(.*?)\}
-NEWLINEBACKTICKr mrg(disc("\1"))BACKTICK
+
 
 \\blog\{(.*?)\}
 NEWLINEBACKTICKr mrg(blog("\1"))BACKTICK
+
+\\blogl\{(.*?)\}\{(.*?)\}
+NEWLINEBACKTICKr mrg(blogl("\1", "\2"))BACKTICK
 
 \\abd\{(.*?)\}
 NEWLINEBACKTICKr mrg(abd("\1"))BACKTICK
@@ -184,6 +199,12 @@ _
 
 ~\\cite
  \\cite
+ 
+\\citei
+\\cite
+
+\\cite\[(.*?)\]\{(.*?)\}
+[\2, \1]
 
 \\cite\{(.*?)\}
 @\1
@@ -213,6 +234,9 @@ hhhhHHHH
 
 
 \\emph\{(.*?)\}
+_\1_
+
+\{\\em\s*(.*?)\}
 _\1_
 
 \\texttt\{(.*?)\}
@@ -260,11 +284,14 @@ w
 \s*#\s*Fig.*\(\*\\ref\{fig*.*
 
 
+Figure\s*~*\s*\\ref\{fig
+\\ref\{fig
+
 ~*\\ref\{fig:(.*?)\}
  \@fig-\1
 
 \\a*label\{(.*?)\}
-{#sec-\1}
+ {#sec-\1}
 
 ~*\\ref\{(.*?)\}
  \@sec-\1
@@ -274,3 +301,10 @@ w
 
 prType='latex'
 prType='html'
+
+^\\L$
+
+
+^\\endL$
+
+

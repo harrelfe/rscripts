@@ -25,8 +25,10 @@
 
 ## Notes
 ##  If cache=TRUE figure captions may not be created
+##  Set ipacue=FALSE to not generate `r ipacue()` at each
+##  top-level \being{itemize,enumerate,description}
 
-convertL2M <- function(file, out='', transtab=NULL) {
+convertL2M <- function(file, out='', transtab=NULL, ipacue=TRUE, rsetup=TRUE) {
 
   if(! length(transtab)) 
     transtab <- 'https://raw.githubusercontent.com/harrelfe/rscripts/master/convertL2M.rex'
@@ -61,6 +63,17 @@ convertL2M <- function(file, out='', transtab=NULL) {
 
   if(nestingi[n] != 0) warning('itemize environment not closed')
   if(nestinge[n] != 0) warning('enumerate environment not closed')
+
+  ## Compute degree of nesting ignoring whether iti was \bi or \be
+  nestingie <- cumsum(st %in% c('\\bi', '\\be')) -
+               cumsum(st %in% c('\\ei', '\\ee'))
+
+  ## If ipacue=TRUE, for every top level \bi or \be insert a new
+  ## line with `r ipacue()` at end of next line
+  if(ipacue) {
+    i <- which(st %in% c('\\bi', '\\be') & nestingie == 1)
+    if(any(i)) for(j in i) s[j + 1] <- paste(s[j + 1], '`r ipacue()`')
+  }
 
   ## For every \bi find line number of matching \ei
   ## For every line determine current environment
@@ -200,7 +213,8 @@ convertL2M <- function(file, out='', transtab=NULL) {
   z <- gsub('\\\\bi$', '', z)
   z <- gsub('\\\\be$', '', z)
   i <- c(grep('\\\\ei$', z), grep('\\\\ee$', z))
-  if(length(i)) z <- z[- i]
+  ## if(length(i)) z <- z[- i]
+  if(length(i)) z[i] <- ''
 
   ## Remove any blank line preceeding a > 1st level list
   p <- c('^    \\+ ',      '^        -',
@@ -213,6 +227,25 @@ convertL2M <- function(file, out='', transtab=NULL) {
   }
   z <- z[z != '**DELETE**']
 
+
+  bt <- paste(rep("`", 3), collapse='')
+  if(rsetup)
+    z <-
+      c("```{r include=FALSE}",
+        "require(Hmisc)",
+        "getRs('reptools.r')",
+        "getRs('qbookfun.r')",
+        "hookaddcap()",
+        "options(qproject='rms', prType='html')",
+        "source('~/r/rmarkdown/qbookfun.r')",
+        "knitr::set_alias(w = 'fig.width', h = 'fig.height', cap = 'fig.cap', scap ='fig.scap')",
+        "```",
+        "",
+        z,
+        "",
+        "```{r echo=FALSE}",
+        "# saveCap('')",
+        "```")
 
   cat(z, sep='\n', file=out)
   invisible()
