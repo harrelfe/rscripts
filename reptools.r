@@ -654,15 +654,11 @@ missChk <- function(data, use=NULL, exclude=NULL,
                `NA combinations` ~ .combplotp.)
   }
 
-  if(prednmiss && (pm < p)) {
+  if(prednmiss && (pm < p) && any(na.per.obs == 0)) {
     ## Predict using ordinal regression the number of missing variables
     ## from all the non-missing variables
     ## Compute the number of missing variables per observation
     preds <- names(na.per.obs)[na.per.obs == 0]
-    if(! length(preds)) {
-      cat('No variables without NAs to predict number of NAs per observation\n\n')
-      break
-      }
     if(length(omitpred)) {
       omitv <- if(is.character(omitpred)) omitpred
                else
@@ -681,7 +677,7 @@ missChk <- function(data, use=NULL, exclude=NULL,
                 `Predicting # NAs per obs` ~ print(.misschkfit., coefs=FALSE) +
                                              plot(.misschkanova.))
       }
- }
+  }
 
   do.call(maketabs, c(list(initblank=TRUE, baselabel=baselabel),
                       list(tabs)))
