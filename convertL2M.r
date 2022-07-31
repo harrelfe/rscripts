@@ -45,6 +45,18 @@ convertL2M <- function(file, out='', transtab=NULL, ipacue=TRUE, rsetup=TRUE) {
   w <- readLines(file)
   s <- trimws(w, which='right') # lines in file with no white space on right
   
+  ## Intercept \cite{foo1,foo2,foo3} -> [@foo1; @foo2; @foo3]
+  s <- gsub('~\\\\cite', '\\\\cite', s)
+  j <- grep('\\cite[a-z]*\\{', s)
+  if(any(j)) for(k in j) {
+    x <- s[k]
+    inside <- sub('.*\\\\cite[a-z]*\\{(.*?)\\}.*', '\\1', x)
+    tto    <- sub(',', '; @', paste0('[@', inside, ']'))
+    ex     <- paste0('\\\\cite[a-z]*\\{', inside, '\\}')
+    x      <- sub(ex, tto, x)
+    s[k]   <- x
+    }
+  
   ## Do main translations
 
   for(i in 1 : nt)
@@ -116,7 +128,7 @@ convertL2M <- function(file, out='', transtab=NULL, ipacue=TRUE, rsetup=TRUE) {
   for(j in item) {
     ## Find latest environment that was not closed before current line
     lasto <- mx(opened, opened < j & closed > j)
-    if(lasto == 0) stop('\\item encountered that is not after beginning of an itemize or enumerate environment')
+    if(lasto == 0) stop(paste('\\item encountered that is not after beginning of an itemize or enumerate environment', '\nj=', j, '\nitem[j]=', item[j]))
     type[j] <- ttype[which(opened == lasto)]
   }
 
@@ -233,11 +245,10 @@ convertL2M <- function(file, out='', transtab=NULL, ipacue=TRUE, rsetup=TRUE) {
     z <-
       c("```{r include=FALSE}",
         "require(Hmisc)",
+        "options(qproject='rms', prType='html')",
         "getRs('reptools.r')",
         "getRs('qbookfun.r')",
         "hookaddcap()",
-        "options(qproject='rms', prType='html')",
-        "source('~/r/rmarkdown/qbookfun.r')",
         "knitr::set_alias(w = 'fig.width', h = 'fig.height', cap = 'fig.cap', scap ='fig.scap')",
         "```",
         "",

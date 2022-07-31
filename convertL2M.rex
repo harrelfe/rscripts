@@ -77,6 +77,12 @@ NEWLINE\\begin{array}{ccc}
 \\etable
 \\end{tabular}
 
+\\ctabl\{
+\\begin{tabular
+
+\\ectabl
+\\end{tabular}
+
 \\clearpage
 
 
@@ -165,13 +171,13 @@ BACKTICK\1BACKTICK
 **\1**
 
 ^<<
-BACKTICKBACKTICKBACKTICK{r 
+NEWLINEBACKTICKBACKTICKBACKTICK{r 
 
 >>=
 }
 
 ^@$
-BACKTICKBACKTICKBACKTICK
+BACKTICKBACKTICKBACKTICKNEWLINE
 
 ^\\chapter\{(.*?)\}
 NEWLINE# \1
@@ -184,6 +190,9 @@ NEWLINE### \1
 
 ^\\subsubsection\{(.*?)\}
 NEWLINE#### \1
+
+\\paragraph\{(.*?)\}
+**\1**
 
 \.\\ 
 . 
@@ -240,7 +249,7 @@ _\1_
 _\1_
 
 \\texttt\{(.*?)\}
-<tt>\1</tt>
+`\1`
 
 \{\\larger(.*?)\}
 \1
@@ -296,8 +305,8 @@ Figure\s*~*\s*\\ref\{fig
 ~*\\ref\{(.*?)\}
  \@sec-\1
 
-<br>
 \\\\
+<br>
 
 prType='latex'
 prType='html'
@@ -306,5 +315,4 @@ prType='html'
 
 
 ^\\endL$
-
 
