@@ -1261,7 +1261,7 @@ spar <-
                  mgp = if(!axes) mgp=c(.75, .1, 0) else
                  if(multi) c(1.5, .365, 0) else c(2.4-.4, 0.475, 0),
                  tcl = if(multi)-0.25 else -0.4, xpd=FALSE, las=1,
-                 bot=0, left=0, top=0, rt=0, ps=if(multi) 14 else 18,
+                 bot=0, left=0, top=0, rt=0, ps=if(multi) 12 else 15,
                  mfrow=NULL, axes=TRUE, cex.lab=1.15, cex.axis=.8,
                  ...) {
   multi <- length(mfrow) > 0
