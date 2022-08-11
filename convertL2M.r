@@ -2,8 +2,10 @@
 #
 # Usage:
 #   require(Hmisc)
-#   getRs('convertL2M.r', put='source')   # gets from github
+#   getRs('convertL2M.r')   # gets from github
 #   convertL2M('my.Rnw', 'my.Rmd')
+#   Add internalize='directory.../shared.R' to move external R code
+#   chunks to inside the new code chunks
 #
 # Must be done manually:
 #  before running: make sure chunk headers are all on one input line
@@ -28,7 +30,8 @@
 ##  Set ipacue=FALSE to not generate `r ipacue()` at each
 ##  top-level \being{itemize,enumerate,description}
 
-convertL2M <- function(file, out='', transtab=NULL, ipacue=TRUE, rsetup=TRUE) {
+convertL2M <- function(file, out='', transtab=NULL, ipacue=TRUE, rsetup=TRUE,
+  internalize=NULL) {
 
   if(! length(transtab)) 
     transtab <- 'https://raw.githubusercontent.com/harrelfe/rscripts/master/convertL2M.rex'
@@ -156,9 +159,40 @@ convertL2M <- function(file, out='', transtab=NULL, ipacue=TRUE, rsetup=TRUE) {
                e = gsub('\\\\item\\s+', neste[nestinge[i]], trimws(z[i]))
                )
   }
+  
+  if(length(internalize)) {
+    ext <- readLines(internalize)
+    ext <- sub('# Figure \\(\\*.*\\*\\)', '', ext)
+    ext <- ext[ext != '']
+    le <- length(ext)
+    ecn <- character(le)
+    for(j in 1 : le) {
+      cat(j, grepl('^##\\s@knitr', ext[j]), '\n')
+      # Carry forward chunk names, extracted from ## @knitr chunkname
+      if(grepl('^##\\s@knitr', ext[j]))
+        ecn[j : le] <- sub('##\\s@knitr\\s(.*)', '\\1', ext[j])
+    }
+    ext <- split(ext, ecn)
+    ext <- lapply(ext, function(x) x[-1])  # remove first entry
+    }
 
   notchunkheader    <- ! grepl('^```\\{r', z)
   z[notchunkheader] <-   gsub('\\\\\\\\', '<br>', z[notchunkheader])
+  
+  # For every chunk header whose name is in internalize, expand the 
+  # chunk to include lines in internalize
+  
+  if(length(internalize)) {
+    for(j in 1 : length(z)) {
+      if(grepl('^```\\{r', z[j])) {
+        cname <- sub('^```\\{r\\s(*\\w*).*\\}', '\\1', z[j])
+        if(cname %in% names(ext))
+          z[j] <- paste(z[j], paste(ext[[cname]], collapse='\n'), sep='\n')
+      }
+    }
+    # Convert z back into multiple lines
+    z <- unlist(strsplit(z, '\n'))
+  }
 
   ## For all array environments convert <br> back to \\
   ## Also replace {ccc} with correct number if needed
