@@ -31,7 +31,7 @@
 ##  top-level \being{itemize,enumerate,description}
 
 convertL2M <- function(file, out='', transtab=NULL, ipacue=TRUE, rsetup=TRUE,
-  internalize=NULL) {
+  internalize=NULL, verbose=FALSE) {
 
   if(! length(transtab)) 
     transtab <- 'https://raw.githubusercontent.com/harrelfe/rscripts/master/convertL2M.rex'
@@ -162,18 +162,21 @@ convertL2M <- function(file, out='', transtab=NULL, ipacue=TRUE, rsetup=TRUE,
   
   if(length(internalize)) {
     ext <- readLines(internalize)
-    ext <- sub('# Figure \\(\\*.*\\*\\)', '', ext)
+    ext <- sub('#\\s*Fig.*\\s\\(\\*.*\\*\\)', '', ext)
     ext <- ext[ext != '']
     le <- length(ext)
     ecn <- character(le)
     for(j in 1 : le) {
-      cat(j, grepl('^##\\s@knitr', ext[j]), '\n')
+      # cat(j, grepl('^##\\s@knitr', ext[j]), '\n')
       # Carry forward chunk names, extracted from ## @knitr chunkname
       if(grepl('^##\\s@knitr', ext[j]))
         ecn[j : le] <- sub('##\\s@knitr\\s(.*)', '\\1', ext[j])
     }
     ext <- split(ext, ecn)
     ext <- lapply(ext, function(x) x[-1])  # remove first entry
+    if(verbose) cat('\nExternal chunks found:',
+                    paste(names(ext), collapse=', '), '\nFirst chunk:\n',
+                    paste(ext[[1]], collapse='\n'), '\n')
     }
 
   notchunkheader    <- ! grepl('^```\\{r', z)
@@ -184,10 +187,14 @@ convertL2M <- function(file, out='', transtab=NULL, ipacue=TRUE, rsetup=TRUE,
   
   if(length(internalize)) {
     for(j in 1 : length(z)) {
-      if(grepl('^```\\{r', z[j])) {
-        cname <- sub('^```\\{r\\s(*\\w*).*\\}', '\\1', z[j])
-        if(cname %in% names(ext))
+      if(grepl('^\n*```\\{r', z[j])) {
+        cname <- sub('^\n*```\\{r\\s(*\\w*).*\\}', '\\1', z[j])
+        if(verbose) cat('Processing chunk', cname, '\n')
+        if(cname %in% names(ext)) {
+          if(verbose) cat('Expanded into\n')
           z[j] <- paste(z[j], paste(ext[[cname]], collapse='\n'), sep='\n')
+          if(verbose) cat(z[j], '\n')
+        }
       }
     }
     # Convert z back into multiple lines
