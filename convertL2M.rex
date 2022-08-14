@@ -167,6 +167,9 @@ $$\\begin{array}{ccc}
 \Co\{
 \co\{
 
+\\\\co\{(.*?)\}
+BACKTICK\1BACKTICK
+
 \\co\{(.*?)\}
 BACKTICK\1BACKTICK
 
