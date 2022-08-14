@@ -186,17 +186,23 @@ convertL2M <- function(file, out='', transtab=NULL, ipacue=TRUE, rsetup=TRUE,
   # chunk to include lines in internalize
   
   if(length(internalize)) {
+    cnames <- character(0)
     for(j in 1 : length(z)) {
       if(grepl('^\n*```\\{r', z[j])) {
-        cname <- sub('^\n*```\\{r\\s(*\\w*).*\\}', '\\1', z[j])
+        cname <- sub('^\n*```\\{r\\s*', '', z[j])
+        cname <- sub('(\\w)[,}].*', '\\1', cname)
+        cname <- strsplit(cname, split=c('}', ','), fixed=TRUE)[[1]][1]
         if(verbose) cat('Processing chunk', cname, '\n')
         if(cname %in% names(ext)) {
+          cnames <- c(cnames, cname)
           if(verbose) cat('Expanded into\n')
           z[j] <- paste(z[j], paste(ext[[cname]], collapse='\n'), sep='\n')
           if(verbose) cat(z[j], '\n')
         }
       }
     }
+    cat('\nExternal chunks not used:',
+        paste(setdiff(names(ext), cnames), collapse=','), '\n')
     # Convert z back into multiple lines
     z <- unlist(strsplit(z, '\n'))
   }

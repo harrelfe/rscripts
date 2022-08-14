@@ -161,10 +161,16 @@ $$\\begin{array}{ccc}
 \\item\[(.*?)\]
 \\item <b>\1</b>
 
+\\Co\{
+\\co\{
+
 \Co\{
 \co\{
 
 \\co\{(.*?)\}
+BACKTICK\1BACKTICK
+
+\co\{(.*?)\}
 BACKTICK\1BACKTICK
 
 \\textbf\{(.*?)\}
