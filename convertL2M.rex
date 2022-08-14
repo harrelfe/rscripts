@@ -176,6 +176,12 @@ BACKTICK\1BACKTICK
 \co\{(.*?)\}
 BACKTICK\1BACKTICK
 
+\\fun\{(.*?)\}
+
+
+\\funp\{(.*?)\}
+
+
 \\textbf\{(.*?)\}
 **\1**
 
