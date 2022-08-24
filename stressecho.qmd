@@ -1,0 +1,105 @@
+---
+title: "Stress Echo Descriptive Analysis"
+author: "Frank Harrell"
+date: last-modified
+format: 
+  html:
+    cap-location: margin
+    reference-location: margin
+    code-tools: true
+    code-fold: show
+    code-block-bg: "#f1f3f5"
+    code-block-border-left: "#31BAE9"
+    self-contained: true
+execute:
+  warning: false
+  message: false
+---
+
+## Introduction
+
+This report reads an existing R dataset (officially a "data frame") and makes various descriptive summaries, packaging text, code, and output into an html file.  Some of the graphics are rendered both as static and as interactive graphs.  The interactive ones allow you to pan, zoom, and hover with the mouse to see more details.  Interactive graphics are constructed using the R `plotly` package, which the `Hmisc` package loads automatically.  To run this report you'll need to install the `Hmisc` and `plotly` packages and their dependencies (`RStudio` will take care of the dependencies).
+
+## Loading User-Contributed R Packages
+
+In R a _package_ is a collection of functions, function documentation ("help files"), and example datasets.
+When you install R and `RStudio` many standard packages are automatically installed.  There are over 10,000 user-contributed packages that extend what R can do.  These include specialty packages for biomedical research (e.g., flow cytometry analysis, genomics, interfaces to REDCap) and a huge number of packages for analysis, table making, and graphics.  After using the `RStudio` `Tools` menu to install add-on packages, you load packages into R to make them available when running your report by using the `require` or `library` command.  In the following we get access to the [`Hmisc` package](https://hbiostat.org/R/Hmisc).
+
+```{r setup}
+require(Hmisc)   # Hmisc must already be installed
+```
+
+If you installed `Hmisc` after 2022-08-15 you can load this complete report script into your `RStudio` script editor window by running the command (usually from the R `console` under `RStudio`) `getRs('stressecho.qmd', put='rstudio')`.
+
+## Accessing Data
+
+There are many ways to import data into R, as described [here](https://hbiostat.org/rflow/fcreate.html).  Much of the time you will be importing `.csv` or `REDCap` files or binary files created by `Stata`, `SPSS`, or `SAS`.  For learning R there is a wide variety of ready-to-use datasets on the Vanderbilt Department of Biostatistics dataset repository at [hbiostat.org/data](https://hbiostat.org/data).  These datasets are already in R binary format and many of them are fully documented and annotated.  In the R `Hmisc` package there is a function `getHdata` that finds these datasets, downloads them from the web server, and loads them into R's memory for easy access.
+
+Use the`getHdata` function to download the [stress echocardiogram dataset](https://hbiostat.org/data/repo/stressEcho.html) and read it into R's memory.  This dataset is annotated with variable labels and, for continuous variables, units of measurement.  These annotations are used by `contents`, `describe`, and certain graphics functions.
+
+Sometimes datasets have long names that are tedious to type.  I use a convention of copying the currently active dataset into an R data frame called `d` to save typing during analysis.
+
+```{r import}
+getHdata(stressEcho)
+d <- stressEcho   # copy dataset so can refer to short name d
+```
+
+## Data Dictionary
+
+The names of variables in the stress echo dataset can be printed by using the command `names(d)`.  But let's use an `Hmisc` package function to provide more metadata^[`results='asis'` in the chunk header prepares R to expect specially formatted html output to be created by the `html` function.]  
+
+```{r results='asis'}
+html(contents(d))
+```
+
+## Descriptive Statistics
+
+The `Hmisc` package `describe` function produces appropriate descriptive statistics for each variable depending on the variable's nature (binary, categorical, continuous, etc.). [See [this](https://hbiostat.org/R/glossary.html) for definitions of some of the items in `describe` output.]{.aside}  If you just type `describe(d)` you'll get plain text output with no graphics.  Running the output of `describe` through the `html` function converts it to html format which contains small graphics files to render high-resolution spike histograms for continuous variables.
+
+```{r results='asis'}
+des <- describe(d)   # store results of describe() in des
+html(des)            # can also use html(describe(d))
+```
+
+`describe` also has a `plot` method that translates descriptive statistics to purely graphical form and draws larger high-resolution histograms for continuous variables.  The `plot` method produces two graphics objects: one for categorical variables and one for continuous variables.  We save the overall `plot` result in object `p` then reference two sub-objects^[For these static graphics we could have just typed `plot(des)` and two plots would appear in succession.  That approach does not work when making interactive graphs later.]
+
+```{r}
+p <- plot(des)
+```
+
+```{r}
+#| label: fig-cat
+#| fig-cap: "Categorical variables"
+p$Categorical
+```
+
+```{r}
+#| label: fig-cont
+#| fig-cap: "Continuous variables"
+p$Continuous
+```
+
+To render these two graphs in interactive format using `plotly` we set a system option that the `Hmisc` package monitors: `grType`.  It's default value is `'plain'`.
+
+```{r}
+options(grType='plotly')
+p <- plot(des)
+```
+
+```{r}
+#| label: fig-cat-interactive
+#| fig-cap: "Categorical variables.  Hover over points to see numerators and denominators of proportions, and hover over the leftmost point to see more information."
+p$Categorical
+```
+
+```{r}
+#| label: fig-cont-interactive
+#| fig-cap: "Continuous variables.  Hover over the leftmost spike to see a full list of descriptive statistics.  Hover over other spikes to see $x$-axis values and frequency counts."
+p$Continuous
+```
+
+## Computing Environment
+
+A function `session` stored in an object in the `Hmisc` package prints the current computing environment in a nice format.
+
+`r markupSpecs$html$session()`
