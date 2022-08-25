@@ -1275,9 +1275,9 @@ rwrap <- function(x) paste0('\\`r ', x, '\\`')
 
 
 ## Usage for 80% font size: `r fontstyle(80)`    . . .  `r endfont`
-fontsize <- function(size=NULL, color=NULL)
+fontstyle <- function(size=NULL, color=NULL)
   paste0('<p style="',
-    if(length(size))  paste0('font-size: ', size,  '%;'),
-    if(length(color)) paste0('color:',      color, ';'), '">')
+  if(length(size))  paste0('font-size: ', size,  '%;'),
+  if(length(color)) paste0('color:',      color, ';'), '">')
 endfont  <- '</p>'
 
