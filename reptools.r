@@ -1272,3 +1272,8 @@ spar <-
 
 ## For illustrating in-line R codes so back ticks will appear
 rwrap <- function(x) paste0('\\`r ', x, '\\`')
+
+fontsize <- function(pct) paste0('<span style="font-size: ', pct, '%;">')
+endfont  <- function() '</span>'
+
+  
