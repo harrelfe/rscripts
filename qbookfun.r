@@ -76,6 +76,12 @@ ems <- function(x, ...) {}
 rms <- function(x, ...) bookref('RMS', x)  
 
 quoteit <- function(x, y=NULL, marg=FALSE, bymarg=FALSE) {
+  if(! marg && ! bymarg) {
+  w <- paste0('\n\n::: {.quoteit}\n', x)
+  if(length(y)) w <- paste(w, '<br><span style="color:black;font-style:normal;float:right;text-align:right;"> — ', y, '</span>')
+  w <- paste0(w, '\n:::\n\n')
+  return(w)
+  }
   w <- if(length(y)) paste0(' — ', y) else ''
   if(marg) paste0('\n::: {.column-margin}\n', x, w, '\n:::\n\n')
   else if(bymarg)
