@@ -78,7 +78,7 @@ rms <- function(x, ...) bookref('RMS', x)
 quoteit <- function(x, y=NULL, marg=FALSE, bymarg=FALSE) {
   if(! marg && ! bymarg) {
   w <- paste0('\n\n::: {.quoteit}\n', x)
-  if(length(y)) w <- paste(w, '<br><span style="color:black;font-style:normal;float:right;text-align:right;"> — ', y, '</span>')
+  if(length(y)) w <- paste(w, '<br><span style="color:black;font-style:normal;float:right;text-align:right;"> — ', y, '</span><br>')
   w <- paste0(w, '\n:::\n\n')
   return(w)
   }
