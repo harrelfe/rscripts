@@ -16,7 +16,7 @@
 
 
 save_fst <- function(d, filebase=as.character(substitute(d)),
-                verbose=TRUE)
+                verbose=TRUE) {
     require(Hmisc)
     require(fst)
     at <- keepHattrib(d)
