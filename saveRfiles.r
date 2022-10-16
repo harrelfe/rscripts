@@ -16,7 +16,9 @@
 
 
 save_fst <- function(d, filebase=as.character(substitute(d)),
-                verbose=TRUE) {
+                verbose=TRUE)
+    require(Hmisc)
+    require(fst)
     at <- keepHattrib(d)
     fd <- paste0(filebase, '.fst')
     fa <- paste0(filebase, '-attr.rds')
