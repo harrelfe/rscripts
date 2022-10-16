@@ -1,4 +1,4 @@
-save_fts <- function(d, filebase=as.character(substitute(d)),
+save_fst <- function(d, filebase=as.character(substitute(d)),
                 verbose=TRUE) {
     at <- keepHattrib(d)
     fd <- paste0(filebase, '.fst')
@@ -9,7 +9,7 @@ save_fts <- function(d, filebase=as.character(substitute(d)),
     invisible()
 }
 
-retrieve_fts <- function(filebase, ...) {
+retrieve_fst <- function(filebase, ...) {
     fd <- paste0(filebase, '.fst')
     fa <- paste0(filebase, '-attr.rds')
     d  <- read_fst(fd, ...)
