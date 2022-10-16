@@ -1,0 +1,20 @@
+.quoteit {
+  color: darkblue;
+  font-size: 80%;
+  font-style: italic;
+  margin-left: 10%;
+  margin-right: 10%;
+}
+
+.smaller {
+  font-size: 80%;
+}
+
+.smaller2 {
+  font-size: 64%;
+}
+
+.mermaidTooltip {
+  font-family: courier;
+  white-space: pre;
+}
