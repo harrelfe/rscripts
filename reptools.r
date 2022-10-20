@@ -1240,7 +1240,10 @@ hookaddcap <- function(loc=NULL) {
 latestFile <- function(pattern, verbose=TRUE) {
   f <- list.files(pattern=pattern)
   if(length(f) == 1) return(f)
-  if(length(f) == 0) stop(paste('no files matching', pattern, 'were found'))
+  if(length(f) == 0) {
+    warning(paste('no files matching', pattern, 'were found')
+    return(character(0))
+  }
 
   i <- file.info(f, extra_cols=FALSE)
   mtime <- i$mtime
