@@ -1241,7 +1241,7 @@ latestFile <- function(pattern, verbose=TRUE) {
   f <- list.files(pattern=pattern)
   if(length(f) == 1) return(f)
   if(length(f) == 0) {
-    warning(paste('no files matching', pattern, 'were found')
+    warning(paste('no files matching', pattern, 'were found'))
     return(character(0))
   }
 
