@@ -1294,7 +1294,7 @@ rwrap <- function(x) paste0('\\`r ', x, '\\`')
 timeMar <- function(x) {
   .systime. <<- system.time(.res. <- x)
   k <- capture.output(.systime.)
-  k[2] <- paste(k[2], 'seconds')
+  k[2] <- paste0(k[2], 's')
   k  <- c('```', k, '```')
   makecolmarg(k, type='cat')
   invisible(.res.)
