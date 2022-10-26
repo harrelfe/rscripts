@@ -1284,3 +1284,16 @@ rwrap <- function(x) paste0('\\`r ', x, '\\`')
 #   if(length(color)) paste0('color:',      color, ';'), '">')
 # endfont  <- '</p>'
 
+
+
+# Function to time an expression, printing the result of system.time in
+# the right margin, and storing the result of system.time in .systime.
+# in the global environment.
+# Invisibly returns the result of the expression
+
+timeMar <- function(x) {
+  .systime. <<- system.time(.res. <- x)
+  k  <- c('```', 'Run time in seconds', '', capture.output(.systime.), '```')
+  makecolmarg(k, type='cat')
+  invisible(.res.)
+}
