@@ -1256,9 +1256,9 @@ latestFile <- function(pattern, verbose=TRUE) {
 
 spar <-
   function(mar=if(!axes)
-                 c(2.25+bot-.45*multi,2*(las==1)+2.2+left,
+                 c(2.25+0.6+bot-.45*multi,2*(las==1)+2.2+left,
                    .5+top+.25*multi, .5+rt) else
-                 c(3.25+bot-.45*multi,2*(las==1)+3.7+left,
+                 c(3.25+0.6+bot-.45*multi,2*(las==1)+3.7+left,
                    .5+top+.25*multi, .5+rt),
                  lwd = if(multi)1 else 1.75,
                  mgp = if(!axes) mgp=c(.75, .1, 0) else
