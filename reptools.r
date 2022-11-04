@@ -546,7 +546,8 @@ missChk <- function(data, use=NULL, exclude=NULL,
   p <- ncol(d)
 
   ismiss <- function(x)
-    if(is.character(x)) is.na(x) | trimws(x) == '' else is.na(x)
+    if(is.character(x) | is.factor(x))
+      is.na(x) | trimws(x) == '' else is.na(x)
 
   ## Replace each variable with missingness indicator
   di <- d[, lapply(.SD, ismiss)]
@@ -807,7 +808,8 @@ dataOverview <- function(d, d2=NULL, id=NULL,
   }
 
   ismiss <- function(x)
-    if(is.character(x)) is.na(x) | trimws(x) == '' else is.na(x) 
+    if(is.character(x) | is.factor(x))
+      is.na(x) | trimws(x) == '' else is.na(x) 
   na         <- sapply(d, ismiss) * 1
   na.per.var <- apply(na, 2, sum)
   na.per.obs <- apply(na, 1, sum)
