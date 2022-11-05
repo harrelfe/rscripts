@@ -101,3 +101,62 @@ importREDCap <- function(file=NULL, pr=TRUE) {
   names(data) <- gsub('\\.factor', '', n)
   data
 }
+
+
+
+cleanupREDCap <- function(d, mchoice=TRUE, rmhtml=TRUE, pr=TRUE, ...) {
+  # Purpose: Clean up a data frame imported from REDCap using either
+  # manual export or API.  By default removes html tags from variable
+  # labels and converts sequences of variables representing a single
+  # multiple choice question to a single variable using Hmisc::mChoice
+  #
+  # Multiple choice variables are found by looking for variable names
+  # that end in three underscores followed by consecutive integers 1,2,...
+  #
+  # Set pr=FALSE to not print information about mChoice variables created
+  # ... arguments are passed to mChoice
+  #
+
+  require(data.table)
+  d <- copy(d)
+  setDT(d)   # will leave existing keys intact if already a data.table
+
+  if(rmhtml) {
+    trans <- function(x) {
+      rem <- c('<p>', '</p>', '</div>', '</span>', '<p .*?>', '<div .*?>', '<span .*?>',
+               '<br>', '<br />', '\\n')
+      for(a in rem) x <- gsub(a, '', x)
+      x
+      }
+    for(v in names(d)) {
+      lab <- attr(d[[v]], 'label')
+      if(length(lab)) setattr(d[[v]], 'label', trans(lab))
+    }
+  }
+
+  if(! mchoice) return(d)
+
+  # Find all variable names that are part of multiple choice sequences
+  # These names end in ___n with lowest n=1 and consecutive numbers
+  n <- names(d)
+  i <- grep('^.*___[1-9][0-9]*[0-9]*$', n)
+  if(! length(i)) return(d)
+  n <- n[i]
+
+  basename <- sub('___[1-9][0-9]*[0-9]*$', '', n)
+  if(any(basename %in% names(d)))
+    stop('base name for multiple choice variable has the same name as a non-multiple choice variable')
+
+  for(v in unique(basename)) {
+    V <- n[basename == v]
+    numbers <- as.integer(sub(paste0('^', v, '___'), '', V))
+    numchoices <- max(numbers)
+    if(min(numbers) != 1 || numchoices != length(V)) next
+    first <- paste0(v, '___1')
+    d[, (v) := do.call('mChoice', c(.SD, ...)), .SDcols=V]
+    setattr(d[[v]], 'label', label(d[[first]]))
+    d[, (V) := NULL]
+    if(pr) cat(numchoices, 'variables named', paste0(v, '___*'), 'combined into mChoice variable', v, '\n')
+  }
+d
+}
