@@ -5,11 +5,13 @@ derv <- list(  # mega list for all datasets
      label='Body Mass Index',
      units='Kg/m^2')
   ),
-  # Derived variables for dataset B
+  
+  # Derived variables for dataset B, and transformation of existing var z
   B = list(
     list(x = expression(x1 * x2 / x3),
          label = 'X', drop=.q(x1, x2, x3)),
     list(y = expression(y1 / y2),
-         label = 'Y', drop=.q(y1, y2))
+         label = 'Y', drop=.q(y1, y2)),
+    list(z = expression(z * 1000))
   )
 )
