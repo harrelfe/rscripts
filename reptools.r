@@ -1303,3 +1303,45 @@ timeMar <- function(x) {
   makecolmarg(k, type='cat')
   invisible(.res.)
 }
+
+## Function to apply derived variable specifications derv as detailed
+## at http://hbiostat.org/rflow/manip.html#sec-manip-recexp to a data table d
+## Set pr=FALSE to suppress information messages
+## Actions on d are done in place, so call the function using
+## runDeriveExpr(d, derv object) and not by running
+## d <- runDeriveExpr(d, derv object)
+
+runDeriveExpr <- function(d, derv, pr=TRUE) {
+  addlabu <- function(x, lab, un) {
+    if(length(lab)) label(x) <- lab
+    if(length(un))  units(x) <- un
+    x
+  }
+  allvars <- names(d)
+  for(w in derv) {
+    vname <- names(w)[1]
+    ex    <- w[[1]]
+    lab   <- w$label
+    un    <- w$units
+    dr    <- w$drop
+    ll    <- length(lab)
+    lu    <- length(un)
+    if(pr) {
+      z <- if(vname %in% allvars)
+             paste('Existing variable', vname, 'changed')
+           else
+             paste('Derived variable', vname, 'added')
+      cat(z,
+          if(ll || lu)
+            paste0(' with', if(ll) ' label', if(lu) ' units'),
+          if(length(dr)) paste0('; dropped variables ',
+                               paste(dr, collapse=', ')),
+          '\n', sep='')
+      }
+    d[, (vname) := eval(ex)]
+    if(length(dr)) d[, (dr) := NULL]
+    if(ll || lu)
+      set(d, j=vname, value=addlabu(d[[vname]], lab, un))
+  }
+  invisible()
+}
