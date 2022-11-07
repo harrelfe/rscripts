@@ -16,11 +16,13 @@ derv <- list(  # mega list for all datasets
   )
 )
 
+# Another approach using upData() instead of runDeriveExpr()
+
 updata <- list(
   # upData input for dataset A
   A = list(
     bmi = expression(703 * weight / height ^ 2),
-    labels = c(bmi='Body mass Index'),
+    labels = c(bmi='Body Mass Index'),
     units  = c('Kg/m^2')
   ),
   B = list(
@@ -28,7 +30,7 @@ updata <- list(
     x = expression(x1 * x2 / x3),
     y = expression(y1 / y2),
     z = expression(z * 1000),
-    labels=c(x='X', y='Y'),
-    drop=.q(x1, x2, x3, y1, y2)
+    labels = .q(x=X, y=Y),
+    drop   = .q(x1, x2, x3, y1, y2)
   )
 )
