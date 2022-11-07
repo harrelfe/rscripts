@@ -15,3 +15,20 @@ derv <- list(  # mega list for all datasets
     list(z = expression(z * 1000))
   )
 )
+
+updata <- list(
+  # upData input for dataset A
+  A = list(
+    bmi = expression(703 * weight / height ^ 2),
+    labels = c(bmi='Body mass Index'),
+    units  = c('Kg/m^2')
+  ),
+  B = list(
+    # upData input for dataset B
+    x = expression(x1 * x2 / x3),
+    y = expression(y1 / y2),
+    z = expression(z * 1000),
+    labels=c(x='X', y='Y'),
+    drop=.q(x1, x2, x3, y1, y2)
+  )
+)
