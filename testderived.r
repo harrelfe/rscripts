@@ -34,3 +34,6 @@ updata <- list(
     drop   = .q(x1, x2, x3, y1, y2)
   )
 )
+
+# To syntax-check code in this file, just source() it into any R session
+# after running require(Hmisc) (to define .q if you use it)
