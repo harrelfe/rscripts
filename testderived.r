@@ -3,7 +3,8 @@
 # the derv object below
 # Example: (not very complex but you'll get the idea)
 # myfun <- function(x1, x2) x1 > 3 | (x1 < 1 & x2 < 0)
-# list(x = myfun(x1, x2))
+# ...
+# list(x = expression(myfun(x1, x2)))
 # myfun is defined first, when this entire file is source()'d
 
 
