@@ -1,3 +1,12 @@
+# Define any complex derivations or repetitively used code as functions here
+# These functions may be called as needed from code inside lists inside
+# the derv object below
+# Example: (not very complex but you'll get the idea)
+# myfun <- function(x1, x2) x1 > 3 | (x1 < 1 & x2 < 0)
+# list(x = myfun(x1, x2))
+# myfun is defined first, when this entire file is source()'d
+
+
 derv <- list(  # mega list for all datasets
   # Derived variables for dataset A
   A = list(
