@@ -967,6 +967,48 @@ dataOverview <- function(d, d2=NULL, id=NULL,
   invisible()
 }
 
+# Provides an overview of the data tables inside a list object X
+# id is a formula listing a single ID variable, e.g. id = ~ patient.id
+# The result returned (invisible) is a data frame containing for each
+# variable a comma-separated list of datasets containing that variable
+# (other than id variables).
+#
+# See the Multiple Files tab at https://hbiostat.org/rflow/fcreate.html#simport
+multDataOverview <- function(X, id=NULL) {
+  if(length(id)) id <- all.vars(id)
+k <- length(X)
+nam <- lapply(X, names)
+nuv <- length(unique(unlist(nam)))
+common <- names(X[[1]])
+if(k > 1) for(i in 2 : k) {
+  common <- intersect(common, names(X[[i]]))
+  if(! length(common)) break  # intersection already empty
+}
+common  <- sort(common)
+ncommon <- length(common)
+cat(k, 'datasets\n')
+cat(nuv, 'distinct variable names across datasets\n')
+if(ncommon) cat('Variables in all datasets:', paste(common, collapse=', '), '\n')
+
+w <- data.frame(dataset=names(X),
+                rows=sapply(X, nrow),
+                columns=sapply(X, length))
+if(length(id)) {
+  uid <- function(x) if(id %in% names(x)) length(unique(x[[id]])) else NA
+  w$'Distinct IDs' <- sapply(X, uid)
+}
+cat('\n')
+print(w)
+
+nvar <- sapply(nam, length)
+# For each variable name count the number of datasets containing it
+w <- data.table(dsname=rep(names(X), nvar), variable=unlist(nam))
+if(length(id)) w <- subset(w, variable != id)
+# For each variable create a comma-separated list of datasets
+# containing it
+invisible(w[, .(datasets=paste(sort(dsname), collapse=', ')), keyby=variable])
+}
+
 asisOut <- function(...) {
   x <- list(...)
   x <- if(length(x) > 1) paste0(unlist(x)) else x[[1]]
