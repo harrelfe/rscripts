@@ -111,7 +111,7 @@ cleanupREDCap <- function(d, mchoice=TRUE, rmhtml=TRUE, pr=TRUE, ...) {
   # multiple choice question to a single variable using Hmisc::mChoice
   #
   # Multiple choice variables are found by looking for variable names
-  # that end in three underscores followed by consecutive integers 1,2,...
+  # that end in three underscores followed only by integers
   #
   # Set pr=FALSE to not print information about mChoice variables created
   # ... arguments are passed to mChoice
@@ -137,22 +137,25 @@ cleanupREDCap <- function(d, mchoice=TRUE, rmhtml=TRUE, pr=TRUE, ...) {
   if(! mchoice) return(d)
 
   # Find all variable names that are part of multiple choice sequences
-  # These names end in ___n with lowest n=1 and consecutive numbers
+  # These names end in ___x with x being an integer
   n <- names(d)
-  i <- grep('^.*___[1-9][0-9]*[0-9]*$', n)
+  i <- grep('^.*___[0-9][0-9]*[0-9]*$', n)
+  i <- grep('^.*___.*$', n)
   if(! length(i)) return(d)
   n <- n[i]
 
-  basename <- sub('___[1-9][0-9]*[0-9]*$', '', n)
+  basename <- sub('___[0-9][0-9]*[0-9]*$', '', n)
+  basename <- sub('___.*', '', n)
   if(any(basename %in% names(d)))
     stop('base name for multiple choice variable has the same name as a non-multiple choice variable')
 
   for(v in unique(basename)) {
     V <- n[basename == v]
-    numbers <- as.integer(sub(paste0('^', v, '___'), '', V))
-    numchoices <- max(numbers)
-    if(min(numbers) != 1 || numchoices != length(V)) next
-    first <- paste0(v, '___1')
+    numbers    <- sub(paste0('^', v, '___'), '', V)
+    if(! all.is.numeric(numbers)) next
+    numbers    <- as.integer(numbers)
+    numchoices <- length(numbers)
+    first <- paste0(v, '___', min(numbers))
     d[, (v) := do.call('mChoice', c(.SD, ...)), .SDcols=V]
     setattr(d[[v]], 'label', label(d[[first]]))
     d[, (V) := NULL]
