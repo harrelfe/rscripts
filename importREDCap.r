@@ -104,11 +104,16 @@ importREDCap <- function(file=NULL, pr=TRUE) {
 
 
 
-cleanupREDCap <- function(d, mchoice=TRUE, rmhtml=TRUE, pr=TRUE, ...) {
+cleanupREDCap <- function(d, mchoice=TRUE, rmhtml=TRUE, rmrcl=TRUE,
+                          pr=TRUE, ...) {
   # Purpose: Clean up a data frame imported from REDCap using either
   # manual export or API.  By default removes html tags from variable
   # labels and converts sequences of variables representing a single
   # multiple choice question to a single variable using Hmisc::mChoice
+  #
+  # By default REDCap labels and levels and the redcapFactor class
+  # are removed.  Set rmrcl=FALSE to not remove these.
+  # You can get this information by exporting REDCap metadata.
   #
   # Multiple choice variables are found by looking for variable names
   # that end in three underscores followed only by integers
@@ -134,32 +139,43 @@ cleanupREDCap <- function(d, mchoice=TRUE, rmhtml=TRUE, pr=TRUE, ...) {
     }
   }
 
-  if(! mchoice) return(d)
+  if(mchoice) {
+    ## Find all variable names that are part of multiple choice sequences
+    ## These names end in ___x with x being an integer
+    n <- names(d)
+    i <- grep('^.*___[0-9][0-9]*[0-9]*$', n)
+    i <- grep('^.*___.*$', n)
+    if(length(i)) {
+      n <- n[i]
 
-  # Find all variable names that are part of multiple choice sequences
-  # These names end in ___x with x being an integer
-  n <- names(d)
-  i <- grep('^.*___[0-9][0-9]*[0-9]*$', n)
-  i <- grep('^.*___.*$', n)
-  if(! length(i)) return(d)
-  n <- n[i]
+      basename <- sub('___[0-9][0-9]*[0-9]*$', '', n)
+      basename <- sub('___.*', '', n)
+      if(any(basename %in% names(d)))
+        stop('base name for multiple choice variable has the same name as a non-multiple choice variable')
 
-  basename <- sub('___[0-9][0-9]*[0-9]*$', '', n)
-  basename <- sub('___.*', '', n)
-  if(any(basename %in% names(d)))
-    stop('base name for multiple choice variable has the same name as a non-multiple choice variable')
-
-  for(v in unique(basename)) {
-    V <- n[basename == v]
-    numbers    <- sub(paste0('^', v, '___'), '', V)
-    if(! all.is.numeric(numbers)) next
-    numbers    <- as.integer(numbers)
-    numchoices <- length(numbers)
-    first <- paste0(v, '___', min(numbers))
-    d[, (v) := do.call('mChoice', c(.SD, ...)), .SDcols=V]
-    setattr(d[[v]], 'label', label(d[[first]]))
-    d[, (V) := NULL]
-    if(pr) cat(numchoices, 'variables named', paste0(v, '___*'), 'combined into mChoice variable', v, '\n')
+      for(v in unique(basename)) {
+        V <- n[basename == v]
+        numbers    <- sub(paste0('^', v, '___'), '', V)
+        if(! all.is.numeric(numbers)) next
+        numbers    <- as.integer(numbers)
+        numchoices <- length(numbers)
+        first <- paste0(v, '___', min(numbers))
+        d[, (v) := do.call('mChoice', c(.SD, ...)), .SDcols=V]
+        setattr(d[[v]], 'label', label(d[[first]]))
+        d[, (V) := NULL]
+        if(pr) cat(numchoices, 'variables named', paste0(v, '___*'), 'combined into mChoice variable', v, '\n')
+      }
+    }
   }
+
+  if(rmrcl)
+    for(v in names(d)) {
+      x <- d[[v]]
+      if(inherits(x, 'redcapFactor')) {
+        class(x) <- setdiff(class(x), 'redcapFactor')
+        attr(x, 'redcapLabels') <- attr(x, 'redcapLevels') <- NULL
+        d[, (v) := x]
+        }
+    }
 d
 }
