@@ -105,7 +105,7 @@ importREDCap <- function(file=NULL, pr=TRUE) {
 
 
 cleanupREDCap <- function(d, mchoice=TRUE, rmhtml=TRUE, rmrcl=TRUE,
-                          pr=TRUE, ...) {
+                          toPOSIXct=FALSE, pr=TRUE, ...) {
   # Purpose: Clean up a data frame imported from REDCap using either
   # manual export or API.  By default removes html tags from variable
   # labels and converts sequences of variables representing a single
@@ -117,6 +117,12 @@ cleanupREDCap <- function(d, mchoice=TRUE, rmhtml=TRUE, rmrcl=TRUE,
   #
   # Multiple choice variables are found by looking for variable names
   # that end in three underscores followed only by integers
+  #
+  # Per https://stackoverflow.com/questions/21487614 POSIXlt does not
+  # work with data.table.  Set toPOSIXct=TRUE to convert any
+  # POSIXlt class variables to POSIXct.  Note that data.table()
+  # converts POSIXlt POSIXt variables to POSIXct POSIXt automatically,
+  # with a warning, so this option is seldom needed.
   #
   # Set pr=FALSE to not print information about mChoice variables created
   # ... arguments are passed to mChoice
@@ -177,5 +183,15 @@ cleanupREDCap <- function(d, mchoice=TRUE, rmhtml=TRUE, rmrcl=TRUE,
         d[, (v) := x]
         }
     }
+  if(toPOSIXct)
+    for(v in names(d)) {
+      x <- d[[v]]
+      if(inherits(x, 'POSIXlt')) {
+        x <- as.POSIXct(x)
+        d[, (v) := x]
+        setattr(d[[v]], 'label', label(x))
+       }
+    }
+
 d
 }
