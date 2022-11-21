@@ -976,19 +976,26 @@ dataOverview <- function(d, d2=NULL, id=NULL,
 # See the Multiple Files tab at https://hbiostat.org/rflow/fcreate.html#simport
 multDataOverview <- function(X, id=NULL) {
   if(length(id)) id <- all.vars(id)
-k <- length(X)
-nam <- lapply(X, names)
-nuv <- length(unique(unlist(nam)))
-common <- names(X[[1]])
-if(k > 1) for(i in 2 : k) {
-  common <- intersect(common, names(X[[i]]))
-  if(! length(common)) break  # intersection already empty
-}
+  k <- length(X)
+  nam <- lapply(X, names)
+  nuv <- length(unique(unlist(nam)))
+  common <- names(X[[1]])
+  if(k > 1) for(i in 2 : k) {
+    common <- intersect(common, names(X[[i]]))
+    if(! length(common)) break  # intersection already empty
+  }
 common  <- sort(common)
 ncommon <- length(common)
 cat(k, 'datasets\n')
 cat(nuv, 'distinct variable names across datasets\n')
 if(ncommon) cat('Variables in all datasets:', paste(common, collapse=', '), '\n')
+
+cat('\nFrequencies of variable classes used, other than labelled:\n')
+w <- lapply(X, function(x) sapply(x, function(y) paste(setdiff(class(y), 'labelled'), collapse='+')))
+print(table(unlist(w)))
+
+w <- lapply(X, function(x) sapply(x, function(y) inherits(y, 'labelled')))
+cat('\nVariables with labels:', sum(unlist(w)), 'out of', length(unlist(w)), '\n\n')
 
 w <- data.frame(dataset=names(X),
                 rows=sapply(X, nrow),
