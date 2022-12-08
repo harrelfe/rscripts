@@ -726,6 +726,18 @@ makemermaid <- function(.object., ..., callout=NULL, file=NULL) {
   invisible()
 }
 
+makegraphviz <- function(.object., ..., callout=NULL, file=NULL) {
+  x <- strsplit(.object., '\n')[[1]]
+  # Translate `foo` to <font color='darkblue' face='Lucida Console'>foo</font>
+  x <- gsub('`(.*?)`', "<font color='darkblue' face='courier'>\\1 </font>", x)
+  code <- makecodechunk(x, lang='dot', callout=callout)
+  ki <- knitr::knit_expand
+  etext <- do.call('ki', c(list(text=code), list(...)))
+  if(length(file)) cat(etext, sep='\n', file=file)
+  cat(knitr::knit(text=etext, quiet=TRUE))
+  invisible()
+}
+
 
 vClus <- function(d, exclude=NULL, corrmatrix=FALSE,
                   fracmiss=0.2, maxlevels=10, minprev=0.05,
