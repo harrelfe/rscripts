@@ -728,7 +728,8 @@ makemermaid <- function(.object., ..., callout=NULL, file=NULL) {
 
 makegraphviz <- function(.object., ..., callout=NULL, file=NULL) {
   x <- strsplit(.object., '\n')[[1]]
-  # Translate `foo` to <font color='darkblue' face='Lucida Console'>foo</font>
+  # Translate `foo` to <font color='darkblue' face='courier'>foo</font>
+  # face=Lucida Console resulted in overwriting of text
   x <- gsub('`(.*?)`', "<font color='darkblue' face='courier'>\\1 </font>", x)
   code <- makecodechunk(x, lang='dot', callout=callout)
   ki <- knitr::knit_expand
