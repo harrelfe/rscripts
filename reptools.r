@@ -733,7 +733,22 @@ makegraphviz <- function(.object., ..., callout=NULL, file=NULL) {
   x <- gsub('`(.*?)`', "<font color='darkblue' face='courier'>\\1 </font>", x)
   code <- makecodechunk(x, lang='dot', callout=callout)
   ki <- knitr::knit_expand
-  etext <- do.call('ki', c(list(text=code), list(...)))
+  dotlist <- list(...)
+  L <- length(dotlist)
+  # Function to strip off style info done by html.data.frame
+  mtab <- function(d) {
+    w <- unclass(html(d, file=FALSE))
+    w <- sub('.*<table .*?>', '<table border="0" cellborder="1" cellspacing="0">',
+              w)
+    w <- gsub('\n', '', w)
+    w <- gsub('<th>', '<td>', w)
+    w <- gsub('</th>', '</td>', w)
+    w
+  }
+  if(L) for(i in 1 : L)
+    if(is.data.frame(dotlist[[i]]))
+      dotlist[[i]] <- mtab(dotlist[[i]])
+  etext <- do.call('ki', c(list(text=code), dotlist))
   if(length(file)) cat(etext, sep='\n', file=file)
   cat(knitr::knit(text=etext, quiet=TRUE))
   invisible()
