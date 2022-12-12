@@ -737,13 +737,16 @@ makegraphviz <- function(.object., ..., callout=NULL, file=NULL) {
   L <- length(dotlist)
   # Function to strip off style info done by html.data.frame
   mtab <- function(d) {
-    w <- unclass(html(d, file=FALSE))
-    w <- sub('.*<table .*?>', '<table border="0" cellborder="1" cellspacing="0">',
-              w)
-    w <- gsub('\n', '', w)
-    w <- gsub('<th>', '<td>', w)
-    w <- gsub('</th>', '</td>', w)
-    w
+    k <- ncol(d)
+    w <- matrix('', nrow=nrow(d) + 1, ncol=k)
+    w[1, ] <- paste0('<font color="darkblue"><b>', names(d),
+                    '</b></font>')
+    for(i in 1 : k) w[-1, i] <- format(d[[i]])
+    w[] <- paste0('<td>', w, '</td>')
+    w <- apply(w, 1, function(x) paste0('<tr>',
+                paste(x, collapse=''), '</tr>'))
+    c('<table border="0" cellborder="0" cellspacing="0">',
+          w[1], '<HR/>', w[-1], '</table>')
   }
   if(L) for(i in 1 : L)
     if(is.data.frame(dotlist[[i]]))
