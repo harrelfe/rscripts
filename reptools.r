@@ -716,22 +716,19 @@ disVars <- function(...) varType(...)$discrete
 asForm  <- function(x) as.formula(paste('~', paste(x, collapse=' + ')))
 
 
-makemermaid <- function(.object., ..., callout=NULL, file=NULL) {
-  x <- strsplit(.object., '\n')[[1]]
-  code <- makecodechunk(x, lang='mermaid', callout=callout)
+makemermaid <- function(.object., ..., file) {
+  code <- strsplit(.object., '\n')[[1]]
   ki <- knitr::knit_expand
   etext <- do.call('ki', c(list(text=code), list(...)))
-  if(length(file)) cat(etext, sep='\n', file=file)
-  cat(knitr::knit(text=etext, quiet=TRUE))
+  cat(etext, sep='\n', file=file)
   invisible()
 }
 
-makegraphviz <- function(.object., ..., callout=NULL, file=NULL) {
+makegraphviz <- function(.object., ..., file) {
   x <- strsplit(.object., '\n')[[1]]
   # Translate `foo` to <font color='darkblue' face='courier'>foo</font>
   # face=Lucida Console resulted in overwriting of text
-  x <- gsub('`(.*?)`', "<font color='darkblue' face='courier'>\\1 </font>", x)
-  code <- makecodechunk(x, lang='dot', callout=callout)
+  code <- gsub('`(.*?)`', "<font color='darkblue' face='courier'>\\1 </font>", x)
   ki <- knitr::knit_expand
   dotlist <- list(...)
   L <- length(dotlist)
@@ -752,8 +749,7 @@ makegraphviz <- function(.object., ..., callout=NULL, file=NULL) {
     if(is.data.frame(dotlist[[i]]))
       dotlist[[i]] <- mtab(dotlist[[i]])
   etext <- do.call('ki', c(list(text=code), dotlist))
-  if(length(file)) cat(etext, sep='\n', file=file)
-  cat(knitr::knit(text=etext, quiet=TRUE))
+  cat(etext, sep='\n', file=file)
   invisible()
 }
 
