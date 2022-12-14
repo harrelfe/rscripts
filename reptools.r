@@ -745,7 +745,7 @@ makegraphviz <- function(.object., ..., file) {
       align[i] <- if(length(unique(nchar(di))) == 1) 'CENTER'
         else if(is.numeric(di)) 'RIGHT' else 'LEFT'
     }
-    w[] <- paste0('<td ALIGN="', align, '"">', w, '</td>')
+    w[] <- paste0('<td ALIGN="', align, '">', w, '</td>')
     w <- apply(w, 1, function(x) paste0('<tr>',
                 paste(x, collapse=''), '</tr>'))
     c('<table border="0" cellborder="0" cellspacing="0">',
