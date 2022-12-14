@@ -742,6 +742,7 @@ makegraphviz <- function(.object., ..., file) {
     for(i in 1 : k) {
       w[-1, i] <- format(d[[i]])
       if(is.numeric(d[[i]])) align[i] <- 'ALIGN="RIGHT"'
+    }
     w[] <- paste0('<td ', align, '>', w, '</td>')
     w <- apply(w, 1, function(x) paste0('<tr>',
                 paste(x, collapse=''), '</tr>'))
