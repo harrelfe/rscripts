@@ -738,12 +738,14 @@ makegraphviz <- function(.object., ..., file) {
     w <- matrix('', nrow=nrow(d) + 1, ncol=k)
     w[1, ] <- paste0('<font color="darkblue"><b>', names(d),
                     '</b></font>')
-    align <- rep('ALIGN="LEFT"', k)
+    align <- character(k)
     for(i in 1 : k) {
-      w[-1, i] <- format(d[[i]])
-      if(is.numeric(d[[i]])) align[i] <- 'ALIGN="RIGHT"'
+      di <- d[[i]]
+      w[-1, i] <- format(di)
+      align[i] <- if(length(unique(nchar(di))) == 1) 'CENTER'
+        else if(is.numeric(di)) 'RIGHT' else 'LEFT'
     }
-    w[] <- paste0('<td ', align, '>', w, '</td>')
+    w[] <- paste0('<td ALIGN="', align, '"">', w, '</td>')
     w <- apply(w, 1, function(x) paste0('<tr>',
                 paste(x, collapse=''), '</tr>'))
     c('<table border="0" cellborder="0" cellspacing="0">',
