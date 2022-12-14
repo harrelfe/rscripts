@@ -738,8 +738,11 @@ makegraphviz <- function(.object., ..., file) {
     w <- matrix('', nrow=nrow(d) + 1, ncol=k)
     w[1, ] <- paste0('<font color="darkblue"><b>', names(d),
                     '</b></font>')
-    for(i in 1 : k) w[-1, i] <- format(d[[i]])
-    w[] <- paste0('<td>', w, '</td>')
+    align <- rep('ALIGN="LEFT"', k)
+    for(i in 1 : k) {
+      w[-1, i] <- format(d[[i]])
+      if(is.numeric(d[[i]])) align[i] <- 'ALIGN="RIGHT"'
+    w[] <- paste0('<td ', align, '>', w, '</td>')
     w <- apply(w, 1, function(x) paste0('<tr>',
                 paste(x, collapse=''), '</tr>'))
     c('<table border="0" cellborder="0" cellspacing="0">',
