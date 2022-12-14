@@ -736,16 +736,17 @@ makegraphviz <- function(.object., ..., file) {
   mtab <- function(d) {
     k <- ncol(d)
     w <- matrix('', nrow=nrow(d) + 1, ncol=k)
-    w[1, ] <- paste0('<font color="darkblue"><b>', names(d),
-                    '</b></font>')
-    align <- character(k)
+    w[1, ] <- paste0('<td><font color="darkblue"><b>', names(d),
+                    '</b></font></td>')
     for(i in 1 : k) {
       di <- d[[i]]
-      w[-1, i] <- format(di)
-      align[i] <- if(length(unique(nchar(di))) == 1) 'CENTER'
+      f  <- trimws(format(di))
+      w[-1, i] <- f
+      align <- if(length(unique(nchar(f))) == 1) 'CENTER'
         else if(is.numeric(di)) 'RIGHT' else 'LEFT'
+      w[-1, i] <- paste0('<td ALIGN="', align, '">',
+                          w[-1, i], '</td>')
     }
-    w[] <- paste0('<td ALIGN="', align, '">', w, '</td>')
     w <- apply(w, 1, function(x) paste0('<tr>',
                 paste(x, collapse=''), '</tr>'))
     c('<table border="0" cellborder="0" cellspacing="0">',
