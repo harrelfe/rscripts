@@ -6,15 +6,8 @@
   margin-right: 10%;
 }
 
-.smaller {
-  font-size: 80%;
-}
-
-.smaller2 {
-  font-size: 64%;
-}
-
 .mermaidTooltip {
-  font-family: courier;
-  white-space: pre;
+		font-family: courier;
+		white-space: pre;
 }
+
