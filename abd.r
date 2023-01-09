@@ -6,6 +6,8 @@ getabd <- function(name='', lowernames=FALSE) {
   #        add lowernames=TRUE to convert variable names to all lower case
   require(Hmisc)
   
+  # Source: https://biostat.app.vumc.org/MsciBiostatIIDatasets
+  
 abd <- read.csv(textConnection('
 x1|name|label|url|x2
 |02-e-2a|Deaths from tigers|http://whitlockschluter.zoology.ubc.ca/wp-content/data/chapter02/chap02e2aDeathsFromTigers.csv|
