@@ -2,7 +2,7 @@
 title: "Project Title"
 author:
   - name: First Last
-    affiliation: Department of<br>Vanderbilt University School of Medicine<br>MSCI Biostatistics II
+    affiliation: Department of ____<br>Vanderbilt University School of Medicine<br>MSCI Biostatistics II
 date: last-modified
 format:
   html:
@@ -21,7 +21,6 @@ format:
     code-fold: show
     code-block-bg: "#f1f3f5"
     code-block-border-left: "#31BAE9"
-    highlight-style: tango
     reference-location: margin
     fig-cap-location: margin
 
@@ -36,26 +35,33 @@ getRs('abd.r')  # if using getabd function
 ```
 # Background
 
-To load this template into a running `RStudio` script editor window (usually the upper left pane), type the following in the `RStudio` command console (usually the lower left pane).
+To load this complete template into a running `RStudio` script editor window (usually the upper left pane), type the following in the `RStudio` command console (usually the lower left pane).
 
 ```{r eval=FALSE}
+require(Hmisc)   # provides getRs function
 getRs('b2.qmd', put='rstudio')
 ```
 
 # Data Import
 
-If reading a `csv` dataset from ABD use the `getabd` function.  If reading a binary R file from `hbiostat.org/data` use the `Hmisc` `getHdata` function.[See [this](https://hbiostat.org/rflow/fcreate.html) for methods for importing your own datasets.]{.aside}
+If reading a `csv` dataset from ABD use the `getabd` function.  If reading a binary R file from `hbiostat.org/data` use the `Hmisc` `getHdata` function instead.[See [this](https://hbiostat.org/rflow/fcreate.html) for methods for importing your own datasets.]{.aside}
 
 ```{r import}
 # getabd()     # run without an argument if you need a list of all
                # available ABD datasets
-d <- getabd('02-e-2a') # fetch ?? csv file and store contents in data frame d
+d <- getabd('02-e-2a') # fetch 02-e-2a csv file and store contents in data frame d
 # getHdata(support) etc. for larger fully annotated datasets
 # d <- support  # copy data frame produced by getHdata to use a short name
 html(contents(d))  # data dictionary for imported dataset
 ```
 
 # Descriptive Statistics
+
+Note that the `describe` function considers the `person` variable to be a continuous variable, because it is numeric with lots of levels.  So it computes descriptive statistics that are not really appropriate for person ID.  To prevent this from happening we could have converted `person` to a character variable using the following code chunk.[In the chunk header we set `eval=FALSE` so the `upData` code is not actually run.]{.aside}
+
+```{r char, eval=FALSE}
+d <- upData(d, person = as.character(person))
+```
 
 ```{r desc}
 html(describe(d))

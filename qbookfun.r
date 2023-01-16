@@ -59,6 +59,11 @@ disc <- function(x) {
   linkit('🅓', file)
   }
 
+rmsdisc <- function(x='') {
+  file <- paste0('https://discourse.datamethods.org/rms', x)
+  linkit('discourse.png', file)
+}
+
 blog <- function(x) {
   file <- paste0('https://fharrell.com/post/', x)
   linkit('blog', file)
