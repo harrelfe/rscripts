@@ -1,0 +1,223 @@
+--- 
+title: "Predicting Age from Lion Nose"
+author:
+  - name: Frank Harrell
+    affiliation: Department of Biostatistics<br>Vanderbilt University School of Medicine<br>MSCI Biostatistics II
+date: last-modified
+format:
+  html:
+    self-contained: true
+    number-sections: true
+    number-depth: 3
+    anchor-sections: true
+    smooth-scroll: true
+    theme: journal
+    toc: true
+    toc-depth: 3
+    toc-title: Contents
+    toc-location: left
+    code-link: false
+    code-tools: true
+    code-fold: show
+    code-block-bg: "#f1f3f5"
+    code-block-border-left: "#31BAE9"
+    reference-location: margin
+    fig-cap-location: margin
+
+execute:
+  warning: false
+  message: false
+---
+
+```{r setup}
+require(rms)    # also loads Hmisc package
+options(prType='html')   # makes nicer output from rms functions
+# Must put results='asis' in chunk headers that use this html output
+getRs('abd.r')
+```
+
+# Problem
+
+* The lion's nose, ABD example 17.1, page 541 2nd, 546 3rd
+* Dataset: 17-e-1
+* N observations: 32 male lions
+* Response: Age (years)
+* Predictor: Proportion of black pigmentation on nose
+
+# Data Import
+
+```{r import}
+d <- getabd('17-e-1')
+# Give variables short names and create labels and units
+# The .q function in Hmisc does away with need to quote
+# words that are legal R names
+d <- upData(d,
+      rename= .q(ageInYears      = age,
+                 proportionBlack = prop),
+      labels= .q(age  = Age,
+                 prop = 'Proportion Black Nose'),
+      units = .q(age  = years))
+html(contents(d))  # data dictionary for imported dataset
+```
+
+# Descriptive Statistics
+
+
+```{r desc, results='asis'}
+html(describe(d))
+```
+
+::: {.column-margin}
+When using the `html` function to translate the output to html there is a small bug in `Quarto` that keeps the name and label of the first variable from printing.
+
+:::
+
+# Why would understanding the Age-Nose relationship be helpful?
+
+# Construct a scatter plot of the response and explanatory variable
+
+A scatterplot is an excellent way to present the bivariate relationship when there are not many ties on x-y combinations, which would create coincident points that would not be visible on the plot.  Create a function that counts the number of coincident points to within the resolution we expect the plot symbols to have (e.g., 200 points in both x- and y-directions).  We'll add the number of coincident points as a subtitle on the graph.
+
+```{r}
+ncoinc <- function(x, y) {
+  i  <- ! is.na(x + y)   # exclude points missing on x or y
+  x  <- x[i]
+  y  <- y[i]
+  rx <- range(x)
+  ry <- range(y)
+  x  <- round((x - rx[1]) / diff(rx) * 200)
+  y  <- round((y - ry[1]) / diff(ry) * 200)
+  z  <- paste(x, y)
+  length(z) - length(unique(z))
+}
+# with(d, ...) evaluates ... using variables inside d
+nc <- with(d, ncoinc(prop, age))
+```
+
+Make the plot first without capitalizing on labels/units.
+
+```{r}
+ggplot(d, aes(x=prop, y=age)) + geom_point() +
+  xlab('Proportion Black Nose') + ylab('Age, years') +
+  labs(title   = 'Lion Nose Blackness as Predictor of Age',
+       caption = paste(nc, 'coincident points'))
+```
+
+Write a function that will retrieve labels and units stored in our dataset's metadata and format them into an expression that allows `ggplot2` to change fonts for units.  
+[This will have higher payoff when dealing with dozens of variables. See [this](http://hbiostat.org/rflow/graphics.html#ggplot2) for more about plotting labels.]{.aside}
+
+```{r}
+hlab <- function(x) {
+  x <- as.character(substitute(x))
+  label(d[[x]], plot=TRUE, default=x)
+}
+ggplot(d, aes(x=prop, y=age)) + geom_point() +
+  xlab(hlab(prop)) + ylab(hlab(age)) +
+  labs(caption=paste(nc, 'coincident points'))
+```
+
+# How would you describe the relationship in the plot?
+
+# Write down the linear regression model of proportion vs. age
+
+$$E(\text{age} | \text{prop}) = \beta_{0} + \beta_{1}\times \text{prop}$$
+$$\text{age} = \beta_{0} + \beta_{1}\times \text{prop} + \epsilon$$
+
+* Constant (intercept) $\beta_0$ = $E(\text{age} | \text{prop}=0)$
+* Slope $\beta_1$: change in mean age for prop going from 0 to 1 (not realistic)
+* Residual SD $\sigma$: SD of residuals (errors $\epsilon$); $\sigma^2$ is the variance of age not explained by prop
+* How would the model change if the predictor were on the percent scale?  
+* How would the model change if age were on the decade scale?
+* What scale is $\sigma^2$?
+
+# Fit a linear regression model
+
+We use the `rms` package `ols` (ordinary least squares) function, which enhances the built-in R function `lm`.  First, save distributional summaries of all the variables so that predictor ranges can be set automatically for plotting.
+   
+```{r results='asis'}
+dd <- datadist(d); options(datadist='dd')
+f <- ols(age ~ prop, data=d)
+f
+# Create LaTeX math notation for fitted model
+# Quarto / RMarkdown will automatically typeset this
+# Need to have results='asis' in chunk header
+latex(f)
+```
+
+* What are the parameter estimates? $\hat{\beta}_{0} = 0.88, \hat{\beta}_{1} = 10.65, \hat{\sigma} = 1.67$
+* What is the uncertainty of the model parameters? Uncertainties of individual parameters may be assessed by standard errors.  For example if the model is correctly specified the root mean squared error in estimating the slope is estimated to be 1.51.  Uncertainty in $\hat{\sigma}$ is not commonly estimated.
+
+# Plot the linear regression model with confidence bands for the mean
+
+```{r}
+# Predict(f, prop) will get predicted values from the 10th smallest
+# to 10th largest observed prop 
+# Let's override that and plot over the whole observed range
+# Add raw data to plot
+# Type ?Predict or ?ggplot.Predict to get function documentation
+propr <- with(d, range(prop))  # creates vector of length 2 with min&max
+pseq <- seq(propr[1], propr[2], length=100)
+# Omit geom_point(...) to omit raw data points
+ggplot(Predict(f, prop=pseq)) +
+  geom_point(aes(prop, age), d)
+```
+
+* Assess the model fit
+
+# Make a scatter plot of raw & studentized residuals against prop
+
+First plot the two types of residuals against each other to help in understanding.
+
+```{r}
+# Type ?residuals.ols to get documentation for `resid` which is
+# a short name for `residuals.ols`
+r     <- resid(f)
+rstud <-  rstudent(lm(age ~ prop, data=d))
+ggplot(mapping=aes(r, rstud)) + geom_point()
+```
+
+For this one-predictor case the two types of residuals are telling us the same thing.  So just plot the ordinary residual vs. the predictor.
+
+```{r}
+ggplot(d, aes(prop, r)) + geom_point()
+```
+
+* What aspect of model fit does this plot communicate?
+* What would the plot look like if the model fits well?
+* What would the plot look like if the model fits poorly?
+
+# Using the model
+
+* How might you use the model?
+* What is the difference between "estimating the mean" and "prediction of age for a new lion"?
+* Is there a difference between estimating a population parameter and predicting an individual outcome?
+* Which of the two (population vs individual outcome) are we "more certain"?
+
+# Plot the linear regression model fit with two types of bands
+
+```{r}
+a <- Predict(f, prop=pseq)  # normally Predict(f, prop)
+b <- Predict(f, prop=pseq, conf.type='individual')
+# Combine two types of estimates (point estimates don't vary)
+u <- rbind(Mean=a, Individual=b)
+ggplot(u) +
+  guides(color=guide_legend(title='')) +
+  theme(legend.position='bottom')
+```
+
+# A different summary measure of individual lion predictive accuracy
+
+Compute the mean absolute prediction error (mean $|\hat{\epsilon}|$).  This has the advantages of
+
+* quantifying accuracy on the original age scale
+* robust to outliers
+
+```{r}
+mean(abs(r))   # = mean(abs(resid(f)))
+```
+
+$\rightarrow$ predicted ages based on proportion black nose are off by `r round(mean(abs(r)), 2)` years on the average.  This can be compared against the typical difference in ages between lions in the sample (Gini's mean difference) of only`r round(GiniMd(d$age), 1)`.  This is in line with the estimated $R^{2}_\text{adj}$ of only 0.61.  The model is good at predicting long-term average but not so much for estimating ages of individual lions.
+
+# Computing Environment
+
+`r markupSpecs$html$session()`
