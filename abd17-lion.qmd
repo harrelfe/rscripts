@@ -76,7 +76,7 @@ When using the `html` function to translate the output to html there is a small 
 
 # Construct a scatter plot of the response and explanatory variable
 
-A scatterplot is an excellent way to present the bivariate relationship when there are not many ties on x-y combinations, which would create coincident points that would not be visible on the plot.  Create a function that counts the number of coincident points to within the resolution we expect the plot symbols to have (e.g., 200 points in both x- and y-directions).  We'll add the number of coincident points as a subtitle on the graph.
+A scatterplot is an excellent way to present the bivariate relationship when there are not many ties on x-y combinations.  Ties would create coincident points that would not be visible on the plot.  Create a function that counts the number of coincident points to within the resolution we expect the plot symbols to have (e.g., 300 points in both x- and y-directions).  We'll add the number of coincident points as a subtitle on the graph.
 
 ```{r}
 ncoinc <- function(x, y) {
@@ -85,8 +85,8 @@ ncoinc <- function(x, y) {
   y  <- y[i]
   rx <- range(x)
   ry <- range(y)
-  x  <- round((x - rx[1]) / diff(rx) * 200)
-  y  <- round((y - ry[1]) / diff(ry) * 200)
+  x  <- round((x - rx[1]) / diff(rx) * 300)
+  y  <- round((y - ry[1]) / diff(ry) * 300)
   z  <- paste(x, y)
   length(z) - length(unique(z))
 }
@@ -103,7 +103,7 @@ ggplot(d, aes(x=prop, y=age)) + geom_point() +
        caption = paste(nc, 'coincident points'))
 ```
 
-Write a function that will retrieve labels and units stored in our dataset's metadata and format them into an expression that allows `ggplot2` to change fonts for units.  
+Write a function that will retrieve labels and units stored in our dataset's metadata and format them into an expression that allows `ggplot2` to use a different font for units, with units placed to the right of the variable label.  
 [This will have higher payoff when dealing with dozens of variables. See [this](http://hbiostat.org/rflow/graphics.html#ggplot2) for more about plotting labels.]{.aside}
 
 ```{r}
@@ -156,15 +156,17 @@ latex(f)
 # Add raw data to plot
 # Type ?Predict or ?ggplot.Predict to get function documentation
 propr <- with(d, range(prop))  # creates vector of length 2 with min&max
+# Compute vector of 100 equally spaced proportions from min to max
 pseq <- seq(propr[1], propr[2], length=100)
 # Omit geom_point(...) to omit raw data points
-ggplot(Predict(f, prop=pseq)) +
-  geom_point(aes(prop, age), d)
+ggplot(Predict(f, prop=pseq)) + geom_point(aes(prop, age), d)
 ```
 
 * Assess the model fit
 
 # Make a scatter plot of raw & studentized residuals against prop
+
+Studentized residuals are normalized for the standard deviation of the estimated mean.
 
 First plot the two types of residuals against each other to help in understanding.
 
@@ -176,7 +178,7 @@ rstud <-  rstudent(lm(age ~ prop, data=d))
 ggplot(mapping=aes(r, rstud)) + geom_point()
 ```
 
-For this one-predictor case the two types of residuals are telling us the same thing.  So just plot the ordinary residual vs. the predictor.
+For this one-predictor case the two types of residuals are telling us the same thing, just on different scales.  So just plot the ordinary residual vs. the predictor.
 
 ```{r}
 ggplot(d, aes(prop, r)) + geom_point()
@@ -195,28 +197,30 @@ ggplot(d, aes(prop, r)) + geom_point()
 
 # Plot the linear regression model fit with two types of bands
 
+The `rms` package `Predict` function by default computes confidence limits for estimating the population mean.  This is changed using the `conf.type` argument.
+
 ```{r}
 a <- Predict(f, prop=pseq)  # normally Predict(f, prop)
 b <- Predict(f, prop=pseq, conf.type='individual')
 # Combine two types of estimates (point estimates don't vary)
 u <- rbind(Mean=a, Individual=b)
 ggplot(u) +
-  guides(color=guide_legend(title='')) +
-  theme(legend.position='bottom')
+  guides(color=guide_legend(title='')) +   # omit legend title
+  theme(legend.position='bottom')          # put legend at bottom
 ```
 
 # A different summary measure of individual lion predictive accuracy
 
-Compute the mean absolute prediction error (mean $|\hat{\epsilon}|$).  This has the advantages of
+Compute the mean absolute prediction error (mean $|\hat{\epsilon}|$).  This has the advantage of
 
 * quantifying accuracy on the original age scale
-* robust to outliers
+* being robust to outliers
 
 ```{r}
 mean(abs(r))   # = mean(abs(resid(f)))
 ```
 
-$\rightarrow$ predicted ages based on proportion black nose are off by `r round(mean(abs(r)), 2)` years on the average.  This can be compared against the typical difference in ages between lions in the sample (Gini's mean difference) of only`r round(GiniMd(d$age), 1)`.  This is in line with the estimated $R^{2}_\text{adj}$ of only 0.61.  The model is good at predicting long-term average but not so much for estimating ages of individual lions.
+$\rightarrow$ predicted ages based on proportion black nose are off by `r round(mean(abs(r)), 2)` years on the average.  This can be compared against the typical difference in actual ages between lions in the sample (Gini's mean difference) of only `r round(GiniMd(d$age), 1)`.  This is in line with the estimated $R^{2}_\text{adj}$ of only 0.61.  The model is good at predicting long-term average but not so much for estimating ages of individual lions.
 
 # Computing Environment
 
