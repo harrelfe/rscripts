@@ -1,0 +1,229 @@
+--- 
+title: "Mole Rats Energy Expenditure"
+author:
+  - name: Frank Harrell
+    affiliation: Department of Biostatistics<br>Vanderbilt University School of Medicine<br>MSCI Biostatistics II
+date: last-modified
+format:
+  html:
+    self-contained: true
+    number-sections: true
+    number-depth: 3
+    anchor-sections: true
+    smooth-scroll: true
+    theme: journal
+    toc: true
+    toc-depth: 3
+    toc-title: Contents
+    toc-location: left
+    code-link: false
+    code-tools: true
+    code-fold: show
+    code-block-bg: "#f1f3f5"
+    code-block-border-left: "#31BAE9"
+    reference-location: margin
+    fig-cap-location: margin
+
+execute:
+  warning: false
+  message: false
+---
+
+```{r setup}
+require(rms)
+options(prType='html')
+getRs('abd.r')
+```
+
+# Problem
+
+* Mole rats , ABD example 18.4, page 620 2nd[Adapted from Tom Stewart's Stata exercise.]{.aside}
+
+* Dataset: 18-e-4
+* observations: 35
+* Response: energy (daily energy expenditure)
+* Predictors: mass (body mass); caste (worker, lazy)
+
+# Data Import
+
+The dataset contained only natural log-transformed variables.  This is not typically good practice.  In R it's best too transform on-the-fly, so we anti-log the values after importing the data, and drop the original log variables.
+
+```{r import}
+d <- getabd('18-e-4')
+d <- upData(d,
+            mass   = exp(lnMass),
+            energy = exp(lnEnergy),
+            labels = .q(energy = 'Energy Expenditure',
+                        mass   = 'Body Mass'),
+            drop   = .q(lnMass, lnEnergy))
+html(contents(d))  # data dictionary for imported dataset
+```
+
+# Descriptive Statistics
+
+```{r desc, results='asis'}
+html(describe(d))
+```
+
+# What relationships are the researchers studying?
+
+# Plot the raw data
+
+First plot the raw data on their original scale then after taking natural log of the two continuous variables.  Levels of `caste` are depicted using color.
+
+```{r}
+ncoinc <- function(x, y) {
+  i  <- ! is.na(x + y)   # exclude points missing on x or y
+  x  <- x[i]
+  y  <- y[i]
+  rx <- range(x)
+  ry <- range(y)
+  x  <- round((x - rx[1]) / diff(rx) * 300)
+  y  <- round((y - ry[1]) / diff(ry) * 300)
+  z  <- paste(x, y)
+  length(z) - length(unique(z))
+}
+nc <- with(d, ncoinc(mass, energy))
+nc    # no coincident points so ignore
+```
+
+```{r}
+hlab <- function(x) {
+  x <- as.character(substitute(x))
+  label(d[[x]], plot=TRUE, default=x)
+}
+ggplot(d, aes(x=mass, y=energy, color=caste)) + geom_point() +
+  xlab(hlab(mass)) + ylab(hlab(energy))
+ggplot(d, aes(x=mass, y=energy, color=caste)) + geom_point() +
+  scale_x_continuous(trans='log',
+    breaks       = c(45, seq(50, 200, by=25)),
+    minor_breaks = seq(50, 200, by=5)) +
+  scale_y_continuous(trans='log',
+    breaks       = c(35, seq(50, 175, by=25)),
+    minor_breaks = seq(40, 175, by=5)) +
+  xlab(hlab(mass)) + ylab(hlab(energy))
+```
+
+# Write down the linear regression model that will help understand relationships of interest
+
+
+Log transformations make things more symmetric and appear to make a linear model work better, so let's use them.  Use natural logs.
+
+$$\ln(\text{energy}) = \beta_{0} + \beta_{1}\times\ln(\text{mass}) + \beta_{2}\times[\text{caste=worker}] + \beta_{3}\times\ln(\text{mass})\times[\text{caste=worker}]$$
+
+where the 0/1 indicator $[u]$ is 1 if $u$ is true, 0 if $u$ is false.
+
+* How many parameters are in the model?
+
+
+# Write null and alternative hypotheses of the interaction effect 
+
+* Using parameters in the full model: $H_{0}: \beta_{3}=0, H_\text{A}: \beta_{3} \neq 0$
+* By a comparison of two models: fit a model that omits the interaction term and run a statistical test based on how much worsening there is in $\hat{\sigma}^2$ which is equivalent to how much loss there is in $R^2$. 
+* What does the presence of an interaction mean in terms of the research question?  
+
+# Fit the model
+
+We fit model `f` with interaction and model `g` without interaction.
+Note that the `*` notation in R automatically includes main effects along with interactions of variables on either side of `*`.  R works best when transformations are specified inside the model formula. [Note there is currently a bug that prevents the $\LaTeX$ mathematical syntax from rendering properly.  This is fixed in the `rms` version run here (6.4-1) but will not render correctly in the publicly available version (6.4-0).]{.aside}
+
+```{r results='asis'}
+dd <- datadist(d); options(datadist='dd')
+f <- ols(log(energy) ~ log(mass) * caste, data=d)
+f
+latex(f)
+g <- ols(log(energy) ~ log(mass) + caste, data=d)
+g
+latex(g)
+```
+
+# Plot fits from both models
+
+See Fig. 18.4-1 ABD 2nd.  Note that `rms` plots on the original predictor scale but takes logs internally.   `Predict(fit, x, z)` means to obtain predictions for combinations of values of `x` and `z` with `x` placed on the $x$-axis and `z` generating separate curves vertically.  Adding `fun=exp` transforms predicted values by anti-logging them, before plotting.  Predictions default to using the 10th smallest and largest values of `mass` for limits.  We override that to use the full data range.
+
+```{r}
+rmass <- with(d, range(mass))
+masses <- seq(rmass[1], rmass[2], length=150)
+ggplot(Predict(f, mass=masses, caste, fun=exp))
+ggplot(Predict(g, mass=masses, caste, fun=exp))
+```
+
+# Diagnostics for both models
+
+* Check for randomness and constant horizontal variability in residuals vs. $\hat{Y}$
+* Look for normality of residuals
+
+We use studentized residuals, which for now need to be computed using the build-in `lm` function. [See [this](https://stackoverflow.com/questions/4357031) for a discussion of using `ggplot2` for qqnorm plots.]{.aside}
+
+```{r}
+flm <- lm(log(energy) ~ log(mass) * caste, data=d)
+glm <- lm(log(energy) ~ log(mass) + caste, data=d)
+rf  <- rstandard(flm)
+rg  <- rstandard(glm)
+
+ggplot(mapping=aes(fitted(flm), rf)) + geom_point()
+ggplot(mapping=aes(sample=rf)) + geom_qq() + stat_qq_line() +
+  xlab('Studentized Residuals') + ylab('Normal Quantiles')
+ggplot(mapping=aes(fitted(glm), rg)) + geom_point()
+ggplot(mapping=aes(sample=rg)) + geom_qq() + stat_qq_line() +
+  xlab('Studentized Residuals') + ylab('Normal Quantiles')
+```
+# Chunk tests
+
+In the following example, we are going to perform a series of chunk tests.  We are going to demonstrate how to perform a chunk test with two different methods.  The first method is a comparison of models.  The second is a direct test of the betas.  The two methods are equivalent and will give identical answers for linear models.  [The comparison of models approach is only valid if the regression models are fit
+using the same observations.  This is often an issue if there is missing data as the default practice is to disregard observations that have missing covariates. The consequence is that the reduced model may use more observations than the full model.  We will cover an example of how to compare models when there is missing data.]{.aside}
+
+Depending on your circumstances, one method may be easier to implement than another.
+
+## Method 1: Comparison of models
+
+Use the built-in `lm` function to do this as its `anova` function compares two models with an $F$-test
+
+### Interaction test
+
+* Full: $E[\ln(\text{energy})] = \beta_{0} + \beta_{1}\times\ln(\text{mass}) + \beta_{2}\times[\text{worker}] + \beta_{3}\times\ln(\text{mass})\times[\text{worker}]$
+* Reduced: $E[\ln(\text{energy})] = \beta_{0} + \beta_{1}\times\ln(\text{mass}) + \beta_{2}\times[\text{worker}]$
+
+```{r}
+anova(lm(log(energy) ~ log(mass) + caste, data=d), flm) 
+```
+
+### Total impact of mass
+
+* Reduced: $E[\ln(\text{energy})] = \beta_{0} + \beta_{1}\times[\text{worker}]$
+
+```{r}
+anova(lm(log(energy) ~ caste, data=d), flm)
+```
+
+### Total impact of caste
+
+* Reduced: $E[\ln(\text{energy})] = \beta_{0} + \beta_{1}\times\ln(\text{mass})$
+
+```{r}
+anova(lm(log(energy) ~ log(mass), data=d), flm)
+```
+
+### Overall regression
+
+* Reduced: $E[\ln(\text{energy})] = \beta_{0}$
+
+```{r}
+anova(lm(log(energy) ~ 1, data=d), flm)
+```
+
+
+## Method 2: Directly test $\beta$ in full model
+
+All the tests are automatically done by the `rms` package's `anova` function on the `ols` full model fit.
+
+```{r results='asis'}
+anova(f)
+```
+
+This approach avoids issues with missing data.
+
+
+# Computing Environment
+
+`r markupSpecs$html$session()`
