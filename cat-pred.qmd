@@ -1,0 +1,120 @@
+--- 
+title: "Categorical Predictors"
+author:
+  - name: Frank Harrell
+    affiliation: Department of Biostatistics<br>Vanderbilt University School of Medicine<br>MSCI Biostatistics II
+date: last-modified
+format:
+  html:
+    self-contained: true
+    number-sections: true
+    number-depth: 3
+    anchor-sections: true
+    smooth-scroll: true
+    theme: journal
+    toc: true
+    toc-depth: 3
+    toc-title: Contents
+    toc-location: left
+    code-link: false
+    code-tools: true
+    code-fold: show
+    code-block-bg: "#f1f3f5"
+    code-block-border-left: "#31BAE9"
+    reference-location: margin
+    fig-cap-location: margin
+
+execute:
+  warning: false
+  message: false
+---
+
+```{r setup}
+require(rms)
+options(prType='html')
+```
+
+# Problem
+
+* Dataset: NHANES - `nhgh`
+* N observations: 6805
+* Response: Height
+* Predictors: Race and ethnicity, sex
+
+# Data Import
+
+```{r import}
+getHdata(nhgh)
+d <- upData(nhgh, keep=.q(ht, re, sex))
+html(contents(d))  # data dictionary for imported dataset
+```
+
+# Descriptive Statistics
+
+```{r desc, results='asis'}
+html(describe(d))
+```
+# Internal Coding for Categorical Predictors
+
+## Cell Means Model
+
+This is more natural but only works when there is only one categorical predictor, otherwise the model is overparameterized.  The `rms` package does not support this.  When not adjusting for other covariates and the model is linear (ordinary regression) the cell means are easily obtained by stratification.
+
+With the cell means model there is one parameter per level of the categorical predictor so there are $k$ parameters for $k$ categories.  Parameter values are category-specific means.
+
+For a model with race/ethnicity `re` as the sole predictor the model can be written
+
+$$E(\text{height} | \text{re}) = \mu_{\text{re}}$$
+
+where `re` is indexing the means $\mu$ over all 5 levels.
+
+## Reference Cell Model
+
+This is the default in R and is what `rms` uses.    There are $k-1$ parameters for $k$ categories and any number of predictors may be categorical.  Parameter values are offsets (differences) from the reference category mean.  The reference category can be anything but by default is the first category (first `factor` level if predictor is a `factor`, first one in alphabetic order otherwise).
+
+The model intercept is the estimated mean at the first level.  If there are other variables in the model, it is the mean with all these set to zero.
+
+
+```{r results='asis'}
+dd <- datadist(d); options(datadist='dd')
+levels(d$re)   # same as with(d, levels(re))
+f <- ols(ht ~ re, data=d)
+f
+latex(f)
+```
+
+See that the reference cell is the first `level`, `Mexican American`, since `re` is a `factor` (categories are in a user-specified order).
+
+## Compare Predictions with `re`-specific Means
+
+```{r}
+#| fig.height: 1.6
+Predict(f, re)
+summary(ht ~ re, data=d)   # uses summary.formula in Hmisc
+# Plot is flipped for categorical predictor, hence ylab
+ggplot(Predict(f, re), ylab='Mean Height, cm')
+```
+
+Manually compute the estimated mean for `Other Hispanic`
+
+```{r}
+coef(f)
+# First coefficient is intercept
+coef(f)[1] + coef(f)['re=Other Hispanic']
+```
+
+## Controlling the Contrasts
+
+Model estimates gave us all contrasts with `Mexican American`.  Let's instead get all contrasts with `Other Hispanic`.  This does not require refitting the model since it can be done using `summary.rms` (short generic name `summary`).
+
+```{r results='asis'}
+summary(f, re='Other Hispanic')
+```
+
+Get a specific contrast using `contrast.rms` (short generic name `contrast`).  The contrast is the mean for `Non-Hispanic Black` minus the mean for `Non-Hispanic White`.
+
+```{r}
+contrast(f, list(re='Non-Hispanic Black'),
+            list(re='Non-Hispanic White'))
+```
+
