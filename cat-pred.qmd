@@ -39,7 +39,7 @@ options(prType='html')
 * Dataset: NHANES - `nhgh`
 * N observations: 6805
 * Response: Height
-* Predictors: Race and ethnicity, sex
+* Predictors: Race/ethnicity combination
 
 # Data Import
 

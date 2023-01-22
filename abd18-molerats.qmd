@@ -129,10 +129,10 @@ Note that the `*` notation in R automatically includes main effects along with i
 
 ```{r results='asis'}
 dd <- datadist(d); options(datadist='dd')
-f <- ols(log(energy) ~ log(mass) * caste, data=d)
+f <- ols(log(energy) ~ log(mass) * caste, data=d, x=TRUE)  # x=TRUE needed for studentized residuals
 f
 latex(f)
-g <- ols(log(energy) ~ log(mass) + caste, data=d)
+g <- ols(log(energy) ~ log(mass) + caste, data=d, x=TRUE)
 g
 latex(g)
 ```
@@ -153,18 +153,16 @@ ggplot(Predict(g, mass=masses, caste, fun=exp))
 * Check for randomness and constant horizontal variability in residuals vs. $\hat{Y}$
 * Look for normality of residuals
 
-We use studentized residuals, which for now need to be computed using the build-in `lm` function. [See [this](https://stackoverflow.com/questions/4357031) for a discussion of using `ggplot2` for qqnorm plots.]{.aside}
+We use studentized residuals.  [See [this](https://stackoverflow.com/questions/4357031) for a discussion of using `ggplot2` for qqnorm plots.]{.aside}
 
 ```{r}
-flm <- lm(log(energy) ~ log(mass) * caste, data=d)
-glm <- lm(log(energy) ~ log(mass) + caste, data=d)
-rf  <- rstandard(flm)
-rg  <- rstandard(glm)
+rf  <- resid(f, type='studentized')
+rg  <- resid(g, type='studentized')
 
-ggplot(mapping=aes(fitted(flm), rf)) + geom_point()
+ggplot(mapping=aes(fitted(f), rf)) + geom_point()
 ggplot(mapping=aes(sample=rf)) + geom_qq() + stat_qq_line() +
   xlab('Studentized Residuals') + ylab('Normal Quantiles')
-ggplot(mapping=aes(fitted(glm), rg)) + geom_point()
+ggplot(mapping=aes(fitted(g), rg)) + geom_point()
 ggplot(mapping=aes(sample=rg)) + geom_qq() + stat_qq_line() +
   xlab('Studentized Residuals') + ylab('Normal Quantiles')
 ```
@@ -185,7 +183,9 @@ Use the built-in `lm` function to do this as its `anova` function compares two m
 * Reduced: $E[\ln(\text{energy})] = \beta_{0} + \beta_{1}\times\ln(\text{mass}) + \beta_{2}\times[\text{worker}]$
 
 ```{r}
-anova(lm(log(energy) ~ log(mass) + caste, data=d), flm) 
+# Fit the full model with lm first
+flm <- lm(log(energy) ~ log(mass) * caste, data=d)
+anova( lm(log(energy) ~ log(mass) + caste, data=d), flm) 
 ```
 
 ### Total impact of mass

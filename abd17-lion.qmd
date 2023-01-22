@@ -136,7 +136,7 @@ We use the `rms` package `ols` (ordinary least squares) function, which enhances
    
 ```{r results='asis'}
 dd <- datadist(d); options(datadist='dd')
-f <- ols(age ~ prop, data=d)
+f <- ols(age ~ prop, data=d, x=TRUE)   # x=TRUE needed for studentized residuals later
 f
 # Create LaTeX math notation for fitted model
 # Quarto / RMarkdown will automatically typeset this
@@ -166,7 +166,7 @@ ggplot(Predict(f, prop=pseq)) + geom_point(aes(prop, age), d)
 
 # Make a scatter plot of raw & studentized residuals against prop
 
-Studentized residuals are normalized for the standard deviation of the estimated mean.
+Studentized residuals are normalized for the standard deviation of the estimated mean and leave out the current observation for computing the regression coefficient estimates that are used to compute residuals.
 
 First plot the two types of residuals against each other to help in understanding.
 
@@ -174,7 +174,7 @@ First plot the two types of residuals against each other to help in understandin
 # Type ?residuals.ols to get documentation for `resid` which is
 # a short name for `residuals.ols`
 r     <- resid(f)
-rstud <-  rstudent(lm(age ~ prop, data=d))
+rstud <- resid(f, type='studentized')   # needs rms 6.4-1
 ggplot(mapping=aes(r, rstud)) + geom_point()
 ```
 
