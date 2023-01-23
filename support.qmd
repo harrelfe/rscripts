@@ -1,0 +1,188 @@
+--- 
+title: "SUPPORT: Study to Understand Prognoses Outcomes Preferences and Risks of Treatments"
+author:
+  - name: Frank Harrell
+    affiliation: Department of Biostatistics<br>Vanderbilt University School of Medicine<br>MSCI Biostatistics II
+date: last-modified
+format:
+  html:
+    self-contained: true
+    number-sections: true
+    number-depth: 3
+    anchor-sections: true
+    smooth-scroll: true
+    theme: journal
+    toc: true
+    toc-depth: 3
+    toc-title: Contents
+    toc-location: left
+    code-link: false
+    code-tools: true
+    code-fold: show
+    code-block-bg: "#f1f3f5"
+    code-block-border-left: "#31BAE9"
+    reference-location: margin
+    fig-cap-location: margin
+
+execute:
+  warning: false
+  message: false
+---
+
+```{r setup}
+require(rms)
+options(prType='html')
+```
+
+# Problem
+
+* SUPPORT
+* [Description](http://hbiostat.org/data/repo/SupportDesc.html)
+* N observations: 1000
+* Goal: Assess relationship between sex, mean arterial blood pressure at baseline, and study length of stay (days in hospital from the date of qualification for the study)
+
+# Data Import
+
+```{r import, results='asis'}
+getHdata(support)
+d <- upData(support, keep=.q(slos, meanbp, sex))
+html(contents(d), levelType='table')  # data dictionary for imported dataset
+```
+
+# Descriptive Statistics
+
+```{r desc, results='asis'}
+html(describe(d))
+```
+
+Baseline is day 3.  `meanbp=0` means cardiac arrest happened on that day.  This happened in `r sum(d$meanbp == 0, na.rm=TRUE)` patients.
+
+Try transformations in `slos` to find one that makes the distribution more symmetric.
+
+```{r}
+#| fig.height: 2.75
+y <- d$slos
+w <- rbind(data.frame(trans='identity',   y = y),
+           data.frame(trans='sqrt',       y = sqrt(y)),
+           data.frame(trans='cube root',  y = y^(1/3)),
+           data.frame(trans='log',        y = log(y)),
+           data.frame(trans='reciprocal', y = 1 / y))
+ggplot(w, aes(x=y)) + geom_histogram(bins=100) +
+  facet_wrap(~ trans, scales='free_x')   # let x scale vary
+```
+
+We'll use the log transformation.
+
+# Setting Knot Locations
+
+* Linear spline: must be specified
+* Restricted cubic spline (rcs): can specify or use default quantiles
+
+Let's specify knots manually and use the same knot location for linear and cubic splines.  Knots are specified as the vector `knots` as below.
+
+```{r}
+knots <- c(40, 60, 70, 80, 100, 110, 140)
+```
+
+# Plot Raw Data
+
+Include knot locations as vertical reference lines on the plot.
+
+Note the bimodality of the `meanbp` distribution.
+
+```{r}
+hlab <- function(x) {
+  x <- as.character(substitute(x))
+  label(d[[x]], plot=TRUE, default=x)
+}
+
+ggplot(d, aes(x=meanbp, y=slos, color=sex)) + geom_point() +
+  scale_y_continuous(trans="log",
+    breaks=c(3, seq(  5,  45, by=5), seq(50, 90, by=10),
+                seq(100, 250, by=25))) +
+  xlab(hlab(meanbp)) + ylab(hlab(slos)) +
+  geom_vline(xintercept=knots, alpha=0.3, color='blue')
+```
+
+# Linear Spline in `meanbp`
+
+## Fit
+
+```{r results='asis'}
+dd <- datadist(d); options(datadist='dd')
+# x=TRUE is used for plotting basis functions
+f <- ols(log(slos) ~ lsp(meanbp, knots) + sex, data=d, x=TRUE)
+f
+latex(f)
+```
+
+```{r}
+specs(f, long=TRUE)    # show detailed specs for predictors
+```
+
+## Plot Spline Basis Functions
+
+These are the basis for curve fitting, which puts weights ($\hat{\beta}$) on each of the basis functions and then adds them together.  The first basis function (linear everywhere) in a linear or restricted spline function in the original variable.  Linear spline basis functions are zero until the particular knot is cross.
+
+```{r}
+X <- f$x
+X <- X[, - ncol(X)]     # remove last column (sex)
+matplot(X[, 1], X)      # first column against all columns
+```
+## Tests of Flatness and Linearity
+
+The tests can also be obtained by comparing to simpler models, but the `rms` `anova` function is easier.
+
+```{r results='asis'}
+anova(f)
+```
+
+## Plot Predicted Log LOS 
+
+Include raw data on the plot.
+
+```{r}
+ggplot(Predict(f, meanbp, sex)) + geom_point(aes(meanbp, log(slos)), d)
+```
+
+# Restricted Cubic Spline Model
+
+A restricted cubic spline is continuous in the slope and slope of the slope (acceleration) so is more realistic.
+
+## Fit
+
+```{r results='asis'}
+f <- ols(log(slos) ~ rcs(meanbp, knots) + sex, data=d, x=TRUE)
+f
+latex(f)
+```
+
+```{r}
+specs(f, long=TRUE)
+```
+
+## Plot Spline Basis Functions
+
+```{r}
+X <- f$x
+X <- X[, - ncol(X)]     # remove last column (sex)
+matplot(X[, 1], X)      # first column against all columns
+```
+
+## Tests of Flatness and Linearity
+
+```{r results='asis'}
+anova(f)
+```
+
+## Plot Predicted Log LOS 
+
+```{r}
+ggplot(Predict(f, meanbp, sex))
+```
+
+* Why could the sex difference be misleading?
+
+# Computing Environment
+
+`r markupSpecs$html$session()`
