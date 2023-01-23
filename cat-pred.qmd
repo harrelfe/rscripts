@@ -58,7 +58,7 @@ html(describe(d))
 
 ## Cell Means Model
 
-This is more natural but only works when there is only one categorical predictor, otherwise the model is overparameterized.  The `rms` package does not support this.  When not adjusting for other covariates and the model is linear (ordinary regression) the cell means are easily obtained by stratification.
+This is more natural but only works when there is only one categorical predictor, otherwise the model is overparameterized.  The `rms` package does not support this.  When not adjusting for other covariates and the model is linear (ordinary regression) the cell means are easily obtained by stratification. [See Tom Stewart's excellent [presentation](https://hbiostat.org/doc/b2/cell-means-vs-ref-cell.pdf) that graphically illustrates the difference between the reference cell and cell means models.]{.aside}
 
 With the cell means model there is one parameter per level of the categorical predictor so there are $k$ parameters for $k$ categories.  Parameter values are category-specific means.
 
