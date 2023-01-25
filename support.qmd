@@ -45,7 +45,7 @@ options(prType='html')
 
 ```{r import, results='asis'}
 getHdata(support)
-d <- upData(support, keep=.q(slos, meanbp, sex))
+d <- upData(support, keep=.q(slos, meanbp, sex, age, dzgroup, num.co, edu, income, scoma, hrt, resp, temp, totcst))
 html(contents(d), levelType='table')  # data dictionary for imported dataset
 ```
 
@@ -182,6 +182,59 @@ ggplot(Predict(f, meanbp, sex))
 ```
 
 * Why could the sex difference be misleading?
+
+
+# Missing Data
+
+We will be predicting total cost.  There is one patient with a total cost of zero, which we remove.
+
+```{r}
+d <- subset(d, totcst != 0 | is.na(totcst))
+```
+
+## Summarize Patterns of Missings
+
+Use the `reptools` report function repository's `missChk` function to summarize patterns.  `missChk` requires installing and loading the `data.table` package.
+
+```{r results='asis'}
+require(data.table)
+getRs('reptools.r')
+missChk(d)
+```
+
+## Multiple Imputation of `edu, income, totcst`
+
+Use the `Hmisc` package `aregImpute` function to create multiple imputations of missing variables.  The method used is predictive mean matching, based on predicting each sometimes-missing variable from all the others and finding donor observations based on how close the predicted value of the target variable for the observation with that variable missing is to the predicted target variable on all the observations for which it was not missing.  Use 10 imputations per missing value.  Continuous variables are automatically splined when predicting the target variable.  3 burn-in iterations are discarded.
+
+```{r}
+set.seed(1)    # set random number seed so can reproduce calculations
+# Force the discrete variable scoma to be treated as linear to
+# avoid problems with excessive ties when trying to compute knots
+a <- aregImpute(~ age + sex + slos + dzgroup + num.co + edu +
+                income + I(scoma) + totcst + meanbp + hrt + resp + temp,
+                data=d, n.impute=10)
+a
+# Show imputed values for each sometimes-missing variable, for
+# the first 5 patients needed to be imputed
+a$imputed$edu[1:5,]
+a$imputed$income[1:5,]
+round(a$imputed$totcst[1:5,])
+```
+
+## Pooled Fit After Multiple Imputation
+
+The `Hmisc` `fit.mult.impute` function makes 10 completed datasets, fits 10 models, averages their coefficient estimates to get final parameter estimates, and uses Rubin's rule to get standard errors and approximate Wald test statistics assuming approximate normality.
+
+```{r}
+f <- fit.mult.impute(log(totcst) ~ rcs(age, 4) + rcs(meanbp, 4) + rcs(hrt, 4) +
+  sex + dzgroup + num.co +scoma + income, ols, a, data=d)
+```
+
+```{r results='asis'}
+f
+anova(f)
+```
+
 
 # Computing Environment
 

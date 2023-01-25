@@ -1,0 +1,117 @@
+--- 
+title: "NHANES"
+author:
+  - name: Frank Harrell
+    affiliation: Department of Biostatistics<br>Vanderbilt University School of Medicine<br>MSCI Biostatistics II
+date: last-modified
+format:
+  html:
+    self-contained: true
+    number-sections: true
+    number-depth: 3
+    anchor-sections: true
+    smooth-scroll: true
+    theme: journal
+    toc: true
+    toc-depth: 3
+    toc-title: Contents
+    toc-location: left
+    code-link: false
+    code-tools: true
+    code-fold: show
+    code-block-bg: "#f1f3f5"
+    code-block-border-left: "#31BAE9"
+    reference-location: margin
+    fig-cap-location: margin
+
+execute:
+  warning: false
+  message: false
+---
+
+```{r setup}
+require(rms)
+options(prType='html')
+```
+
+# Problem: How Are Demographics Associated with Height?
+
+* Dataset: `nhgh`
+* N observations: 6795
+* Response: height
+* Predictors: Race/ethnicity, sex, age
+
+# Data Import
+
+```{r import,results='asis'}
+getHdata(nhgh)
+d <- upData(nhgh, keep=.q(sex, age, re, ht, SCr, gh))
+html(contents(d))
+```
+
+# Descriptive Statistics
+
+```{r desc, results='asis'}
+html(describe(d))
+```
+
+# Plot Raw Data
+
+There are many tied values of `ht` so use hexagonal binning to depict frequency counts of coincident points.  Use `ggplot2` faceting to stratify by `re` and `sex`.  Make the plot taller than usual with chunk markup `#| fig.height: 8.5` (8.5 inches).
+
+```{r}
+#| fig.height: 8.5
+hlab <- function(x) {
+  x <- as.character(substitute(x))
+  label(d[[x]], plot=TRUE, default=x)
+}
+cuts <- c(1:5, 10, 15, 20, 30)  # cutpoints for cell N
+ggplot(d, aes(x=age, y=ht)) +
+  facet_grid(re ~ sex) +
+  stat_binhex(aes(alpha=..count.., color=cut2(..count.., cuts=cuts)), bins=80) +
+  xlab(hlab(age)) + ylab(hlab(ht)) +
+  guides(alpha='none', fill=FALSE, color=guide_legend(title='Frequency'))
+```
+
+# Linear Model
+
+* No assumption of linearity for continuous predictors
+* Allow for age $\times$ sex interaction (different shapes of age relationship by sex)
+
+```{r results='asis'}
+dd <- datadist(d); options(datadist='dd')
+# x=TRUE needed for studentized residuals
+f <- ols(ht ~ re + sex * rcs(age, 4), data=d, x=TRUE)
+f
+latex(f)
+```
+
+# Diagnostics
+
+## Residuals
+
+```{r}
+r <- resid(f, type='studentized')
+ggplot(mapping=aes(fitted(f), r)) + geom_point(alpha=.2)
+ggplot(mapping=aes(sample=r)) + geom_qq() + stat_qq_line() +
+  xlab('Studentized Residuals') + ylab('Normal Quantiles')
+```
+
+* What is your opinion about which model assumptions hold and which don't?
+* How might the right hand side of the model not fit adequately?
+
+## Influence Statistics
+
+Find observations that if removed would change a parameter by more than 0.15 standardized (by standard error) units.[Because of the large sample size there were no overly influential observations at standard cutoffs such as 0.4.  The cutoff was relaxed to 0.15 for illustration.]{.aside}  `which.influence` in `rms` recognizes that some predictors have multiple $\beta$s associated with them (e.g., splined predictors or categorical predictors like `re` with > 2 levels).  It finds observations that are influential on *any* of the predictor's parameters.
+
+**NOTE**: The output of `show.influence` will be incorrect for you until `rms` 6.4-2 is released.  The output below is correct.
+
+```{r}
+w <- which.influence(f, 0.15)
+w
+show.influence(w, d)
+```
+
+# Computing Environment
+
+`r markupSpecs$html$session()`
