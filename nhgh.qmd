@@ -45,7 +45,8 @@ options(prType='html')
 
 ```{r import,results='asis'}
 getHdata(nhgh)
-d <- upData(nhgh, keep=.q(sex, age, re, ht, SCr, gh))
+d <- upData(nhgh, keep=.q(sex, age, re, ht, SCr, gh,
+  dx, tx, wt, bmi, leg, arml, armc, waist, tri, sub))
 html(contents(d))
 ```
 
@@ -111,6 +112,119 @@ w <- which.influence(f, 0.15)
 w
 show.influence(w, d)
 ```
+
+# Data Reduction
+
+**Why do data reduction?**
+
+If we hope to construct stable models, there is a limit to the complexity of the models we construct.  The type of outcome and number of observations limit complexity. [Some of this material was provided by Tom Stewart]{.aside}
+
+**Approach**
+
+Determine "effective sample size" and parameter budget.  Live within the parameter budget and allocate parameters to predictors based on research goals and the strength of association with outcome.
+
+**Challenge**
+
+Lots of predictors with a limited parameter budget. 
+
+**Strategies Demonstrated**
+
+ * Generalized Spearman's $\rho$ (predictive potential)
+ * Variable clustering
+ * Redundancy analysis
+ * Principal components
+
+## Data Subsetting
+
+Include persons age 21 and older who have never been diagnosed or treated for diabetes.
+
+```{r}
+d <- subset(d, age >= 21 & dx == 0 & tx == 0)
+cat(nrow(d), 'subjects qualified\n')
+```
+
+## Predictive Potential of Continuous Variables
+
+```{r}
+#| fig.height: 3.5
+s <- spearman2(gh ~ age + bmi + ht + wt + leg + arml + armc +
+               waist + tri + sub, data=d)
+s
+plot(s)
+```
+
+## Variable Clustering
+
+* Shows possibility of combining some variables
+* Occasionally leads to removal of some variables
+* Helps with collinearities, redundancies, lowering effective number of parameters in need of estimation
+
+```{r}
+v <- varclus(~ age + bmi + ht + wt + leg + arml + armc + waist +
+             tri + sub + re + sex,
+             data=d)   # function is in Hmisc
+plot(v)
+```
+
+* Interpret what you see for continuous variables
+* Interpret what you see for categorical variables
+
+## Redundancy Analysis
+
+* Try to predict each predictor from the other predictors (splined if continuous, all indicator variables less one if categorical)
+* Note that `bmi, ht, wt` would have been perfectly predicted (any one from the other two; $R^{2} = 1.0$) had they been logged
+
+```{r}
+redun(~ age + bmi + ht + wt + leg + arml + armc + waist + tri + sub + re + sex,
+             data=d)  # function is in Hmisc
+```
+
+## Principal Components
+
+* A way to find linear combinations of predictors that captures much of the information in the individual predictors
+* Is masked to Y so is *unsupervised learning* that does not lead to overfitting
+* Consider the body size measurements only, and remove BMI for the moment because it is perfectly computed from height and weight (were logs to be taken on all 3 variables)
+* PCs are linear combination of the original variables
+* First PC (PC$_1$) explains maximum variance subject to a scaling constraint
+* Second PC (PC$_2$) explains the second largest variance subject to being uncorrelated with PC$_1$.
+
+```{r}
+#| fig.height: 4
+pc <- princomp(~ age + ht + wt + leg + arml + armc + waist + tri + sub,
+  cor=TRUE, data=d)
+plot(pc, type='lines', main='')
+# Add cumulative fraction of variance explained ("scree plot")
+addscree <- function(x, npcs=min(10, length(x$sdev)),
+                     plotv=FALSE,
+                     col=1, offset=.8, adj=0, pr=FALSE) {
+  vars <- x$sdev^2
+  cumv <- cumsum(vars)/sum(vars)
+  text(1:npcs, vars[1:npcs] + offset*par('cxy')[2],
+       as.character(round(cumv[1:npcs], 2)),
+       srt=45, adj=adj, cex=.65, xpd=NA, col=col)
+  if(plotv) lines(1:npcs, vars[1:npcs], type='b', col=col)
+}
+addscree(pc)
+```
+
+* How many components would you choose?
+
+Get the coefficients of the first 2 PCs by regressing the PCs on the original variables.  Complication: number of rows in the matrix of PCs equals the number of subjects with no variables missing.  This will not align with the original data.  Make a subset of the original data.
+
+```{r results='asis'}
+pcs <- pc$scores    # pick off all PCs
+pc1 <- pcs[, 1]     # PC1 is 1st column of pcs
+pc2 <- pcs[, 2]
+w   <- subset(d, ! is.na(age + ht + wt + leg + arml + armc +
+              waist + tri + sub))
+ols(pc1 ~ age + ht + wt + leg + arml + armc + waist + tri + sub,
+    data=w)
+ols(pc2 ~ age + ht + wt + leg + arml + armc + waist + tri + sub,
+    data=w)
+```
+
+* Make sure you understand why $R^{2} = 1.0$
+* To use PC-based data reduction in outcome prediction, substitute `pc1`, `pc2`, ... for some of the constituent variables.
 
 # Computing Environment
 

@@ -212,7 +212,7 @@ set.seed(1)    # set random number seed so can reproduce calculations
 # avoid problems with excessive ties when trying to compute knots
 a <- aregImpute(~ age + sex + slos + dzgroup + num.co + edu +
                 income + I(scoma) + totcst + meanbp + hrt + resp + temp,
-                data=d, n.impute=10)
+                data=d, n.impute=10, pr=FALSE)
 a
 # Show imputed values for each sometimes-missing variable, for
 # the first 5 patients needed to be imputed
@@ -234,6 +234,21 @@ f <- fit.mult.impute(log(totcst) ~ rcs(age, 4) + rcs(meanbp, 4) + rcs(hrt, 4) +
 f
 anova(f)
 ```
+
+# Variable Clustering
+
+* Can lead to data reduction
+* This can allow you to live within the parameter budget
+* Go back to the original imported `support` dataset which has more variables and didn't remove an observation
+
+```{r}
+v <- varclus(~ age + sex + dzclass + race + meanbp + wblc + hrt +
+             resp + temp + alb + bili + crea + sod + ph + glucose +
+             bun + urine + adlsc, data=support)
+plot(v)
+```
+
+* What are the near redundancies?
 
 
 # Computing Environment
