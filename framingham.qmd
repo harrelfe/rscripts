@@ -1,0 +1,164 @@
+--- 
+title: "Framingham Heart Study"
+author:
+  - name: Frank Harrell
+    affiliation: Department of Biostatistics<br>Vanderbilt University School of Medicine<br>MSCI Biostatistics II
+date: last-modified
+format:
+  html:
+    self-contained: true
+    number-sections: true
+    number-depth: 3
+    anchor-sections: true
+    smooth-scroll: true
+    theme: journal
+    toc: true
+    toc-depth: 3
+    toc-title: Contents
+    toc-location: left
+    code-link: false
+    code-tools: true
+    code-fold: show
+    code-block-bg: "#f1f3f5"
+    code-block-border-left: "#31BAE9"
+    reference-location: margin
+    fig-cap-location: margin
+
+execute:
+  warning: false
+  message: false
+---
+
+```{r setup}
+require(rms)
+options(prType='html')
+```
+
+# Problem
+
+* Dataset: Framingham 2.10 dataset from WD Dupont *Statistical Modeling for Biomedical Researchers*
+* N observations: 4699
+* Response: Systolic Blood Pressure
+* Predictors: BMI, age, serum cholesterol, sex
+* Problem 1: Can regression diagnostics find a known outlier?
+* Problem 2: Internally validate a linear model
+
+# Data Preparation
+
+## Data Import
+
+Change the age of subject 2642 from 55 to 103 after importing.
+
+```{r import,results='asis'}
+fram <- read.csv('http://hbiostat.org/data/repo/2.20.Framingham.csv')
+d <- upData(fram,
+            age = ifelse(id == 2642, 103, age),
+            labels = .q(sbp = 'Systolic Blood Pressure',
+                        bmi = 'Body Mass Index',
+                        scl = 'Serum Cholesterol'),
+            units  = .q(sbp = mmHg))
+html(contents(d))
+```
+
+## Descriptive Statistics
+
+```{r desc, results='asis'}
+html(describe(d))
+```
+
+The age outlier is already seen in the spike histogram above.
+
+# Linear Model With Outlier in Data
+
+## Fit
+
+* Allow sex to modify the effects of the other three variables
+* Predicting untransformed `sbp` resulted in very problematic qq plot
+* Taking log(`sbp`) solved $\frac{1}{2}$ the problem
+
+We take logs of BMI and cholesterol in the hope of leading to more linear relationships.
+```{r results='asis'}
+dd <- datadist(d); options(datadist='dd')
+f <- ols(log(sbp) ~ sex * (log(bmi) + age + log(scl)), data=d, x=TRUE)
+f
+```
+
+## Diagnostics
+
+On the first plot, distinguish the one molested point from the others by making it red.
+
+```{r}
+r <- resid(f, type='studentized')
+ggplot(mapping=aes(fitted(f), r)) +
+  geom_point(alpha=.2) +
+  geom_point(aes(x=fitted(f)[1], y=r[1], color=I('red'), size=I(3)))
+ggplot(mapping=aes(sample=r)) + geom_qq() + stat_qq_line() +
+  xlab('Studentized Residuals') + ylab('Normal Quantiles')
+```
+
+## Influence Statistics
+
+```{r}
+w <- which.influence(f)
+w
+show.influence(w, d)
+```
+
+The correct point was found, and it affected two parameter estimates (main age parameter and age $\times$ sex interaction; `Count`=2) by more than 0.2 standardized units (the default cutoff for `which.influence`).
+
+# Fit and Validate Model Without Outlier
+
+Go back to the original imported data.
+
+```{r}
+d <- upData(fram,
+            labels = .q(sbp = 'Systolic Blood Pressure',
+                        bmi = 'Body Mass Index',
+                        scl = 'Serum Cholesterol'),
+            units  = .q(sbp = mmHg))
+```
+
+## Fit
+
+```{r results='asis'}
+dd <- datadist(d); options(datadist='dd')
+f <- ols(log(sbp) ~ sex * (log(bmi) + age + log(scl)),
+         data=d, x=TRUE, y=TRUE)   # x, y needed for validations
+f
+```
+
+## Bootstrap Strong Internal Validation
+
+The small difference between $R^2$ and $R^{2}_\text{adj}$ above previews the small amount of overfitting depicted below.
+
+Use 300 bootstrap resamples for validation of statistical indexes, each of which is used to fit a model from scratch.  Use 150 bootstraps for calibration just to save time.
+
+```{r results='asis'}
+set.seed(17)    # so can replicate results
+v <- validate(f, B=300)
+html(v)
+cal <- calibrate(f, B=150)
+plot(cal)
+```
+
+The calibration curve looks excellent where predicted values are not rare.
+
+* What is overfitting and why would it be a concern?
+* What is optimism?
+* Does an in-sample calibration plot provide useful information?
+   + Plot of $Y$ vs. $\hat{Y}$ in the model development sample (whole sample)
+* What is the in-sample mean |prediction error|?
+* Does the in-sample mean |prediction error| over or under estimate the out-of-sample error?
+* Compute the in-sample Spearman rank correlation
+* What is the difference between discriminaton and calibration?
+  
+```{r}
+# Compute mean |prediction error| on the original sbp scale
+with(d, mean(abs(exp(fitted(f)) - sbp), na.rm=TRUE))
+with(d, spearman(fitted(f), sbp))
+with(d, spearman(fitted(f), log(sbp)))
+```
+
+# Computing Environment
+
+`r markupSpecs$html$session()`
