@@ -49,15 +49,21 @@ options(prType='html')
 
 Change the age of subject 2642 from 55 to 103 after importing.
 
-```{r import,results='asis'}
+```{r import}
 fram <- read.csv('http://hbiostat.org/data/repo/2.20.Framingham.csv')
+fram <-
+  upData(fram,
+         sex = factor(sex, 1:2, c('male', 'female')),
+         labels = .q(sbp = 'Systolic Blood Pressure',
+                     bmi = 'Body Mass Index',
+                     scl = 'Serum Cholesterol'),
+         units  = .q(sbp = mmHg))
 d <- upData(fram,
-            age = ifelse(id == 2642, 103, age),
-            labels = .q(sbp = 'Systolic Blood Pressure',
-                        bmi = 'Body Mass Index',
-                        scl = 'Serum Cholesterol'),
-            units  = .q(sbp = mmHg))
-html(contents(d))
+            age = ifelse(id == 2642, 103, age))
+```
+
+```{r results='asis'}
+html(contents(d), levelType='table')
 ```
 
 ## Descriptive Statistics
@@ -96,26 +102,29 @@ ggplot(mapping=aes(sample=r)) + geom_qq() + stat_qq_line() +
   xlab('Studentized Residuals') + ylab('Normal Quantiles')
 ```
 
+A good advertisement for semiparametric (ordinal) regression models.
+
 ## Influence Statistics
 
 ```{r}
+#| fig.height: 2.75
+i <- resid(f, 'influence.measures')
+par(mfrow=c(1,2))
+hist(i[, 'dfb.age'], nclass=100, xlab='Change in Age beta', main='')
+hist(i[, 'dffit'], nclass=100, xlab='DFFIT', main='')
 w <- which.influence(f)
 w
 show.influence(w, d)
 ```
 
-The correct point was found, and it affected two parameter estimates (main age parameter and age $\times$ sex interaction; `Count`=2) by more than 0.2 standardized units (the default cutoff for `which.influence`).
+The correct point was found, and it affected two parameter estimates (main age parameter and age $\times$ sex interaction; `Count`=2) by more than 0.2 standardized units (the default cutoff for `which.influence`).  Another influential observation is one with a cholesterol of 492.
 
 # Fit and Validate Model Without Outlier
 
 Go back to the original imported data.
 
 ```{r}
-d <- upData(fram,
-            labels = .q(sbp = 'Systolic Blood Pressure',
-                        bmi = 'Body Mass Index',
-                        scl = 'Serum Cholesterol'),
-            units  = .q(sbp = mmHg))
+d <- fram
 ```
 
 ## Fit
@@ -126,6 +135,22 @@ f <- ols(log(sbp) ~ sex * (log(bmi) + age + log(scl)),
          data=d, x=TRUE, y=TRUE)   # x, y needed for validations
 f
 ```
+
+Before preceding let's check the linearity assumptions for the continuous predictors by expanding them into splines with 4 knots.
+
+```{r results='asis'}
+g <- ols(log(sbp) ~ sex * (rcs(log(bmi),4) +
+         rcs(age, 4) + rcs(log(scl), 4)),
+         data=d, x=TRUE, y=TRUE)   # x, y needed for validations
+g
+```
+
+```{r}
+AIC(f); AIC(g)   # small difference, g slightly better
+```
+
+We'll go with the simpler model.
+
 
 ## Bootstrap Strong Internal Validation
 
@@ -158,6 +183,16 @@ with(d, mean(abs(exp(fitted(f)) - sbp), na.rm=TRUE))
 with(d, spearman(fitted(f), sbp))
 with(d, spearman(fitted(f), log(sbp)))
 ```
+
+Also use a nonparametric smoother to get an in-sample "apparent" calibration plot.
+
+```{r app}
+ggplot(d, aes(x=fitted(f), y=log(sbp))) + geom_point(alpha=0.2) +
+  geom_smooth(method=lm, color='red') + 
+  geom_smooth(color='green') +
+  geom_abline(intercept=0, slope=1, color='blue')
+```
+
 
 # Computing Environment
 
