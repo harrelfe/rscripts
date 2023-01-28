@@ -1,0 +1,272 @@
+--- 
+title: "Diagnostic Model Using Duke Cardiac Catheterization Data"
+author:
+  - name: Frank Harrell
+    affiliation: Department of Biostatistics<br>Vanderbilt University School of Medicine<br>MSCI Biostatistics II
+date: last-modified
+format:
+  html:
+    self-contained: true
+    number-sections: true
+    number-depth: 3
+    anchor-sections: true
+    smooth-scroll: true
+    theme: journal
+    toc: true
+    toc-depth: 3
+    toc-title: Contents
+    toc-location: left
+    code-link: false
+    code-tools: true
+    code-fold: show
+    code-block-bg: "#f1f3f5"
+    code-block-border-left: "#31BAE9"
+    reference-location: margin
+    fig-cap-location: margin
+
+execute:
+  warning: false
+  message: false
+---
+
+```{r setup}
+require(rms)
+options(prType='html')
+```
+
+# Problem
+
+* Probabilistic diagnosis of significant (coronary flow-limiting) coronary artery stenosis $~~\rightarrow~ \geq 70$ percent diameter narrowing in $\geq 1$ major coronary artery
+   + Process leads to a model for pre-test probability of CAD
+* Patients presenting with chest pain to Duke University Medical Center and undergoing left heart catheterization/angiogram for it
+* Dataset: `acath`
+* Number of observations: 2258 patients
+* Response: `sigdz`
+* Predictors: age, sex, cholesterol
+* Statistical model: binary logistic regression model
+* See [here](http://hbiostat.org/rmsc/lrm.html#assessment-of-model-fit) and [here](http://hbiostat.org/bbr/dx.html#example-diagnosis-of-coronary-artery-disease-cad)
+
+* Question [Thanks to Tom Stewart for an earlier version of this example.]{.aside}
+* Translate question to model
+* Identify covariates for adjustment
+   + Missing data strategy
+* Determine parameter budget
+   + Effective sample size --> 15:1 rule --> budget
+   + Data reduction needed?
+   + Interactions?
+   + Non-linear terms
+   + Allocation of parameters according to clinical understanding
+* Fit the model
+* Model diagnostics
+   + Overly influential observations (dfbetas, dfits)
+   + Residual diagnostics (linear model usually)
+* Measures of model performance (Optimism corrected)
+   + Discrimination
+   + Calibration
+* Understanding the model (Partial effect plots)
+* Hypothesis tests
+   + Total predictor impact
+   + Linearity
+   + Interaction
+
+
+# Preparation
+
+## Data Import
+
+Exclude patients having missing cholesterol.  This is not good statistical practice and is used only for simplicity.
+
+```{r import,results='asis'}
+getHdata(acath)
+d <- upData(acath,
+            subset = ! is.na(choleste),
+            sex = factor(sex, 0:1, c('male', 'female')))
+html(contents(d), levelType='table')
+```
+
+## Descriptive Statistics
+
+```{r desc, results='asis'}
+html(describe(d))
+```
+
+# Marginal Relationships
+
+Estimate the probability that significant CAD will be found, using moving overlapping proportions and other methods.  The probability estimates will be a function of age and sex then of cholesterol and age.  Use the `movStats` function in `Github`.  Estimate probabilities using the `loess` nonparametric smoother, logistic regression (LR), and moving proportions in overlapping windows.  Use the `addggLayers` function in the `reptools` repository in Github to add spike histograms and extended box plots to depict age and cholesterol marginal distributions. For the second plot, since age is a continuous variable, if we want to stratify on it vertically we must use an arbitrary information-losing categorization (we will model this interaction as continuous later).  We use tertiles of age.
+
+```{r results='asis'}
+#| fig.height: 7.5
+getRs('reptools.r')
+getRs('movStats.r')
+u <- movStats(sigdz ~ age + sex, loess=TRUE, lrm=TRUE,
+              data=d, melt=TRUE, pr='margin')
+hlab <- function(x) {
+  x <- as.character(substitute(x))
+  label(d[[x]], plot=TRUE, default=x)
+}
+g <- ggplot(u, aes(x=age, y=sigdz, col=sex)) + geom_line() +
+  facet_grid(Type ~ Statistic) +
+  xlab(hlab(age)) + ylab(hlab(sigdz)) +
+  guides(color=guide_legend(title='')) +
+  theme(legend.position='bottom')
+g <- addggLayers(g, d, by='sex', value='age', pos='top')
+addggLayers(g, d, by='sex', value='age', type='spike')
+
+d <- upData(d, ageTertile = cut2(age, g=3))
+u <- movStats(sigdz ~ choleste + ageTertile, loess=TRUE, lrm=TRUE,
+              data=d, melt=TRUE, pr='margin')
+g <- ggplot(u, aes(x=choleste, y=sigdz, col=ageTertile)) + geom_line() +
+  facet_grid(Type ~ Statistic) +
+  xlab(hlab(choleste)) + ylab(hlab(sigdz)) +
+  guides(color=guide_legend(title='Age Tertile')) +
+  theme(legend.position='bottom')
+g <- addggLayers(g, d, by='ageTertile', value='choleste', pos='top')
+addggLayers(g, d, by='ageTertile', value='choleste', type='spike')
+```
+
+# Parameter Budget
+
+* Smaller of the number of events and number of non-events: `r (m <- min(table(d$sigdz)))`
+* Rough rule of thumb: this number / 15: `r round(m / 15, 1)`
+* Data reduction/model simplification probably not needed
+* Allocation of parameters according to clinical knowledge
+* Age and cholesterol not known to act linearly
+* Interactions:
++ Cholesterol known to be weaker risk factor as one ages
++ Women and men have different risk trajectories $\rightarrow$ age $\times$ sex interaction likely
+
+* Let u and v be restricted cubic spline functions with 4 knots
+   + 3 parameters = 1 linear + 2 nonlinear
+* u is for age and v is for cholesterol (ch)
+* Base model omits ch $\times$ age interaction
+* Base model: logit = intercept + sex + u(age) + u(age) $\times$ sex + v(ch)
+* Parameters: 1 + 1 + 3 + 3 + 3 = 11
+* How to model age $\times$ ch interaction?
+   + full spline interactions: u(age) $\times$ v(ch)
+      + $3\times 3 = 9$ more parameters
+   + restricted interaction surface (singly nonlinear): u(age) $\times$ ch + age $\times$ v(ch)
+      + $3\times 1 + 1\times 3 - 1 = 5$ parameters (-1 so as not not include the linear $\times$ linear term twice)
+   + linear $\times$ linear interaction: age $\times$ ch
+      + 1 parameter
+
+# Fit Three Models
+
+For model goodness of fit comparisons we focus on AIC and the third $R^2$ measure `R2(p,1520.4)` which is adjusted for `p` model parameters excluding the intercept, and uses an effective sample size of 1520.[The last adjusted $R^2$ is computed in a way that recognizes that binary outcomes have less information than continuous ones so that the effective sample size here is not the total sample size of 2258.  AIC is inversely related to the model LR $\chi^2$ statistic $-2 \times p$.]{.aside}
+
+```{r results='asis'}
+dd <- datadist(d); options(datadist='dd')
+f1 <- lrm(sigdz ~ rcs(age, 4) * (sex + rcs(choleste, 4)),
+          data=d, tol=1e-13)    # tol= gets around error:failure to fit
+f1
+f2 <- lrm(sigdz ~ rcs(age, 4) * sex + rcs(choleste, 4) +
+          rcs(age, 4) %ia% rcs(choleste, 4), data=d)
+f2
+f3 <- lrm(sigdz ~ rcs(age, 4) * sex + rcs(choleste, 4) +
+          age %ia% choleste, data=d)
+f3
+```
+
+```{r}
+c('AIC f1'=AIC(f1), 'AIC f2'=AIC(f2), 'AIC f3'=AIC(f3))
+```
+
+According to AIC, the third model (with a linear $\times$ linear interaction) is most likely to predict future observations the best.  $R^{2}_\text{adj}$ does not penalize for complexity as heavily as AIC, and favors the first model.
+
+## Likelihood Ratio $\chi^2$ Tests Against the Full Model
+
+```{r}
+lrtest(f1, f2)
+lrtest(f1, f3)
+```
+
+* Interpret these
+
+To get a LR test for the overall effect of ch (main effort or interacting with age) one could compare `f1` with a model that ignores ch:
+
+```{r}
+f4 <- lrm(sigdz ~ rcs(age, 4) * sex, data=d)
+lrtest(f1, f4)
+```
+
+* Compare this with the appropriate line in the ANOVA table below
+
+## Wald Tests on the Full Model
+
+Print and plot Wald chunk tests.  A second plot shows relative explained outcome variation by the various risk factors.  This is a variable importance measure.
+
+```{r results='asis'}
+#| fig.height: 2.85
+a <- anova(f1)
+a
+plot(a)
+plot(a, what='proportion chisq')
+```
+
+Also show the ANOVA table with dots indicating which parameters are being tested in each row.
+
+```{r}
+#| column: page-inset-left
+options(prType='plain')
+w <- options(width=120)
+print(a, which='dots')
+options(prType='html');  options(w)  # reset width
+```
+
+* Interpret the tests
+
+The ANOVA includes tests of linearities of interactions, and needed chunk tests that recognize that a main effects-only test is not meaningful when the main effect is contained in an interaction.
+
+# Diagnostics
+
+From here on we use the simplest model (with respect to age $\times$ ch), `f3`.  Use a threshold for DFFITS of 0.25.
+
+```{r}
+# Refit f3 to include raw data for diagnostics and validation
+f <- update(f3, x=TRUE, y=TRUE)
+w <- which.influence(f, 0.25)
+w
+show.influence(w, d)
+```
+
+* Do you do anything about this?
+
+# Partial Effect Plots
+
+We don't use the default `rms` output of showing all partial effects on one large plot, because the ch effect is age-specific.   For the ch plot evaluate predictions at selected ages. 
+```{r}
+agec <- c(40, 45, 50, 55, 60)
+ggplot(Predict(f, age, sex))
+ggplot(Predict(f, choleste, age=agec))
+```
+
+Keep age continuous for make three types of 3-d plots.  Transform from predicted logits to predicted risks.  For continuous $\times$ continuous displays it is important not to extrapolate.  The `rms` `perimeter` function finds the boundary in two dimensions where the sample size is 10 subjects beyond the boundary.
+
+```{r}
+perim <- with(d, perimeter(choleste, age))
+p <- Predict(f, choleste, age, fun=plogis)
+bplot(p, perim=perim)   # is in rms; type ?bplot for details
+bplot(p, lfun=wireframe, alpha.regions=.2, perim=perim)
+bplot(p, lfun=contourplot, perim=perim)
+```
+
+# Internal Validation
+
+* Use the bootstrap with 300 resamples
+* This is a strong internal validation except for not taking into account the tests and AIC that were used to arrive a model `f3`
+
+```{r results='asis'}
+html(validate(f, B=300))
+```
+
+* Interpret
+
+```{r}
+cal <- calibrate(f, B=300)
+plot(cal)
+```
+
+* Interpret
+
+# Computing Environment
+
+`r markupSpecs$html$session()`
