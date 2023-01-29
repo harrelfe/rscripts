@@ -227,7 +227,7 @@ The `Hmisc` `fit.mult.impute` function makes 10 completed datasets, fits 10 mode
 
 ```{r}
 f <- fit.mult.impute(log(totcst) ~ rcs(age, 4) + rcs(meanbp, 4) + rcs(hrt, 4) +
-  sex + dzgroup + num.co +scoma + income, ols, a, data=d)
+  sex + dzgroup + num.co + scoma + income, ols, a, data=d)
 ```
 
 ```{r results='asis'}
@@ -250,6 +250,45 @@ plot(v)
 
 * What are the near redundancies?
 
+
+# Ordinal Predictor
+
+If an ordinal predictor has few levels, we generally include it into a regression model as a nominal categorical variable. If an ordinal variable has many levels, we generally treat it as a continuous variable and include it into the regression as a restricted cubic spline. However, what are the options for an ordinal variable with a middle number of levels?
+
+* Consider number of comorbidities: `num.co`
+* Predict `log(slos)`
+* This predicts mean `slos` which under a normality assumption for the residuals is also the median `slos`
+* Anti-log of predicted value is median `slos`
+* No missing data on the only two variables being analyzed (`num.co, slos`)
+* Compare a variety of ways of modeling `num.co`; focus on $R^2_\text{adj}$
+* Only 1 patient has `num.co=7`
+* Model with and without curtailing `num.co` at 6
+* Add a categorical version of `num.co` to the dataset
+* In R `pmin(x, 6)` ("parallel minimum") takes for every observation the minimum of `x` and 6
+* For count variables with not many categories, ties prevent us from rationally choosing knots for splines
+* Quadratic relationship often works well enough (`pol(x, 2)`)
+* Sometimes zero has a special meaning $\rightarrow$ fit a final model that is quadratic in `num.co` but with a discontinuity at `num.co`=0
+
+```{r}
+d <- upData(d, num.co7 = factor(num.co),
+               num.co6 = factor(pmin(num.co, 6)))
+```
+
+```{r results='asis'}
+ols(log(slos) ~ num.co, data=d)
+ols(log(slos) ~ pmin(num.co, 6), data=d)
+ols(log(slos) ~ pol(num.co, 2), data=d)
+ols(log(slos) ~ pol(pmin(num.co, 6), 2), data=d)
+ols(log(slos) ~ num.co7, data=d)
+ols(log(slos) ~ num.co6, data=d)
+# Define a quadratic function with discontuity at zero for `gTrans`
+g <- function(x) cbind(zero = x == 0, num.co = x, 'num.co^2' = x ^ 2)
+ols(log(slos) ~ gTrans(num.co, g), data=d)
+```
+
+* For the 0-6 categorical model look at linearity by seeing how the $\hat{\beta}$ progress
+* Other interpretations
+* Conclusions
 
 # Computing Environment
 
