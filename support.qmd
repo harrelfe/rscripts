@@ -257,7 +257,7 @@ If an ordinal predictor has few levels, we generally include it into a regressio
 
 * Consider number of comorbidities: `num.co`
 * Predict `log(slos)`
-* This predicts mean `slos` which under a normality assumption for the residuals is also the median `slos`
+* This predicts mean log `slos` which under a normality assumption for the residuals is also the median log `slos`
 * Anti-log of predicted value is median `slos`
 * No missing data on the only two variables being analyzed (`num.co, slos`)
 * Compare a variety of ways of modeling `num.co`; focus on $R^2_\text{adj}$
@@ -272,14 +272,16 @@ If an ordinal predictor has few levels, we generally include it into a regressio
 ```{r}
 d <- upData(d, num.co7 = factor(num.co),
                num.co6 = factor(pmin(num.co, 6)))
+dd <- datadist(d)
 ```
 
 ```{r results='asis'}
+# In the code below (x) means "execute x and print its result"
 ols(log(slos) ~ num.co, data=d)
 ols(log(slos) ~ pmin(num.co, 6), data=d)
-ols(log(slos) ~ pol(num.co, 2), data=d)
+(f3 <- ols(log(slos) ~ pol(num.co, 2), data=d))
 ols(log(slos) ~ pol(pmin(num.co, 6), 2), data=d)
-ols(log(slos) ~ num.co7, data=d)
+(f5 <- ols(log(slos) ~ num.co7, data=d))
 ols(log(slos) ~ num.co6, data=d)
 # Define a quadratic function with discontuity at zero for `gTrans`
 g <- function(x) cbind(zero = x == 0, num.co = x, 'num.co^2' = x ^ 2)
@@ -289,6 +291,41 @@ ols(log(slos) ~ gTrans(num.co, g), data=d)
 * For the 0-6 categorical model look at linearity by seeing how the $\hat{\beta}$ progress
 * Other interpretations
 * Conclusions
+
+## Compare Estimates
+
+Let's compare estimates of median `slos` as a function of `num.co`:
+
+* stratified sample medians (lower precision but less bias if log normal distribution doesn't fit)
+* saturated linear model (`num.co` categorical with all levels)
+* quadratic model
+
+```{r}
+# Get stratified sample medians
+# Note that sample medians are hurt by ties in raw data
+s <- summary(slos ~ num.co, fun=median, data=d)
+# For more information run ?summary.formula.response (in Hmisc)
+print(s, markdown=TRUE)
+smeds <- with(d, tapply(slos, num.co, median))
+# To use data.table istead:
+#  require(data.table)
+#  setDT(d)   # convert d to a data.table
+#  data.table needs all groups to return the same value type
+#  g <- function(x) as.double(median(x, na.rm=TRUE))
+#  smeds <- d[, g(slos), keyby=num.co]  # keyby: sort into ascending order
+m3 <- Predict(f3, num.co,  fun=exp)$yhat
+m5 <- Predict(f5, num.co7, fun=exp)$yhat
+w <- data.frame('Sample<br>Medians'    = smeds,
+                'Quadratic<br>Model'   = round(m3, 1),
+                'Categorical<br>Model' = round(m5, 1),
+                check.names=FALSE)
+# kabl (almost the same as knitr::kable) is in reptools.r
+# It nicely formats tables in html using markdown
+kabl(w)
+```
+
+* The categorical model is saturated (maximally flexible) on the right hand side of the equation.  Why do estimates from it differ from the sample medians?
+* Do you trust the sample median and categorical model estimates for 7 comorbidities?
 
 # Computing Environment
 
