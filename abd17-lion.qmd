@@ -202,7 +202,12 @@ The `rms` package `Predict` function by default computes confidence limits for e
 ```{r}
 a <- Predict(f, prop=pseq)  # normally Predict(f, prop)
 b <- Predict(f, prop=pseq, conf.type='individual')
-# Combine two types of estimates (point estimates don't vary)
+ggplot(b) + geom_point(aes(prop, age), d) +
+  geom_ribbon(aes(x=prop, ymin=lower, ymax=upper), a, alpha=I(0.2)) +
+  guides(color=guide_legend(title='')) +   # omit legend title
+  theme(legend.position='bottom')          # put legend at bottom
+
+# To put both confidence bands and the graph when you don't need to show raw data: 
 u <- rbind(Mean=a, Individual=b)
 ggplot(u) +
   guides(color=guide_legend(title='')) +   # omit legend title
