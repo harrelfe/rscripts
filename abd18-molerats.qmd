@@ -43,6 +43,7 @@ getRs('abd.r')
 * observations: 35
 * Response: energy (daily energy expenditure)
 * Predictors: mass (body mass); caste (worker, lazy)
+* Goal: How different is mean daily energy expenditure between busy and lazy molerats when adjusted for differences in body mass?
 
 # Data Import
 
@@ -125,7 +126,7 @@ where the 0/1 indicator $[u]$ is 1 if $u$ is true, 0 if $u$ is false.
 # Fit the model
 
 We fit model `f` with interaction and model `g` without interaction.
-Note that the `*` notation in R automatically includes main effects along with interactions of variables on either side of `*`.  R works best when transformations are specified inside the model formula. [Note there is currently a bug that prevents the $\LaTeX$ mathematical syntax from rendering properly.  This is fixed in the `rms` version run here (6.4-1) but will not render correctly in the publicly available version (6.4-0).]{.aside}
+Note that the `*` notation in R automatically includes main effects along with interactions of variables on either side of `*`.  R works best when transformations are specified inside the model formula. 
 
 ```{r results='asis'}
 dd <- datadist(d); options(datadist='dd')
