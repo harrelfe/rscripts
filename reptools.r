@@ -150,7 +150,7 @@ makecallout <- function(...) {
            print = cat(.k., sep='\n'),  # already print()'d
            cat   = cat(.k., sep='\n'),
            run   = cat(knitr::knit(text=knitr::knit_expand(text=.k.),
-                               quiet=TRUE)))
+                                   quiet=TRUE)))
     return(invisible())
   }
   .k.
