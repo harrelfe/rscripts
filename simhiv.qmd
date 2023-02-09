@@ -1,0 +1,154 @@
+--- 
+title: "Ordinal Regression for Simulated HIV Data"
+author:
+  - name: Frank Harrell
+    affiliation: Department of Biostatistics<br>Vanderbilt University School of Medicine<br>MSCI Biostatistics II
+date: last-modified
+format:
+  html:
+    self-contained: true
+    number-sections: true
+    number-depth: 3
+    anchor-sections: true
+    smooth-scroll: true
+    theme: journal
+    toc: true
+    toc-depth: 3
+    toc-title: Contents
+    toc-location: left
+    code-link: false
+    code-tools: true
+    code-fold: show
+    code-block-bg: "#f1f3f5"
+    code-block-border-left: "#31BAE9"
+    reference-location: margin
+    fig-cap-location: margin
+
+execute:
+  warning: false
+  message: false
+---
+
+```{r setup}
+require(rms)
+options(prType='html')
+```
+
+# Problem
+
+* From [Liu, Shepherd, Li, Harrell (2017)](https://biostat.app.vumc.org/wiki/Main/ArchivedAnalyses)
+* Simulated data to mimic real data from an HIV study
+* N observations: 1796
+* Goal: Examine predictors of post-treatment CD4 count
+
+To avoid having to make a choice of how to transform the dependent variable, we use ordinal regression for this continuous variable.  The `rms` `orm` function is made for that.  We will use the proportional odds ordinal logistic semiparametric regression model, commonly called the proportional odds model or the ordinal logistic model.  There are 447 distinct CD4 counts in the data so we will have 446 intercepts in the ordinal model.
+
+# Data Import
+
+```{r import, results='asis'}
+getHdata(simhiv)
+d <- upData(simhiv,
+            rename = .q(init.class = class, init.year = year,       preARTAIDS.clinical = aids),
+            labels = .q(aids = "Pre-ART AIDS") )
+html(contents(d), levelType='table')
+```
+
+# Descriptive Statistics
+
+
+```{r desc, results='asis'}
+html(describe(d))
+```
+
+See how strongly predictors relate to each other.  Note that the Spearman $\rho$ rank correlations used in this call to `varclus` are transformation-invariant.
+
+```{r}
+plot(varclus(~ . - post.cd4, data=d))
+```
+
+Two of the continuous predictors have very skewed distributions.  Taking $\sqrt[3]{}$ of them made for a nicer distribution and is likely to slightly linearize the needed transformations as predictors.  One has zeros so log cannot be used.  We stratify those predictors by baseline AIDS status.
+
+```{r}
+cr <- function(x) x ^ (1/3)
+with(d, histboxp(x=nadir.cd4,     group=aids))
+with(d, histboxp(x=cr(nadir.cd4), group=aids))
+with(d, histboxp(x=pre.rna,       group=aids))
+with(d, histboxp(x=cr(pre.rna),   group=aids))
+```
+
+# Fit the PO Model
+
+Let's use AIC to choose between 4 knots for continuous variables, and 5 knots.
+```{r}
+dd <- datadist(d); options(datadist='dd')
+f <- orm(post.cd4 ~ site + male + rcs(age, 4) + class + route +
+         rcs(cr(nadir.cd4), 4) + rcs(year, 4) + rcs(cr(pre.rna), 4) +
+         aids, data=d)
+g <- orm(post.cd4 ~ site + male + rcs(age, 5) + class + route +
+         rcs(cr(nadir.cd4), 5) + rcs(year, 5) + rcs(cr(pre.rna), 5) +
+         aids, data=d)
+AIC(f)   # better for 4-knot model
+AIC(g)
+```
+
+```{r results='asis'}
+f
+```
+
+# Assess Strength of Associations
+
+```{r results='asis'}
+a <- anova(f)
+a
+plot(a)
+```
+
+# Partial Effect Shapes and Strengths
+
+```{r}
+ggplot(Predict(f))
+```
+
+Let's convert the $y$-axis to median CD4.  In doing so, the adjustment variable settings matter greatly.
+
+```{r}
+quan <- Quantile(f)
+med  <- function(lp) quan(0.5, lp)
+ggplot(Predict(f, fun=med), ylab='Median CD4')
+```
+
+# Compare With a Model With Linear Effects
+
+```{r}
+h <- orm(post.cd4 ~ site + male + age + class + route +
+         cr(nadir.cd4) + year + cr(pre.rna) +
+         aids, data=d)
+lrtest(f, h)
+AIC(f)
+AIC(h)
+```
+
+According to AIC (backed up by likelihood ratio $\chi^2$ test) the linear model (though with $\sqrt[3]{}$ pre-transformations for two variables) is more likely to predict future observations better.  That's because there is more overfitting, with the possibly added predictive value not being worth the extra d.f.
+
+In the linear model see if there is evidence for anything other than `site` being associated with CD4 count.
+
+```{r}
+fs <- orm(post.cd4 ~ site, data=d)
+lrtest(h, fs)
+```
+
+Do the corresponding chunk test with a more approximate method (Wald test):
+
+```{r results='asis'}
+anova(h, male, age, class, route, nadir.cd4, year, pre.rna, aids)
+```
+
+# Point Effect Estimates from Simpler Model
+
+```{r}
+plot(summary(h), log=TRUE)
+```
+
+# Computing Environment
+
+`r markupSpecs$html$session()`
