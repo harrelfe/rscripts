@@ -1,0 +1,28 @@
+---
+title: "Spline Examples"
+date: last-modified
+format:
+  html:
+    self-contained: true
+execute:
+  warning: false
+  message: false
+---
+
+```{r}
+require(rms)
+options(prType='html')
+n <- 100
+set.seed(1)
+x <- runif(100)
+y <- abs(x - 0.5) + runif(100, -.2, .2)
+# Need mapping= since no data before aes
+ggplot(mapping=aes(x, y)) + geom_point()
+# Could also do plot(x, y)
+dd <- datadist(x); options(datadist='dd')
+# Try various models: linear, polynomial, restricted cubic spline, linear spline
+f <- ols(y ~ x)
+ggplot(Predict(f))
+specs(f)
+latex(f)
+```
