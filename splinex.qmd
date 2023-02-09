@@ -16,13 +16,17 @@ n <- 100
 set.seed(1)
 x <- runif(100)
 y <- abs(x - 0.5) + runif(100, -.2, .2)
+real <- annotate('line', x=c(0, .5, 1), y=c(.5, 0, .5), col='red', alpha=0.4)
 # Need mapping= since no data before aes
-ggplot(mapping=aes(x, y)) + geom_point()
+ggplot(mapping=aes(x, y)) + geom_point() + real
 # Could also do plot(x, y)
 dd <- datadist(x); options(datadist='dd')
+# Fit the true model
+f <- ols(y ~ abs(x - 0.5))
+ggplot(Predict(f)) + real
 # Try various models: linear, polynomial, restricted cubic spline, linear spline
 f <- ols(y ~ x)
-ggplot(Predict(f))
+ggplot(Predict(f)) + real
 specs(f)
 latex(f)
 ```
