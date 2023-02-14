@@ -52,7 +52,7 @@ contents(d)
 
 # Descriptive Statistics
 
-```{r desc}
+```{r desc,results='asis'}
 des <- describe(d)
 
 # Function to render multiple plots such as those produced by plot(describe(...))
@@ -68,12 +68,16 @@ plmult <- function(x) {
   do.call(tagList, w)
 }
 
-plmult(plot(des))
+# plmult(plot(des))
 
 # Brute-force way:
 # p <- plot(des)
 # p$Categorical   # will plot correctly, just without a heading
 # p$Continuous    # " " "
+
+# Better: need results='asis':
+getRs('reptools.r')
+maketabs(plot(des))
 ```
 
 # Plot Raw Data
