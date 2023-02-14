@@ -69,6 +69,11 @@ plmult <- function(x) {
 }
 
 plmult(plot(des))
+
+# Brute-force way:
+# p <- plot(des)
+# p$Categorical   # will plot correctly, just without a heading
+# p$Continuous    # " " "
 ```
 
 # Plot Raw Data
