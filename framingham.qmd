@@ -31,7 +31,8 @@ execute:
 
 ```{r setup}
 require(rms)
-options(prType='html')
+options(prType='html', grType='plotly')    # plotly for interactive graphs from describe()
+getRs('reptools.r')  # for maketabs
 ```
 
 # Problem
@@ -62,14 +63,14 @@ d <- upData(fram,
             age = ifelse(id == 2642, 103, age))
 ```
 
-```{r results='asis'}
-html(contents(d), levelType='table')
+```{r}
+print(contents(d), levelType='table')
 ```
 
 ## Descriptive Statistics
 
-```{r desc, results='asis'}
-html(describe(d))
+```{r desc,results='asis'}
+maketabs(plot(describe(d)))   # needs results='asis'
 ```
 
 The age outlier is already seen in the spike histogram above.
@@ -83,7 +84,7 @@ The age outlier is already seen in the spike histogram above.
 * Taking log(`sbp`) solved $\frac{1}{2}$ the problem
 
 We take logs of BMI and cholesterol in the hope of leading to more linear relationships.
-```{r results='asis'}
+```{r}
 dd <- datadist(d); options(datadist='dd')
 f <- ols(log(sbp) ~ sex * (log(bmi) + age + log(scl)), data=d, x=TRUE)
 f
@@ -129,7 +130,7 @@ d <- fram
 
 ## Fit
 
-```{r results='asis'}
+```{r}
 dd <- datadist(d); options(datadist='dd')
 f <- ols(log(sbp) ~ sex * (log(bmi) + age + log(scl)),
          data=d, x=TRUE, y=TRUE)   # x, y needed for validations
@@ -138,7 +139,7 @@ f
 
 Before preceding let's check the linearity assumptions for the continuous predictors by expanding them into splines with 4 knots.
 
-```{r results='asis'}
+```{r}
 g <- ols(log(sbp) ~ sex * (rcs(log(bmi),4) +
          rcs(age, 4) + rcs(log(scl), 4)),
          data=d, x=TRUE, y=TRUE)   # x, y needed for validations
