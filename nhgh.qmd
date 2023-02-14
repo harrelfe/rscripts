@@ -31,7 +31,7 @@ execute:
 
 ```{r setup}
 require(rms)
-options(prType='html')
+options(prType='html', grType='plotly')   # plotly makes certain graphics interactive
 ```
 
 # Problem: How Are Demographics Associated with Height?
@@ -43,22 +43,37 @@ options(prType='html')
 
 # Data Import
 
-```{r import,results='asis'}
+```{r import}
 getHdata(nhgh)
 d <- upData(nhgh, keep=.q(sex, age, re, ht, SCr, gh,
   dx, tx, wt, bmi, leg, arml, armc, waist, tri, sub))
-html(contents(d))
+contents(d)
 ```
 
 # Descriptive Statistics
 
-```{r desc, results='asis'}
-html(describe(d))
+```{r desc}
+des <- describe(d)
+
+# Function to render multiple plots such as those produced by plot(describe(...))
+plmult <- function(x) {
+  require(htmltools)
+  m <- length(x)
+  w <- vector('list', 2 * m)
+  nam <- names(x)
+  for(i in 1 : m) {
+    w[[2*i - 1]] <- h5(nam[i])
+    w[[2*i]]     <- x[[i]]
+  }
+  do.call(tagList, w)
+}
+
+plmult(plot(des))
 ```
 
 # Plot Raw Data
 
-There are many tied values of `ht` so use hexagonal binning to depict frequency counts of coincident points.  Use `ggplot2` faceting to stratify by `re` and `sex`.  Make the plot taller than usual with chunk markup `#| fig.height: 8.5` (8.5 inches).
+There are many tied values of `ht` so use hexagonal binning to depict frequency counts of coincident points.  Use `ggplot2` faceting to stratify by `re` and `sex`.  Make the plot taller than usual with chunk markup `#| fig.height: 8.5` (8.5 inches). [If you have trouble getting this too run try installing the `hexbin` package.}{.aside}
 
 ```{r}
 #| fig.height: 8.5
@@ -79,7 +94,7 @@ ggplot(d, aes(x=age, y=ht)) +
 * No assumption of linearity for continuous predictors
 * Allow for age $\times$ sex interaction (different shapes of age relationship by sex)
 
-```{r results='asis'}
+```{r}
 dd <- datadist(d); options(datadist='dd')
 # x=TRUE needed for studentized residuals
 f <- ols(ht ~ re + sex * rcs(age, 4), data=d, x=TRUE)
@@ -105,7 +120,6 @@ ggplot(mapping=aes(sample=r)) + geom_qq() + stat_qq_line() +
 
 Find observations that if removed would change a parameter by more than 0.15 standardized (by standard error) units.[Because of the large sample size there were no overly influential observations at standard cutoffs such as 0.4.  The cutoff was relaxed to 0.15 for illustration.]{.aside}  `which.influence` in `rms` recognizes that some predictors have multiple $\beta$s associated with them (e.g., splined predictors or categorical predictors like `re` with > 2 levels).  It finds observations that are influential on *any* of the predictor's parameters.
 
-**NOTE**: The output of `show.influence` will be incorrect for you until `rms` 6.4-2 is released.  The output below is correct.
 
 ```{r}
 w <- which.influence(f, 0.15)
