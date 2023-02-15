@@ -76,18 +76,18 @@ options(prType='html')
 
 Exclude patients having missing cholesterol.  This is not good statistical practice and is used only for simplicity.
 
-```{r import,results='asis'}
+```{r import}
 getHdata(acath)
 d <- upData(acath,
             subset = ! is.na(choleste),
             sex = factor(sex, 0:1, c('male', 'female')))
-html(contents(d), levelType='table')
+print(contents(d), levelType='table')
 ```
 
 ## Descriptive Statistics
 
-```{r desc, results='asis'}
-html(describe(d))
+```{r desc}
+describe(d)
 ```
 
 # Marginal Relationships
@@ -153,7 +153,7 @@ addggLayers(g, d, by='ageTertile', value='choleste', type='spike')
 
 For model goodness of fit comparisons we focus on AIC and the third $R^2$ measure `R2(p,1520.4)` which is adjusted for `p` model parameters excluding the intercept, and uses an effective sample size of 1520.[The last adjusted $R^2$ is computed in a way that recognizes that binary outcomes have less information than continuous ones so that the effective sample size here is not the total sample size of 2258.  AIC is inversely related to the model LR $\chi^2$ statistic $-2 \times p$.]{.aside}
 
-```{r results='asis'}
+```{r}
 dd <- datadist(d); options(datadist='dd')
 f1 <- lrm(sigdz ~ rcs(age, 4) * (sex + rcs(choleste, 4)),
           data=d, tol=1e-13)    # tol= gets around error:failure to fit
@@ -194,7 +194,7 @@ lrtest(f1, f4)
 
 Print and plot Wald chunk tests.  A second plot shows relative explained outcome variation by the various risk factors.  This is a variable importance measure.
 
-```{r results='asis'}
+```{r}
 #| fig.height: 2.85
 a <- anova(f1)
 a
@@ -206,10 +206,7 @@ Also show the ANOVA table with dots indicating which parameters are being tested
 
 ```{r}
 #| column: page-inset-left
-options(prType='plain')
-w <- options(width=120)
 print(a, which='dots')
-options(prType='html');  options(w)  # reset width
 ```
 
 * Interpret the tests
@@ -254,8 +251,8 @@ bplot(p, lfun=contourplot, perim=perim)
 * Use the bootstrap with 300 resamples
 * This is a strong internal validation except for not taking into account the tests and AIC that were used to arrive a model `f3`
 
-```{r results='asis'}
-html(validate(f, B=300))
+```{r}
+validate(f, B=300)
 ```
 
 * Interpret
