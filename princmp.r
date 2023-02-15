@@ -28,7 +28,7 @@ princmp <- function(formula, data=environment(formula),
   }
 
   if(sw) {
-    require(leaps)
+    if(! require(leaps)) stop('You must install the leaps package')
     for(j in 1 : k) {
       cat('\nStepwise Approximations to PC', j, '\n', sep='')
       .pc. <- g$scores[, j]
