@@ -1,7 +1,8 @@
-princmp <- function(x, k=1, data, cor=TRUE, offset=0.8, col=1,
+princmp <- function(x, k=min(5, p), data, cor=TRUE, offset=0.8, col=1,
                     adj=0, orig=TRUE) {
-  g <- princomp(x, cor=cor, data=data)
+  g  <- princomp(x, cor=cor, data=data)
   co <- unclass(g$loadings)
+  p  <- ncol(co)
   cat('\nPC Coefficients of Standardized Variables\n')
   print(round(co[, 1 : k], 4))
   p <- ncol(co)
