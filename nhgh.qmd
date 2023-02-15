@@ -214,8 +214,7 @@ redun(~ age + bmi + ht + wt + leg + arml + armc + waist + tri + sub + re + sex,
 ```{r}
 #| fig.height: 4
 getRs('princmp.r')   # gives a lot of useful output and decodes PCs with stepwise regression
-source('~/R/rscripts/princmp.r')
-pc <- princmp(~ age + ht + wt + leg + arml + armc + waist + tri + sub +re,
+pc <- princmp(~ age + ht + wt + leg + arml + armc + waist + tri + sub,
               data=d, sw=TRUE)
 pc1 <- pc[, 1]   # vector of PC1
 pc2 <- pc[, 2]   # PC2
@@ -228,7 +227,7 @@ pc2 <- pc[, 2]   # PC2
 The `princmp` function also can do sparse PCs if you have installed the `pcaPP` package.  This results in many of the loadings being set exactly to zero, effectively doing variable clustering and PC simultaneously.
 
 ```{r}
-spc <- princmp(~ age + ht + wt + leg + arml + armc + waist + tri + sub +re,
+spc <- princmp(~ age + ht + wt + leg + arml + armc + waist + tri + sub,
                data=d, sw=TRUE, method='sparse')
 ```
 
