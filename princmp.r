@@ -9,7 +9,8 @@ princmp <- function(formula, data=environment(formula),
   
   X  <- model.matrix.lm(formula, data)
   cat('Used', nrow(X), 'observations with no NAs out of', nrow(data), '\n')
-  X  <- X[, -1]  # remove intercept
+  X  <- X[, -1, drop=FALSE]  # remove intercept
+  p  <- ncol(X)
   g  <- switch(method,
                regular = princomp(X, cor=cor),
                sparse  = sPCAgrid(X, k=k, method='sd',
@@ -18,7 +19,6 @@ princmp <- function(formula, data=environment(formula),
                                   scores=TRUE, maxiter=10) )
   
   co <- unclass(g$loadings)
-  p  <- ncol(co)
   prz <- function(x, m) {
     x <- format(round(x, m), zero.print=FALSE)
     print(x, quote=FALSE)

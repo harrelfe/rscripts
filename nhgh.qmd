@@ -214,6 +214,7 @@ redun(~ age + bmi + ht + wt + leg + arml + armc + waist + tri + sub + re + sex,
 ```{r}
 #| fig.height: 4
 getRs('princmp.r')   # gives a lot of useful output and decodes PCs with stepwise regression
+source('~/R/rscripts/princmp.r')
 pc <- princmp(~ age + ht + wt + leg + arml + armc + waist + tri + sub +re,
               data=d, sw=TRUE)
 pc1 <- pc[, 1]   # vector of PC1
@@ -233,9 +234,13 @@ spc <- princmp(~ age + ht + wt + leg + arml + armc + waist + tri + sub +re,
 
 * Let's see how regular and sparce PCs predict glycohemoglobin in an ordinal model
 
-```{r}
-for(k in 1:5) print(orm(gh ~  pc[, 1:k], data=d))
-for(k in 1:5) print(orm(gh ~ spc[, 1:k], data=d))
+```{r results='asis'}
+w <- vector('list', 10)
+for(k in 1:5) w[[k]]   <- orm(gh ~  pc[, 1:k], data=d)
+for(k in 1:5) w[[k+5]] <- orm(gh ~ spc[, 1:k], data=d)
+nam <- c(paste0('PC1-', 1:5), paste0('Sparse PC1-', 1:5))
+names(w) <- nam
+maketabs(w)
 ```
 
 # Computing Environment
