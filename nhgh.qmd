@@ -213,40 +213,15 @@ redun(~ age + bmi + ht + wt + leg + arml + armc + waist + tri + sub + re + sex,
 
 ```{r}
 #| fig.height: 4
-pc <- princomp(~ age + ht + wt + leg + arml + armc + waist + tri + sub,
-  cor=TRUE, data=d)
-plot(pc, type='lines', main='')
-# Add cumulative fraction of variance explained ("scree plot")
-addscree <- function(x, npcs=min(10, length(x$sdev)),
-                     plotv=FALSE,
-                     col=1, offset=.8, adj=0, pr=FALSE) {
-  vars <- x$sdev^2
-  cumv <- cumsum(vars)/sum(vars)
-  text(1:npcs, vars[1:npcs] + offset*par('cxy')[2],
-       as.character(round(cumv[1:npcs], 2)),
-       srt=45, adj=adj, cex=.65, xpd=NA, col=col)
-  if(plotv) lines(1:npcs, vars[1:npcs], type='b', col=col)
-}
-addscree(pc)
+getRs('princmp.r')   # simplifies things
+pc <- princmp(~ age + ht + wt + leg + arml + armc + waist + tri + sub,
+              data=d)
+pc1 <- pc[, 1]   # vector of PC1
+pc2 <- pc[, 2]   # PC2
 ```
 
 * How many components would you choose?
 
-Get the coefficients of the first 2 PCs by regressing the PCs on the original variables.  Complication: number of rows in the matrix of PCs equals the number of subjects with no variables missing.  This will not align with the original data.  Make a subset of the original data.
-
-```{r results='asis'}
-pcs <- pc$scores    # pick off all PCs
-pc1 <- pcs[, 1]     # PC1 is 1st column of pcs
-pc2 <- pcs[, 2]
-w   <- subset(d, ! is.na(age + ht + wt + leg + arml + armc +
-              waist + tri + sub))
-ols(pc1 ~ age + ht + wt + leg + arml + armc + waist + tri + sub,
-    data=w)
-ols(pc2 ~ age + ht + wt + leg + arml + armc + waist + tri + sub,
-    data=w)
-```
-
-* Make sure you understand why $R^{2} = 1.0$
 * To use PC-based data reduction in outcome prediction, substitute `pc1`, `pc2`, ... for some of the constituent variables.
 
 # Computing Environment
