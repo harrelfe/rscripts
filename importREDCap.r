@@ -183,8 +183,6 @@ cleanupREDCap <- function(d, mchoice=TRUE, rmhtml=TRUE, rmrcl=TRUE,
   # drop is an optional vector of variable names to remove from the dataset.
   # It is OK for drop to contain variables not present; these names are ignored.
   #
-  # Set pr=FALSE to not print information about changes made to the dataset.
-  #
   # ... arguments are passed to mChoice
   #
 
@@ -339,6 +337,7 @@ combdt <- function(a, b) {
       set(d, j=n[j], value=fun(d[[j]]))
       cred <- rbind(cred, data.frame(name=n[j], description=nm))
     }
+  }
          
   if(length(entrydate)) {
   if(! length(id)) stop('must specify id = ~ idvar when specifying entrydate')
