@@ -334,7 +334,12 @@ combdt <- function(a, b) {
     i     <- if(regex) grep(v, n, ignore.case=ig)
              else if(ig) which(tolower(n) == tolower(v)) else which(n == v)
     if(length(i)) for(j in i) {
-      set(d, j=n[j], value=fun(d[[j]]))
+      x <- d[[j]]
+      set(d, j=n[j], value=fun(x))
+      lab <- label(x)
+      un  <- units(x)
+      if(lab != '') setatr(d[[n[j]]], 'label', lab)
+      if(un  != '') setatr(d[[n[j]]], 'units', un)
       cred <- rbind(cred, data.frame(name=n[j], description=nm))
     }
   }
