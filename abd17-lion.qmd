@@ -209,17 +209,20 @@ ggplot(ab) +
   theme(legend.position='bottom')          # put legend at bottom
 
 # To add raw data to this plot the raw dataset must have a variable
-# added to it (.set.) that `rbind` used to distinguish types of bands
+# added to it (.set.) that rbind used to distinguish types of bands
 # We set .set. to blank for points as this is not applicable
 d$.set. <- ''
 ggplot(ab, legend.position='none') +
   geom_point(aes(prop, age), data=d)
 
-# Another approach to including raw data
+# Another approach to including raw data, not using rbind
 ggplot(b) + geom_point(aes(prop, age), d) +
-  geom_ribbon(aes(x=prop, ymin=lower, ymax=upper), a, alpha=0.2) +
+  geom_ribbon(aes(x=prop, ymin=lower, ymax=upper), a, alpha=0.2, fill='red') +
   guides(color=guide_legend(title='')) +   # omit legend title
   theme(legend.position='bottom')          # put legend at bottom
+
+# Another approach not using rbind
+ggplot()
 ```
 
 # A different summary measure of individual lion predictive accuracy

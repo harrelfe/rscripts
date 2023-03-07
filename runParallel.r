@@ -47,7 +47,7 @@
 ##
 ## Usage:
 ##  require(Hmisc)
-##  getRs('runParallel.r', put='source')
+##  getRs('runParallel.r')
 
 runParallel <- function(onecore, reps, seed=round(runif(1, 0, 10000)),
                         cores=max(1, parallel::detectCores() - 1),
