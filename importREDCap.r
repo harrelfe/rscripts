@@ -241,7 +241,8 @@ combdt <- function(a, b) {
   if(rmhtml) {
     trans <- function(x) {
       rem <- c('<p>', '</p>', '</div>', '</span>', '<p .*?>', '<div .*?>', '<span .*?>',
-               '<br>', '<br />', '\\n')
+               '<br>', '<br />', '\\n', 'strong>', '</strong>', '<tbody>', '</tbody>',
+           '<tr>', '</tr>', '<td.*?>', '<font.*?>', '<u>', '</u>')
       for(a in rem) x <- gsub(a, '', x)
       x
       }
