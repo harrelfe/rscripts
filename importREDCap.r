@@ -215,25 +215,32 @@ combdt <- function(a, b) {
 
   if(length(drop)) {
     todrop <- intersect(names(d), drop)
-    d[, (todrop) := NULL]
-    cred <- rbind(crednotes,
-                  data.frame(name = todrop, description = 'dropped') )
+    if(length(todrop)) {
+      d[, (todrop) := NULL]
+      cred <- rbind(cred,
+                    data.frame(name = todrop, description = 'dropped') )
+      }
   }
 
   n <- names(d)
   
   if(check) {
-    dats <- n[grep('dat', n, ignore.case=TRUE)]
+    dsnt <- if(length(dsname)) paste(' dataset:', dsname)
+    dats <- n[grepl('dat', n, ignore.case=TRUE) &
+              ! grepl('data', n, ignore.case=TRUE)]
     if(length(dats)) {
-      isdate <- sapply(d[[dats]], function(x) inherits(x, c('Date', 'POSIXct', 'dates', 'chron')))
+      isdate <- sapply(as.data.frame(d)[dats],
+                       function(x)
+                         inherits(x, c('Date', 'POSIXct', 'dates', 'chron')))
       if(any(! isdate)) cat('Variables with dat in names are not of date type:',
-                            paste(dats[! isdate], collapse=', '), '\n')
+                            paste(dats[! isdate], collapse=', '), dsnt, '\n')
     }
     tims <- n[grep('tim', n, ignore.case=TRUE)]
     if(length(tims)) {
-      istim <- sapply(d[[tims]], function(x) inherits(x, c('POSIXt', 'POSIXct', 'times')))
+      istim <- sapply(as.data.frame(d)[tims],
+                      function(x) inherits(x, c('POSIXt', 'POSIXct', 'times')))
       if(any(! istim)) cat('Variables with tim in names are not of time type:',
-                          paste(tims[! istim], collapse=', '), '\n')
+                          paste(tims[! istim], collapse=', '), dsnt, '\n')
     }
   }
 
@@ -325,8 +332,8 @@ combdt <- function(a, b) {
 
   if(length(mod)) for(nm in names(mod)) {
     w   <- mod[[nm]]
-    v   <- mod[[1]]
-    fun <- mod[[2]]
+    v   <- w[[1]]
+    fun <- w[[2]]
     if(! is.character(v) ) stop(paste(v,   'is not a character string'))
     if(! is.function(fun)) stop(paste(fun, 'is not a function'))
     regex <- if('regex' %in% names(w)) w$regex else FALSE
@@ -338,8 +345,8 @@ combdt <- function(a, b) {
       set(d, j=n[j], value=fun(x))
       lab <- label(x)
       un  <- units(x)
-      if(lab != '') setatr(d[[n[j]]], 'label', lab)
-      if(un  != '') setatr(d[[n[j]]], 'units', un)
+      if(lab != '') setattr(d[[n[j]]], 'label', lab)
+      if(un  != '') setattr(d[[n[j]]], 'units', un)
       cred <- rbind(cred, data.frame(name=n[j], description=nm))
     }
   }
@@ -371,8 +378,8 @@ combdt <- function(a, b) {
 }
 if(length(cred)) {
   if(length(dsname)) cred <- cbind(dsname=dsname, cred)
-  if(! exists('crednotes')) crednotes <- NULL
-  crednotes <<- rbind(crednotes, cred)
+  if(! exists('crednotes')) crednotes <<- cred
+  else                      crednotes <<- rbind(crednotes, cred)
 }
 
 d
