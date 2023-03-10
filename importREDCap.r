@@ -159,7 +159,7 @@ cleanupREDCap <- function(d, mchoice=TRUE, rmhtml=TRUE, rmrcl=TRUE,
   # ziptrunc <- function(x) {
   #              if(is.numeric(x)) stop('zip code should have been a character variable because of leading zeros')
   #              substring(x, 1, 3) }
-  # mod = list('truncate age at 90'=list('age', function(x) pmin(age, 90), ignore.case=TRUE),
+  # mod = list('truncate age at 90'=list('age', function(x) pmin(x, 90), ignore.case=TRUE),
   #       list('keep first 3 digits of zip code'=list('zip', ziptrunc, regex=TRUE) )
   #
   # entrydate is an optional vector specifying how to replace date or date/time variables
@@ -215,7 +215,6 @@ combdt <- function(a, b) {
 
   if(length(drop)) {
     todrop <- intersect(names(d), drop)
-    if(pr) cat('Variables removed:', paste(todrop, collapse=', '), '\n')
     d[, (todrop) := NULL]
     cred <- rbind(crednotes,
                   data.frame(name = todrop, description = 'dropped') )
