@@ -109,7 +109,7 @@ cleanupREDCap <- function(d, mchoice=TRUE, rmhtml=TRUE, rmrcl=TRUE,
                           mod=FALSE, dsname=NULL,
                           entrydate=NULL, id=NULL,
                           drop=NULL, check=TRUE, fixdt=FALSE, propdt=0.5,
-                          cfile='', ...) {
+                          ...) {
   # Purpose: Clean up a data frame imported from REDCap using either
   # manual export or API.  By default removes html tags from variable
   # labels and converts sequences of variables representing a single
@@ -180,7 +180,7 @@ cleanupREDCap <- function(d, mchoice=TRUE, rmhtml=TRUE, rmrcl=TRUE,
   # already marked as being date or time variables by their R class.  This checking
   # is done before other date/time processing is done but after drop= is processed.
   # Case is ignored.  When check=TRUE, results of checks are appended to
-  # to file cfile, which defaults to the console.
+  # crednotes.
   # Also when check=TRUE you have the option of specifying fixdt=TRUE.
   # When a character variable with dat or tim in its name is a legal
   # date-time, date, or time variable more than propdt of the time,
@@ -233,22 +233,10 @@ combdt <- function(a, b) {
   n <- names(d)
   
   if(check) {
-    isDate <- function(x) inherits(x, c('Date', 'POSIXct', 'dates', 'chron'))
-    isTime <- function(x) inherits(x, c('POSIXt', 'POSIXct', 'times'))
     pcla <- function(i) {
       cl <- d[, sort(unique(unlist(lapply(.SD, class)))), .SDcols=i]
       if(length(cl)) paste(' class:', paste(cl, collapse=','))
     }
-if(FALSE)    pchr <- function(i) {
-      uniquechar <- function(x)
-        sort(unique(x[! is.na(x) & grepl('[a-z,A-Z,_]', x)]))
-      chr <- d[, sort(unique(unlist(lapply(.SD, uniquechar)))), .SDcols=i]
-      if(length(chr)) {
-        chr <- chr[1 : min(length(chr), 4)]
-        paste(' contains characters:', paste(chr, collapse=','))
-      }
-    }
-      
     dsnt <- if(length(dsname)) paste(' dataset:', dsname)
     # regular expression finds dat but not data
     dats <- n[grepl('dat[^a]*$', n, ignore.case=TRUE) |
@@ -259,10 +247,10 @@ if(FALSE)    pchr <- function(i) {
                        sapply(.SD, testCharDateTime, existing=TRUE) %nin% dtty,
                        .SDcols=dats] ]
       if(length(dvars)) {
-        cat('Variables with dat or tim in names are not of date/time type:',
-            paste(dvars, collapse=', '),
-            pcla(dvars), dsnt, '\n',
-            file=cfile, append=TRUE)
+        desc <- paste('Variables with dat or tim in names are not of date/time type', pcla(dvars))
+        cred <- rbind(cred,
+                      data.frame(name=dvars,
+                                 description=desc))
         if(fixdt)
           for(v in dvars) {
             x <- testCharDateTime(d[[v]], p=propdt, convert=TRUE)
