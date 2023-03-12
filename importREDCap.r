@@ -237,11 +237,12 @@ combdt <- function(a, b) {
   if(check) {
     pcla <- function(i) {
       cl <- d[, sort(unique(unlist(lapply(.SD, class)))), .SDcols=i]
+      cl <- setdiff(cl, c('labelled', 'redcapFactor'))
       if(length(cl)) paste(' class:', paste(cl, collapse=','))
     }
     dsnt <- if(length(dsname)) paste(' dataset:', dsname)
-    # regular expression finds dat but not data
-    dats <- n[grepl('dat[^a]*$', n, ignore.case=TRUE) |
+    # regular expression finds dat but not data or validation or _
+    dats <- n[grepl('dat[^ai_]*$', n, ignore.case=TRUE) |
               grepl('tim',       n, ignore.case=TRUE)]
     dtty <- c('datetime', 'date', 'time')
     if(length(dats)) {
@@ -258,7 +259,8 @@ combdt <- function(a, b) {
           for(v in dvars) {
             x <- testCharDateTime(d[[v]], p=propdt, convert=TRUE)
             desc <- 'dat/tim in name, not a date/time variable, converted'
-            detail <- paste0('to:', x$type, ' # not convertible:', x$numna)
+            detail <- paste0('to:', x$type, ' # not convertible:', x$numna,
+                             '/', length(x$x))
             if(x$type %nin% c('character', 'notcharacter')) {
               cred <- rbind(cred,
                             data.frame(name=v, description=desc,
@@ -342,10 +344,9 @@ combdt <- function(a, b) {
       a <- cdatetime[i]
       b <- cdatetime[i + 1]
       nfound <- (a %in% n) + (b %in% n)
-      if(nfound == 1) stop(paste('Only one of date and time variables', a, b, 'are in the dataset'))
+      if(nfound == 1) stop(paste('Only one of date and time variables', a, b, 'is in the dataset'))
       if(nfound == 2) {
         x   <- combdt(d[[a]], d[[b]])
-        desc <- paste('Date and time variables', a, b, 'combined and', b, 'dropped')
         cred <- rbind(cred,
                       data.frame(name=a,
                                  description='date and time variables combined',
