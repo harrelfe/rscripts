@@ -205,8 +205,8 @@ cleanupREDCap <- function(d, mchoice=TRUE, rmhtml=TRUE, rmrcl=TRUE,
 # Transfer label of date to resulting variable
 # See https://stackoverflow.com/questions/21487614
 combdt <- function(a, b) {
-  a[trim(a) == ''] <- NA
-  b[trim(b) == ''] <- NA
+  a[trimws(a) == ''] <- NA
+  b[trimws(b) == ''] <- NA
   b[! is.na(a) & is.na(b)] <- '12:00:00'
   x <- paste(a, b)
   x[is.na(a)] <- NA
