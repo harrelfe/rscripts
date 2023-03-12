@@ -123,8 +123,9 @@ cleanupREDCap <- function(d, mchoice=TRUE, rmhtml=TRUE, rmrcl=TRUE,
   # the very first time cleanupREDCap is called in a session.
   # For changes made to variables, a data frame
   # row will be added to crednotes.  Columns are the optional value
-  # of dsname (dataset name), name (variable name), and description (description
-  # of the change).  When mod is specified it contributes to these records.
+  # of dsname (dataset name), name (variable name), description (generic
+  # description of the change) and details (specific change details).
+  # When mod is specified it contributes to these records.
   # Removal of html from labels and handling of redcapFactor are not recorded.
   #
   # By default REDCap labels and levels and the redcapFactor class
@@ -226,7 +227,8 @@ combdt <- function(a, b) {
     if(length(todrop)) {
       d[, (todrop) := NULL]
       cred <- rbind(cred,
-                    data.frame(name = todrop, description = 'dropped') )
+                    data.frame(name = todrop,
+                               description = 'dropped', details='') )
       }
   }
 
@@ -247,17 +249,20 @@ combdt <- function(a, b) {
                        sapply(.SD, testCharDateTime, existing=TRUE) %nin% dtty,
                        .SDcols=dats] ]
       if(length(dvars)) {
-        desc <- paste('Variables with dat or tim in names are not of date/time type', pcla(dvars))
+        desc <- 'Variables with dat or tim in names are not of date/time type'
         cred <- rbind(cred,
-                      data.frame(name=dvars,
-                                 description=desc))
+                      data.frame(name        = dvars,
+                                 description = desc,
+                                 details     = pcla(dvars)))
         if(fixdt)
           for(v in dvars) {
             x <- testCharDateTime(d[[v]], p=propdt, convert=TRUE)
-            desc <- 'dat/tim in name, not a date/time variable, converted to'
+            desc <- 'dat/tim in name, not a date/time variable, converted'
+            detail <- paste0('to:', x$type, ' # not convertible:', x$numna)
             if(x$type %nin% c('character', 'notcharacter')) {
               cred <- rbind(cred,
-                            data.frame(name=v, description=paste(desc, x$type)))
+                            data.frame(name=v, description=desc,
+                                       details=detail) )
               set(d, j=v, value=x$x)
             }
           }
@@ -266,13 +271,7 @@ combdt <- function(a, b) {
   }
 
   if(rmhtml) {
-    trans <- function(x) {
-      rem <- c('<p>', '</p>', '</div>', '</span>', '<p .*?>', '<div .*?>', '<span .*?>',
-               '<br>', '<br />', '\\n', 'strong>', '</strong>', '<tbody>', '</tbody>',
-           '<tr>', '</tr>', '<td.*?>', '<font.*?>', '<u>', '</u>')
-      for(a in rem) x <- gsub(a, '', x)
-      x
-      }
+    trans <- markupSpecs$html$totxt
     for(v in names(d)) {
       lab <- attr(d[[v]], 'label')
       if(length(lab)) setattr(d[[v]], 'label', trans(lab))
@@ -302,8 +301,10 @@ combdt <- function(a, b) {
         d[, (v) := do.call('mChoice', c(.SD, ...)), .SDcols=V]
         setattr(d[[v]], 'label', label(d[[first]]))
         d[, (V) := NULL]
-        desc <- paste(numchoices, 'variables combined into mChoice variable')
-        cred <- rbind(cred, data.frame(name=v, description=desc) )
+         cred <- rbind(cred,
+                      data.frame(name=v,
+                                 description='variables combined into mChoice variable',
+                                 details=paste(numchoices, 'original variables')))
       }
     }
   }
@@ -329,7 +330,8 @@ combdt <- function(a, b) {
         d[, (v) := x]
         set(d, j=v, value=x)
         setattr(d[[v]], 'label', lab)
-        cred <- rbind(cred, data.frame(name=v, description='POSIXlt -> POSITct') )
+        cred <- rbind(cred, data.frame(name=v, description='POSIXlt -> POSITct',
+                                       details='') )
        }
     }
 
@@ -344,7 +346,11 @@ combdt <- function(a, b) {
       if(nfound == 2) {
         x   <- combdt(d[[a]], d[[b]])
         desc <- paste('Date and time variables', a, b, 'combined and', b, 'dropped')
-        cred <- rbind(cred, data.frame(name=a, description=desc) )
+        cred <- rbind(cred,
+                      data.frame(name=a,
+                                 description='date and time variables combined',
+                                 details=paste0(a, ', ', b, ' -> ', a,
+                                                ', ', b, ' dropped')))
         set(d, j=a, value=x)
         set(d, j=b, value=NULL)
       }
@@ -368,7 +374,10 @@ combdt <- function(a, b) {
       un  <- units(x)
       if(lab != '') setattr(d[[n[j]]], 'label', lab)
       if(un  != '') setattr(d[[n[j]]], 'units', un)
-      cred <- rbind(cred, data.frame(name=n[j], description=nm))
+      cred <- rbind(cred,
+                    data.frame(name        = n[j],
+                               description = 'customized modification',
+                               details     = nm))
     }
   }
          
@@ -393,7 +402,10 @@ combdt <- function(a, b) {
       x <- as.numeric(difftime(x, entry))
       units(x) <- 'days'
       set(d, j=n, value=x)
-      cred <- rbind(cred, data.frame(name=n, description='changed from date/time to days from entry') )
+      cred <- rbind(cred,
+                    data.frame(name=n,
+                               description='changed from date/time to days from entry',
+                               details='') )
     }
   }
 }
