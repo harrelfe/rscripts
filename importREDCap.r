@@ -110,7 +110,7 @@ cleanupREDCap <- function(d, mchoice=TRUE, rmhtml=TRUE, rmrcl=TRUE,
                           entrydate=NULL, id=NULL,
                           drop=NULL, check=TRUE, fixdt=FALSE, propdt=0.5,
                           ...) {
-  # Purpose: Clean up a data frame imported from REDCap using either
+  # Purpose: Clean up a data table imported from REDCap using either
   # manual export or API.  By default removes html tags from variable
   # labels and converts sequences of variables representing a single
   # multiple choice question to a single variable using Hmisc::mChoice
@@ -194,31 +194,48 @@ cleanupREDCap <- function(d, mchoice=TRUE, rmhtml=TRUE, rmrcl=TRUE,
   #
   # ... arguments are passed to mChoice
   #
-
+  # cleanupREDCap does its changes to data tables by reference.
+  # It returns a character string listing the distinct changes made
+  # to the data table.
+  
   require(data.table)
-  d <- copy(d)
-  setDT(d)   # will leave existing keys intact if already a data.table
+  if(! is.data.table(d)) stop('dataset must be a data table')
 
 # Set missing or blank times to noon, then concatenate date and time character strings
 # Convert character to POSIXlt/POSIXt date/time variable, adding mid day
 # Check that missingness of result is same as missingness of date
 # Transfer label of date to resulting variable
 # See https://stackoverflow.com/questions/21487614
-combdt <- function(a, b) {
-  a[trimws(a) == ''] <- NA
-  b[trimws(b) == ''] <- NA
-  b[! is.na(a) & is.na(b)] <- '12:00:00'
-  x <- paste(a, b)
-  x[is.na(a)] <- NA
-  y <- as.POSIXct(x, format='%Y-%m-%d %H:%M:%S')
-  j <- is.na(y) != is.na(a)
-  if(any(j)) {
-    print(cbind(Date=a, Time=b, Combined=as.character(y))[j, ])
-    stop('missingness of date/time variable does not match that in original dates (see above list)')
+  combdt <- function(a, b) {
+    if(! inherits(b, 'times')) stop('b must be a chron times variable')
+    a[trimws(a) == ''] <- NA
+    b[trimws(b) == ''] <- NA
+    ## Sometimes the imported variable is changed to character
+    if(! is.numeric(b)) {
+      bat <- attributes(b)
+      na  <- is.na(b)
+      bo  <- b
+      b   <- suppressWarnings(as.numeric(b))
+      bad <- bo[is.na(b) & ! na]
+      cat('\nbad time values set to noon:',
+          paste(bad, collapse=', '), '\n', sep='')
+      attributes(b) <- bat
+      }
+    
+    b[(! is.na(a)) & is.na(b)] <- '12:00:00'
+    x <- paste(a, b)
+    x[is.na(a)] <- NA
+    y <- as.POSIXct(x, format='%Y-%m-%d %H:%M:%S')
+    # j <- which(! is.na(y))
+    # print(data.frame(Date=a, Time=b, Combined=y)[j[1:5], ])
+    j <- is.na(y) != is.na(a)
+    if(any(j)) {
+      print(data.frame(Date=a, Time=b, Combined=y)[j, ])
+      stop('missingness of date/time variable does not match that in original dates (see above list)')
+    }
+    label(y) <- label(a)
+    y
   }
-  label(y) <- label(a)
-  y
-}
 
   cred <- NULL
 
@@ -250,7 +267,7 @@ combdt <- function(a, b) {
                        sapply(.SD, testCharDateTime, existing=TRUE) %nin% dtty,
                        .SDcols=dats] ]
       if(length(dvars)) {
-        desc <- 'Variables with dat or tim in names are not of date/time type'
+        desc <- 'variables with dat or tim in names are not of date/time type'
         cred <- rbind(cred,
                       data.frame(name        = dvars,
                                  description = desc,
@@ -416,5 +433,6 @@ if(length(cred)) {
   else                      crednotes <<- rbind(crednotes, cred)
 }
 
-d
+  if(! length(cred)) return(invisible())
+  paste(unique(sort(cred$description)), collapse='; ')
 }
