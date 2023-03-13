@@ -206,8 +206,9 @@ cleanupREDCap <- function(d, mchoice=TRUE, rmhtml=TRUE, rmrcl=TRUE,
 # Check that missingness of result is same as missingness of date
 # Transfer label of date to resulting variable
 # See https://stackoverflow.com/questions/21487614
-  combdt <- function(a, b) {
-    if(! inherits(b, 'times')) stop('b must be a chron times variable')
+  combdt <- function(a, b, aname, bname) {
+    if(! inherits(b, 'times'))
+      stop(paste(bname), 'must be a chron times variable')
     a[trimws(a) == ''] <- NA
     b[trimws(b) == ''] <- NA
     ## Sometimes the imported variable is changed to character
@@ -217,8 +218,9 @@ cleanupREDCap <- function(d, mchoice=TRUE, rmhtml=TRUE, rmrcl=TRUE,
       bo  <- b
       b   <- suppressWarnings(as.numeric(b))
       bad <- bo[is.na(b) & ! na]
-      cat('\nbad time values set to noon:',
-          paste(bad, collapse=', '), '\n', sep='')
+      if(length(bad))
+        cat('\nbad time values in ', bname, ' set to noon:',
+            paste(bad, collapse=', '), '\n', sep='')
       attributes(b) <- bat
       }
     
@@ -227,11 +229,13 @@ cleanupREDCap <- function(d, mchoice=TRUE, rmhtml=TRUE, rmrcl=TRUE,
     x[is.na(a)] <- NA
     y <- as.POSIXct(x, format='%Y-%m-%d %H:%M:%S')
     # j <- which(! is.na(y))
-    # print(data.frame(Date=a, Time=b, Combined=y)[j[1:5], ])
+    # cat('\n'); print(data.frame(Date=a, Time=b, Combined=y)[j[1:5], ])
     j <- is.na(y) != is.na(a)
     if(any(j)) {
-      print(data.frame(Date=a, Time=b, Combined=y)[j, ])
-      stop('missingness of date/time variable does not match that in original dates (see above list)')
+      cat('\n')
+      print(as.data.frame(table(is.na(a), is.na(b), is.na(y))))
+      stop('missingness of date/time variables ', aname, ' ', bname,
+           ' does not match that in original dates')
     }
     label(y) <- label(a)
     y
@@ -363,7 +367,7 @@ cleanupREDCap <- function(d, mchoice=TRUE, rmhtml=TRUE, rmrcl=TRUE,
       nfound <- (a %in% n) + (b %in% n)
       if(nfound == 1) stop(paste('Only one of date and time variables', a, b, 'is in the dataset'))
       if(nfound == 2) {
-        x   <- combdt(d[[a]], d[[b]])
+        x   <- combdt(d[[a]], d[[b]], a, b)
         cred <- rbind(cred,
                       data.frame(name=a,
                                  description='date and time variables combined',
