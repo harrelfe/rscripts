@@ -109,7 +109,7 @@ cleanupREDCap <- function(d, mchoice=TRUE, rmhtml=TRUE, rmrcl=TRUE,
                           mod=FALSE, dsname=NULL,
                           entrydate=NULL, id=NULL,
                           drop=NULL, check=TRUE, fixdt=FALSE, propdt=0.5,
-                          ...) {
+                          byref=TRUE, ...) {
   # Purpose: Clean up a data table imported from REDCap using either
   # manual export or API.  By default removes html tags from variable
   # labels and converts sequences of variables representing a single
@@ -192,21 +192,37 @@ cleanupREDCap <- function(d, mchoice=TRUE, rmhtml=TRUE, rmrcl=TRUE,
   # drop is an optional vector of variable names to remove from the dataset.
   # It is OK for drop to contain variables not present; these names are ignored.
   #
+  # By default changes are made in-place (byref=TRUE).  To make changes in a
+  # copy of the dataset (which in this case may also be a data.frame),
+  # set byref=FALSE.  
+  #
   # ... arguments are passed to mChoice
   #
   # cleanupREDCap does its changes to data tables by reference.
-  # It returns a character string listing the distinct changes made
-  # to the data table.
-  
+  # It returns a character vector of the distinct changes made
+  # to the data table if byref=TRUE, or puts this as the 'changes'
+  # attribute of the returned data.table if byref=FALSE.
+
   require(data.table)
-  if(! is.data.table(d)) stop('dataset must be a data table')
+  if(byref) {
+    if(! is.data.table(d)) stop('dataset must be a data table')
+    }  else {
+      d <- copy(d)
+      setDT(d)
+      }
 
 # Set missing or blank times to noon, then concatenate date and time character strings
 # Convert character to POSIXlt/POSIXt date/time variable, adding mid day
 # Check that missingness of result is same as missingness of date
 # Transfer label of date to resulting variable
 # See https://stackoverflow.com/questions/21487614
+
   combdt <- function(a, b, aname, bname) {
+	  if(! requireNamespace('chron', quietly=TRUE))
+		  stop('chron package must be installed to combine dates and times')
+    # x <- data.frame(a, b)
+    # names(x) <- c(aname, bname)
+    # saveRDS(x, file='combdttest.rds')
     if(! inherits(b, 'times'))
       stop(paste(bname), 'must be a chron times variable')
     a[trimws(a) == ''] <- NA
@@ -216,9 +232,8 @@ cleanupREDCap <- function(d, mchoice=TRUE, rmhtml=TRUE, rmrcl=TRUE,
     ## Sometimes the imported variable is changed to character
     if(! is.numeric(b)) {
       bat <- attributes(b)
-      na  <- is.na(b)
       b   <- suppressWarnings(as.numeric(b))
-      bad <- bo[is.na(b) & ! na]
+      bad <- bo[is.na(b) & ! is.na(bo)]
       if(length(bad))
         cat('\nbad time values in ', bname, ' set to noon:',
             paste(bad, collapse=', '), '\n', sep='')
@@ -226,7 +241,7 @@ cleanupREDCap <- function(d, mchoice=TRUE, rmhtml=TRUE, rmrcl=TRUE,
       }
     
     b[(! is.na(a)) & is.na(b)] <- '12:00:00'
-    x <- paste(a, b)
+    x <- paste(a, b)   # will not work for b unless chron is loaded
     x[is.na(a)] <- NA
     y <- as.POSIXct(x, format='%Y-%m-%d %H:%M:%S')
     # j <- which(! is.na(y))
@@ -235,11 +250,11 @@ cleanupREDCap <- function(d, mchoice=TRUE, rmhtml=TRUE, rmrcl=TRUE,
     if(any(j)) {
       cat('\n')
       print(as.data.frame(table(is.na(a), is.na(b), is.na(y))))
-      saveRDS(data.frame(a=ao, b=bo), file='combdterror.rds')
-      stop('missingness of date/time variables ', aname, ' ', bname,
+      stop('missingness of date/time variables ',
+           aname, ' ', bname,
            ' does not match that in original dates')
     }
-    label(y) <- label(a)
+    label(y) <- label(ao)
     y
   }
 
@@ -439,6 +454,13 @@ if(length(cred)) {
   else                      crednotes <<- rbind(crednotes, cred)
 }
 
-  if(! length(cred)) return(invisible())
-  paste(unique(sort(cred$description)), collapse='; ')
+  changes <- if(length(cred)) unique(sort(cred$description))
+  
+  if(byref) return(if(length(changes)) changes else invisible())
+  
+  attr(d, 'changes') <- changes
+  d
 }
+
+    
+  
