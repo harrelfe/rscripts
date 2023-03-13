@@ -211,11 +211,12 @@ cleanupREDCap <- function(d, mchoice=TRUE, rmhtml=TRUE, rmrcl=TRUE,
       stop(paste(bname), 'must be a chron times variable')
     a[trimws(a) == ''] <- NA
     b[trimws(b) == ''] <- NA
+    ao <- a
+    bo <- b
     ## Sometimes the imported variable is changed to character
     if(! is.numeric(b)) {
       bat <- attributes(b)
       na  <- is.na(b)
-      bo  <- b
       b   <- suppressWarnings(as.numeric(b))
       bad <- bo[is.na(b) & ! na]
       if(length(bad))
@@ -234,6 +235,7 @@ cleanupREDCap <- function(d, mchoice=TRUE, rmhtml=TRUE, rmrcl=TRUE,
     if(any(j)) {
       cat('\n')
       print(as.data.frame(table(is.na(a), is.na(b), is.na(y))))
+      saveRDS(data.frame(a=ao, b=bo), file='combdterror.rds')
       stop('missingness of date/time variables ', aname, ' ', bname,
            ' does not match that in original dates')
     }
