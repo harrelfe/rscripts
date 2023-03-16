@@ -113,7 +113,9 @@ cleanupREDCap <- function(d, mchoice=TRUE, rmhtml=TRUE, rmrcl=TRUE,
   # Purpose: Clean up a data table imported from REDCap using either
   # manual export or API.  By default removes html tags from variable
   # labels and converts sequences of variables representing a single
-  # multiple choice question to a single variable using Hmisc::mChoice
+  # multiple choice question to a single variable using Hmisc::mChoice.
+  # Even if rmhtml=FALSE, any label with the only html being <p>...</p>
+  # will have <p> and </p> stripped.
   #
   # See https://hbiostat.org/rflow/fcreate#sec-fcreate-import
   #
@@ -186,8 +188,8 @@ cleanupREDCap <- function(d, mchoice=TRUE, rmhtml=TRUE, rmrcl=TRUE,
   # When a character variable with dat or tim in its name is a legal
   # date-time, date, or time variable more than propdt of the time,
   # the variable will be converted to one of those numeric types and
-  # this is noted in crednotes.  Illegal values are set to NA and the
-  # count of this is recorded too.
+  # this is noted in crednotes.  Illegal values are set to NA and are set
+  # as special missing values that are tabulated with Hmisc::describe().
   #
   # drop is an optional vector of variable names to remove from the dataset.
   # It is OK for drop to contain variables not present; these names are ignored.
@@ -316,7 +318,11 @@ cleanupREDCap <- function(d, mchoice=TRUE, rmhtml=TRUE, rmrcl=TRUE,
       lab <- attr(d[[v]], 'label')
       if(length(lab)) setattr(d[[v]], 'label', trans(lab))
     }
-  }
+  } else for(v in names(d)) {
+           lab <- attr(d[[v]], 'label')
+           if(length(lab)) setattr(d[[v]], 'label',
+                                   sub('^<p>(.*?)</p>$', '\\1', lab) )
+           }
 
   if(mchoice) {
     ## Find all variable names that are part of multiple choice sequences
