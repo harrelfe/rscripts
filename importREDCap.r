@@ -351,8 +351,10 @@ cleanupREDCap <- function(d, mchoice=TRUE, rmhtml=TRUE, rmrcl=TRUE,
         # label; remove it
         le <- setdiff(levels(d1), '')
         if(length(le) == 1) la <- sub(le, '', la, fixed=TRUE)
+        # Also remove (Choose all that apply)
+        la <- sub('(Choose all that apply)', '', la, fixed=TRUE)
         la <- trimws(la)
-        la <- sub(':$', '', la)   # remove trailing :
+        la <- sub('(:|\\.)$', '', la)   # remove trailing : or .
         setattr(d[[v]], 'label', la)
         d[, (V) := NULL]
          cred <- rbind(cred,
