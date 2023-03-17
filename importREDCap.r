@@ -345,7 +345,15 @@ cleanupREDCap <- function(d, mchoice=TRUE, rmhtml=TRUE, rmrcl=TRUE,
         numchoices <- length(numbers)
         first <- paste0(v, '___', min(numbers))
         d[, (v) := do.call('mChoice', c(.SD, ...)), .SDcols=V]
-        setattr(d[[v]], 'label', label(d[[first]]))
+        d1 <- d[[first]]
+        la <- label(d1)
+        # REDCap puts value label of first category at end of variable
+        # label; remove it
+        le <- setdiff(levels(d1), '')
+        if(length(le) == 1) la <- sub(le, '', la, fixed=TRUE)
+        la <- trimws(la)
+        la <- sub(':$', '', la)   # remove trailing :
+        setattr(d[[v]], 'label', la)
         d[, (V) := NULL]
          cred <- rbind(cred,
                       data.frame(name=v,
