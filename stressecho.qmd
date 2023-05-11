@@ -27,9 +27,11 @@ When you install R and `RStudio` many standard packages are automatically instal
 
 ```{r setup}
 require(Hmisc)   # Hmisc must already be installed
+# For certain Hmisc & rms functions set default output format to html
+options(prType='html')
 ```
 
-If you installed `Hmisc` after 2022-08-15 you can load this complete report script into your `RStudio` script editor window by running the command (usually from the R `console` under `RStudio`) `getRs('stressecho.qmd', put='rstudio')`.
+You can load this complete report script into your `RStudio` script editor window by running the command (usually from the R `console` under `RStudio`) `getRs('stressecho.qmd', put='rstudio')`.
 
 ## Accessing Data
 
@@ -46,10 +48,10 @@ d <- stressEcho   # copy dataset so can refer to short name d
 
 ## Data Dictionary
 
-The names of variables in the stress echo dataset can be printed by using the command `names(d)`.  But let's use an `Hmisc` package function to provide more metadata^[`results='asis'` in the chunk header prepares R to expect specially formatted html output to be created by the `html` function.]  
+The names of variables in the stress echo dataset can be printed by using the command `names(d)`.  But let's use an `Hmisc` package function to provide more metadata
 
-```{r results='asis'}
-html(contents(d))
+```{r}
+contents(d)
 ```
 
 In the main output you'll find that the number of levels for categorical variables (R `factor` variables) are highlighted.   These are hyperlinks, and if you click on the number the pointer will jump to the list of levels below.
@@ -58,9 +60,9 @@ In the main output you'll find that the number of levels for categorical variabl
 
 The `Hmisc` package `describe` function produces appropriate descriptive statistics for each variable in a data frame depending on the variable's nature (binary, categorical, continuous, etc.). [See [this](https://hbiostat.org/R/glossary.html) for definitions of some of the items in `describe` output.]{.aside}  If you just type `describe(d)` you'll get plain text output with no graphics.  Running the output of `describe` through the `html` function converts it to html format which contains small graphics files to render high-resolution spike histograms for continuous variables.
 
-```{r results='asis'}
+```{r}
 des <- describe(d)   # store results of describe() in des
-html(des)            # can also use html(describe(d))
+des                  # can also use html(describe(d))
 ```
 
 `describe` also has a `plot` method that translates descriptive statistics to purely graphical form and draws larger high-resolution histograms for continuous variables.  The `plot` method produces two graphics objects: one for categorical variables and one for continuous variables.  We save the overall `plot` result in object `p` then reference two sub-objects^[For these static graphics we could have just typed `plot(des)` and two plots would appear in succession.  That approach does not work when making interactive graphs later.]
@@ -105,4 +107,3 @@ p$Continuous
 A function `session` stored in an object in the `Hmisc` package prints the current computing environment in a nice format.
 
 `r markupSpecs$html$session()`
-
