@@ -33,6 +33,7 @@ execute:
 require(rms)
 options(prType='html')
 getRs('abd.r')
+require(ggplot2)
 ```
 
 # Problem
@@ -57,13 +58,13 @@ d <- upData(d,
             labels = .q(energy = 'Energy Expenditure',
                         mass   = 'Body Mass'),
             drop   = .q(lnMass, lnEnergy))
-html(contents(d))  # data dictionary for imported dataset
+contents(d)  # data dictionary for imported dataset
 ```
 
 # Descriptive Statistics
 
-```{r desc, results='asis'}
-html(describe(d))
+```{r desc}
+describe(d)
 ```
 
 # What relationships are the researchers studying?
@@ -73,26 +74,11 @@ html(describe(d))
 First plot the raw data on their original scale then after taking natural log of the two continuous variables.  Levels of `caste` are depicted using color.
 
 ```{r}
-ncoinc <- function(x, y) {
-  i  <- ! is.na(x + y)   # exclude points missing on x or y
-  x  <- x[i]
-  y  <- y[i]
-  rx <- range(x)
-  ry <- range(y)
-  x  <- round((x - rx[1]) / diff(rx) * 300)
-  y  <- round((y - ry[1]) / diff(ry) * 300)
-  z  <- paste(x, y)
-  length(z) - length(unique(z))
-}
-nc <- with(d, ncoinc(mass, energy))
+nc <- with(d, nCoincident(mass, energy))  # nCoincident in Hmisc
 nc    # no coincident points so ignore
 ```
 
 ```{r}
-hlab <- function(x) {
-  x <- as.character(substitute(x))
-  label(d[[x]], plot=TRUE, default=x)
-}
 ggplot(d, aes(x=mass, y=energy, color=caste)) + geom_point() +
   xlab(hlab(mass)) + ylab(hlab(energy))
 ggplot(d, aes(x=mass, y=energy, color=caste)) + geom_point() +
@@ -128,7 +114,7 @@ where the 0/1 indicator $[u]$ is 1 if $u$ is true, 0 if $u$ is false.
 We fit model `f` with interaction and model `g` without interaction.
 Note that the `*` notation in R automatically includes main effects along with interactions of variables on either side of `*`.  R works best when transformations are specified inside the model formula. 
 
-```{r results='asis'}
+```{r}
 dd <- datadist(d); options(datadist='dd')
 f <- ols(log(energy) ~ log(mass) * caste, data=d, x=TRUE)  # x=TRUE needed for studentized residuals
 f
@@ -218,7 +204,7 @@ anova(lm(log(energy) ~ 1, data=d), flm)
 
 All the tests are automatically done by the `rms` package's `anova` function on the `ols` full model fit.
 
-```{r results='asis'}
+```{r}
 anova(f)
 ```
 

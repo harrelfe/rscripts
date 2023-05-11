@@ -32,8 +32,8 @@ execute:
 ```{r setup}
 require(rms)    # also loads Hmisc package
 options(prType='html')   # makes nicer output from rms functions
-# Must put results='asis' in chunk headers that use this html output
 getRs('abd.r')
+require(ggplot2)
 ```
 
 # Problem
@@ -57,14 +57,14 @@ d <- upData(d,
       labels= .q(age  = Age,
                  prop = 'Proportion Black Nose'),
       units = .q(age  = years))
-html(contents(d))  # data dictionary for imported dataset
+contents(d)  # data dictionary for imported dataset
 ```
 
 # Descriptive Statistics
 
 
-```{r desc, results='asis'}
-html(describe(d))
+```{r desc}
+describe(d)
 ```
 
 ::: {.column-margin}
@@ -79,19 +79,10 @@ When using the `html` function to translate the output to html there is a small 
 A scatterplot is an excellent way to present the bivariate relationship when there are not many ties on x-y combinations.  Ties would create coincident points that would not be visible on the plot.  Create a function that counts the number of coincident points to within the resolution we expect the plot symbols to have (e.g., 300 points in both x- and y-directions).  We'll add the number of coincident points as a subtitle on the graph.
 
 ```{r}
-ncoinc <- function(x, y) {
-  i  <- ! is.na(x + y)   # exclude points missing on x or y
-  x  <- x[i]
-  y  <- y[i]
-  rx <- range(x)
-  ry <- range(y)
-  x  <- round((x - rx[1]) / diff(rx) * 300)
-  y  <- round((y - ry[1]) / diff(ry) * 300)
-  z  <- paste(x, y)
-  length(z) - length(unique(z))
-}
 # with(d, ...) evaluates ... using variables inside d
-nc <- with(d, ncoinc(prop, age))
+# nCoincident is in the Hmisc package
+nc <- with(d, nCoincident(prop, age))
+nc
 ```
 
 Make the plot first without capitalizing on labels/units.
@@ -103,14 +94,9 @@ ggplot(d, aes(x=prop, y=age)) + geom_point() +
        caption = paste(nc, 'coincident points'))
 ```
 
-Write a function that will retrieve labels and units stored in our dataset's metadata and format them into an expression that allows `ggplot2` to use a different font for units, with units placed to the right of the variable label.  
-[This will have higher payoff when dealing with dozens of variables. See [this](http://hbiostat.org/rflow/graphics.html#ggplot2) for more about plotting labels.]{.aside}
+See [this](http://hbiostat.org/rflow/graphics.html#ggplot2) for more about plotting labels.]{.aside}
 
 ```{r}
-hlab <- function(x) {
-  x <- as.character(substitute(x))
-  label(d[[x]], plot=TRUE, default=x)
-}
 ggplot(d, aes(x=prop, y=age)) + geom_point() +
   xlab(hlab(prop)) + ylab(hlab(age)) +
   labs(caption=paste(nc, 'coincident points'))
@@ -134,13 +120,12 @@ $$\text{age} = \beta_{0} + \beta_{1}\times \text{prop} + \epsilon$$
 
 We use the `rms` package `ols` (ordinary least squares) function, which enhances the built-in R function `lm`.  First, save distributional summaries of all the variables so that predictor ranges can be set automatically for plotting.
    
-```{r results='asis'}
+```{r}
 dd <- datadist(d); options(datadist='dd')
 f <- ols(age ~ prop, data=d, x=TRUE)   # x=TRUE needed for studentized residuals later
 f
 # Create LaTeX math notation for fitted model
 # Quarto / RMarkdown will automatically typeset this
-# Need to have results='asis' in chunk header
 latex(f)
 ```
 
