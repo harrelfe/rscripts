@@ -398,7 +398,8 @@ cleanupREDCap <- function(d, mchoice=TRUE, rmhtml=TRUE, rmrcl=TRUE,
       a <- cdatetime[i]
       b <- cdatetime[i + 1]
       nfound <- (a %in% n) + (b %in% n)
-      if(nfound == 1) stop(paste('Only one of date and time variables', a, b, 'is in the dataset'))
+      if(nfound == 1) warning('Only one of date and time variables ', a, ' ', b,
+                              ' is in the dataset')
       if(nfound == 2) {
         x   <- combdt(d[[a]], d[[b]], a, b)
         cred <- rbind(cred,
