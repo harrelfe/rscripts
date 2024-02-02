@@ -97,7 +97,7 @@ ggplot(d, aes(x=prop, y=age)) + geom_point() +
        caption = paste(nc, 'coincident points'))
 ```
 
-See [this](http://hbiostat.org/rflow/graphics.html#ggplot2) for more about plotting labels.]{.aside}
+[See [this](http://hbiostat.org/rflow/graphics.html#ggplot2) for more about plotting labels.]{.aside}
 
 ```{r}
 ggplot(d, aes(x=prop, y=age)) + geom_point() +
@@ -208,9 +208,6 @@ ggplot(b) + geom_point(aes(prop, age), d) +
   geom_ribbon(aes(x=prop, ymin=lower, ymax=upper), a, alpha=0.2, fill='red') +
   guides(color=guide_legend(title='')) +   # omit legend title
   theme(legend.position='bottom')          # put legend at bottom
-
-# Another approach not using rbind
-ggplot()
 ```
 
 # A different summary measure of individual lion predictive accuracy
