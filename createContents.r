@@ -6,15 +6,15 @@ trim <- function(x) {
   sub('^[[:space:]]+', '', x)
 }
 
-files <- list.files(pattern='\\.Rmd$')
+files <- list.files(pattern='\\.(Rmd|qmd)$')
 rfiles <- setdiff(list.files(pattern='\\.r$'), 'createContents.r')
 Files <- c(files, rfiles)
-baseFiles <- sub('\\.Rmd$', '', sub('\\.r$', '', Files))
+baseFiles <- sub('\\.(Rmd|r|qmd)$', '', Files)
 htmls     <- list.files(pattern='\\.html$')
 
 n <- length(files)
 m <- length(rfiles)
-type <- c(rep('R Markdown', n), rep('R', m))
+type <- c(rep('Report', n), rep('R', m))
 N <- n + m
 title <- character(N)
 major <- vector('list', N)
