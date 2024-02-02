@@ -27,11 +27,14 @@ format:
 execute:
   warning: false
   message: false
+
+major: descriptive statistics; ABD
 ---
 
 ```{r setup}
 require(rms)    # also loads Hmisc package
 getRs('abd.r')  # if using getabd function
+options(prType='html')   # get nicer html output for some functions
 ```
 # Background
 
@@ -52,7 +55,7 @@ If reading a `csv` dataset from ABD use the `getabd` function.  If reading a bin
 d <- getabd('02-e-2a') # fetch 02-e-2a csv file and store contents in data frame d
 # getHdata(support) etc. for larger fully annotated datasets
 # d <- support  # copy data frame produced by getHdata to use a short name
-html(contents(d))  # data dictionary for imported dataset
+contents(d)  # data dictionary for imported dataset
 ```
 
 # Descriptive Statistics
@@ -64,12 +67,15 @@ d <- upData(d, person = as.character(person))
 ```
 
 ```{r desc}
-html(describe(d))
+describe(d)
 ```
 
 # Computing Environment
 
 The `session` function printed the following.  `session` is defined inside an object `markupSpecs` provided by `Hmisc`.
 
-`r markupSpecs$html$session()`
+```{r echo=FALSE,results='asis'}
+markupSpecs$html$session()
+```
+
 

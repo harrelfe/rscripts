@@ -27,10 +27,13 @@ format:
 execute:
   warning: false
   message: false
+
+major: data reduction
 ---
 
 ```{r setup}
 require(rms)
+require(qreport)   # for maketabs
 options(prType='html', grType='plotly')   # plotly makes certain graphics interactive
 ```
 
@@ -76,7 +79,6 @@ plmult <- function(x) {
 # p$Continuous    # " " "
 
 # Better: need results='asis':
-getRs('reptools.r')
 maketabs(plot(des))
 ```
 
@@ -213,9 +215,8 @@ redun(~ age + bmi + ht + wt + leg + arml + armc + waist + tri + sub + re + sex,
 
 ```{r}
 #| fig.height: 4
-getRs('princmp.r')   # gives a lot of useful output and decodes PCs with stepwise regression
 pc <- princmp(~ age + ht + wt + leg + arml + armc + waist + tri + sub,
-              data=d, sw=TRUE)
+              data=d, sw=TRUE)$scores
 pc1 <- pc[, 1]   # vector of PC1
 pc2 <- pc[, 2]   # PC2
 ```
@@ -228,7 +229,7 @@ The `princmp` function also can do sparse PCs if you have installed the `pcaPP` 
 
 ```{r}
 spc <- princmp(~ age + ht + wt + leg + arml + armc + waist + tri + sub,
-               data=d, sw=TRUE, method='sparse')
+               data=d, sw=TRUE, method='sparse')$scores
 ```
 
 * Let's see how regular and sparce PCs predict glycohemoglobin in an ordinal model
@@ -244,4 +245,7 @@ maketabs(w)
 
 # Computing Environment
 
-`r markupSpecs$html$session()`
+```{r echo=FALSE,results='asis'}
+markupSpecs$html$session()
+```
+

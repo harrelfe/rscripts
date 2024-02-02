@@ -7,10 +7,14 @@ format:
 execute:
   warning: false
   message: false
+
+major: regression modeling
+minor: ordinary least squares
 ---
 
 ```{r}
 require(rms)
+require(ggplot2)
 options(prType='html')
 n <- 100
 set.seed(1)

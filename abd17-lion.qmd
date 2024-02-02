@@ -27,6 +27,9 @@ format:
 execute:
   warning: false
   message: false
+
+major: regression modeling; ABD
+minor: ordinary least squares
 ---
 
 ```{r setup}
@@ -225,4 +228,6 @@ $\rightarrow$ predicted ages based on proportion black nose are off by `r round(
 
 # Computing Environment
 
-`r markupSpecs$html$session()`
+```{r echo=FALSE,results='asis'}
+markupSpecs$html$session()
+```

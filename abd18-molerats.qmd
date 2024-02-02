@@ -27,6 +27,9 @@ format:
 execute:
   warning: false
   message: false
+
+major: regression modeling; ABD
+minor: ordinary least squares
 ---
 
 ```{r setup}
@@ -213,4 +216,6 @@ This approach avoids issues with missing data.
 
 # Computing Environment
 
-`r markupSpecs$html$session()`
+```{r echo=FALSE,results='asis'}
+markupSpecs$html$session()
+```

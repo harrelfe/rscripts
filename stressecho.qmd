@@ -14,6 +14,7 @@ format:
 execute:
   warning: false
   message: false
+major: descriptive statistics; graphics
 ---
 
 ## Introduction
@@ -106,4 +107,6 @@ p$Continuous
 
 A function `session` stored in an object in the `Hmisc` package prints the current computing environment in a nice format.
 
-`r markupSpecs$html$session()`
+```{r echo=FALSE,results='asis'}
+markupSpecs$html$session()
+```

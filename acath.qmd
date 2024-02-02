@@ -27,10 +27,14 @@ format:
 execute:
   warning: false
   message: false
+major: regression modeling; rms
+minor: logistic
 ---
 
 ```{r setup}
 require(rms)
+require(ggplot2)
+require(lattice)
 options(prType='html')
 ```
 
@@ -266,4 +270,7 @@ plot(cal)
 
 # Computing Environment
 
-`r markupSpecs$html$session()`
+```{r echo=FALSE,results='asis'}
+markupSpecs$html$session()
+```
+

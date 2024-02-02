@@ -27,6 +27,9 @@ format:
 execute:
   warning: false
   message: false
+
+major: regression modeling
+minor: ordinal
 ---
 
 ```{r setup}
@@ -151,4 +154,6 @@ plot(summary(h), log=TRUE)
 
 # Computing Environment
 
-`r markupSpecs$html$session()`
+```{r echo=FALSE,results='asis'}
+markupSpecs$html$session()
+```

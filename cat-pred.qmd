@@ -27,6 +27,9 @@ format:
 execute:
   warning: false
   message: false
+
+major: regression analysis
+minor: ordinary least squares; categorical
 ---
 
 ```{r setup}
@@ -46,13 +49,13 @@ options(prType='html')
 ```{r import}
 getHdata(nhgh)
 d <- upData(nhgh, keep=.q(ht, re, sex))
-html(contents(d))  # data dictionary for imported dataset
+contents(d)  # data dictionary for imported dataset
 ```
 
 # Descriptive Statistics
 
-```{r desc, results='asis'}
-html(describe(d))
+```{r desc}
+describe(d)
 ```
 # Internal Coding for Categorical Predictors
 
@@ -75,7 +78,7 @@ This is the default in R and is what `rms` uses.    There are $k-1$ parameters f
 The model intercept is the estimated mean at the first level.  If there are other variables in the model, it is the mean with all these set to zero.
 
 
-```{r results='asis'}
+```{r}
 dd <- datadist(d); options(datadist='dd')
 levels(d$re)   # same as with(d, levels(re))
 f <- ols(ht ~ re, data=d)
@@ -107,7 +110,7 @@ coef(f)[1] + coef(f)['re=Other Hispanic']
 
 Model estimates gave us all contrasts with `Mexican American`.  Let's instead get all contrasts with `Other Hispanic`.  This does not require refitting the model since it can be done using `summary.rms` (short generic name `summary`).
 
-```{r results='asis'}
+```{r}
 summary(f, re='Other Hispanic')
 ```
 

@@ -27,12 +27,16 @@ format:
 execute:
   warning: false
   message: false
+
+major: regression modeling; validation
+minor: ordinary least squares
 ---
 
 ```{r setup}
 require(rms)
+require(ggplot2)
 options(prType='html', grType='plotly')    # plotly for interactive graphs from describe()
-getRs('reptools.r')  # for maketabs
+require(qreport)  # for maketabs
 ```
 
 # Problem
@@ -197,4 +201,7 @@ ggplot(d, aes(x=fitted(f), y=log(sbp))) + geom_point(alpha=0.2) +
 
 # Computing Environment
 
-`r markupSpecs$html$session()`
+```{r echo=FALSE,results='asis'}
+markupSpecs$html$session()
+```
+

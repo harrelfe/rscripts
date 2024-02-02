@@ -27,10 +27,13 @@ format:
 execute:
   warning: false
   message: false
+major: regression modeling; rms
+minor: ordinary least squares
 ---
 
 ```{r setup}
 require(rms)
+require(ggplot2)
 options(prType='html')
 ```
 
@@ -329,4 +332,6 @@ kabl(w)
 
 # Computing Environment
 
-`r markupSpecs$html$session()`
+```{r echo=FALSE,results='asis'}
+markupSpecs$html$session()
+```
