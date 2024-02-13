@@ -55,31 +55,10 @@ contents(d)
 
 # Descriptive Statistics
 
-```{r desc,results='asis'}
+```{r results='asis'}
+sparkline::sparkline(0) # initialize javascript for describe
 des <- describe(d)
-
-# Function to render multiple plots such as those produced by plot(describe(...))
-plmult <- function(x) {
-  require(htmltools)
-  m <- length(x)
-  w <- vector('list', 2 * m)
-  nam <- names(x)
-  for(i in 1 : m) {
-    w[[2*i - 1]] <- h5(nam[i])
-    w[[2*i]]     <- x[[i]]
-  }
-  do.call(tagList, w)
-}
-
-# plmult(plot(des))
-
-# Brute-force way:
-# p <- plot(des)
-# p$Categorical   # will plot correctly, just without a heading
-# p$Continuous    # " " "
-
-# Better: need results='asis':
-maketabs(plot(des))
+maketabs(print(des, 'both'), wide=TRUE)
 ```
 
 # Plot Raw Data
@@ -88,10 +67,6 @@ There are many tied values of `ht` so use hexagonal binning to depict frequency 
 
 ```{r}
 #| fig.height: 8.5
-hlab <- function(x) {
-  x <- as.character(substitute(x))
-  label(d[[x]], plot=TRUE, default=x)
-}
 cuts <- c(1:5, 10, 15, 20, 30)  # cutpoints for cell N
 ggplot(d, aes(x=age, y=ht)) +
   facet_grid(re ~ sex) +
