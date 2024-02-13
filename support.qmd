@@ -33,6 +33,7 @@ minor: ordinary least squares
 
 ```{r setup}
 require(rms)
+require(qreport)  # provides missChk
 require(ggplot2)
 options(prType='html')
 ```
@@ -46,16 +47,16 @@ options(prType='html')
 
 # Data Import
 
-```{r import, results='asis'}
+```{r import}
 getHdata(support)
 d <- upData(support, keep=.q(slos, meanbp, sex, age, dzgroup, num.co, edu, income, scoma, hrt, resp, temp, totcst))
-html(contents(d), levelType='table')  # data dictionary for imported dataset
+print(contents(d), levelType='table')  # data dictionary for imported dataset
 ```
 
 # Descriptive Statistics
 
-```{r desc, results='asis'}
-html(describe(d))
+```{r desc}
+describe(d)
 ```
 
 Baseline is day 3.  `meanbp=0` means cardiac arrest happened on that day.  This happened in `r sum(d$meanbp == 0, na.rm=TRUE)` patients.
@@ -94,7 +95,7 @@ Include knot locations as vertical reference lines on the plot.
 Note the bimodality of the `meanbp` distribution.
 
 ```{r}
-hlab <- function(x) {
+if(FALSE) hlab <- function(x) {
   x <- as.character(substitute(x))
   label(d[[x]], plot=TRUE, default=x)
 }
@@ -111,7 +112,7 @@ ggplot(d, aes(x=meanbp, y=slos, color=sex)) + geom_point() +
 
 ## Fit
 
-```{r results='asis'}
+```{r}
 dd <- datadist(d); options(datadist='dd')
 # x=TRUE is used for plotting basis functions
 f <- ols(log(slos) ~ lsp(meanbp, knots) + sex, data=d, x=TRUE)
@@ -136,7 +137,7 @@ matplot(X[, 1], X)      # first column against all columns
 
 The tests can also be obtained by comparing to simpler models, but the `rms` `anova` function is easier.
 
-```{r results='asis'}
+```{r}
 anova(f)
 ```
 
@@ -145,7 +146,8 @@ anova(f)
 Include raw data on the plot.
 
 ```{r}
-ggplot(Predict(f, meanbp, sex)) + geom_point(aes(meanbp, log(slos)), d)
+ggplot(Predict(f, meanbp, sex)) +
+  geom_point(aes(meanbp, log(slos)), d)
 ```
 
 # Restricted Cubic Spline Model
@@ -154,7 +156,7 @@ A restricted cubic spline is continuous in the slope and slope of the slope (acc
 
 ## Fit
 
-```{r results='asis'}
+```{r}
 f <- ols(log(slos) ~ rcs(meanbp, knots) + sex, data=d, x=TRUE)
 f
 latex(f)
@@ -174,7 +176,7 @@ matplot(X[, 1], X)      # first column against all columns
 
 ## Tests of Flatness and Linearity
 
-```{r results='asis'}
+```{r}
 anova(f)
 ```
 
@@ -197,17 +199,17 @@ d <- subset(d, totcst != 0 | is.na(totcst))
 
 ## Summarize Patterns of Missings
 
-Use the `reptools` report function repository's `missChk` function to summarize patterns.  `missChk` requires installing and loading the `data.table` package.
+Use the `qreport` package's `missChk` function to summarize patterns.
 
 ```{r results='asis'}
-require(data.table)
-getRs('reptools.r')
 missChk(d)
 ```
 
+We see that about 45% of the observations have at least one missing variable.  This will inform the number of multiple imputations.
+
 ## Multiple Imputation of `edu, income, totcst`
 
-Use the `Hmisc` package `aregImpute` function to create multiple imputations of missing variables.  The method used is predictive mean matching, based on predicting each sometimes-missing variable from all the others and finding donor observations based on how close the predicted value of the target variable for the observation with that variable missing is to the predicted target variable on all the observations for which it was not missing.  Use 10 imputations per missing value.  Continuous variables are automatically splined when predicting the target variable.  3 burn-in iterations are discarded.
+Use the `Hmisc` package `aregImpute` function to create multiple imputations of missing variables.  The method used is predictive mean matching, based on predicting each sometimes-missing variable from all the others and finding donor observations based on how close the predicted value of the target variable for the observation with that variable missing is to the predicted target variable on all the observations for which it was not missing.  Use 45 imputations per missing value.  Continuous variables are automatically splined when predicting the target variable.  3 burn-in iterations are discarded.
 
 ```{r}
 set.seed(1)    # set random number seed so can reproduce calculations
@@ -215,25 +217,25 @@ set.seed(1)    # set random number seed so can reproduce calculations
 # avoid problems with excessive ties when trying to compute knots
 a <- aregImpute(~ age + sex + slos + dzgroup + num.co + edu +
                 income + I(scoma) + totcst + meanbp + hrt + resp + temp,
-                data=d, n.impute=10, pr=FALSE)
+                data=d, n.impute=45, pr=FALSE)
 a
-# Show imputed values for each sometimes-missing variable, for
-# the first 5 patients needed to be imputed
-a$imputed$edu[1:5,]
-a$imputed$income[1:5,]
-round(a$imputed$totcst[1:5,])
+# Show the first 10 imputed values for each sometimes-missing
+# variable, for the first 5 patients needed to be imputed
+a$imputed$edu[1:5, 1:10]
+a$imputed$income[1:5, 1:10]
+round(a$imputed$totcst[1:5, 1:10])
 ```
 
 ## Pooled Fit After Multiple Imputation
 
-The `Hmisc` `fit.mult.impute` function makes 10 completed datasets, fits 10 models, averages their coefficient estimates to get final parameter estimates, and uses Rubin's rule to get standard errors and approximate Wald test statistics assuming approximate normality.
+The `Hmisc` `fit.mult.impute` function makes 45 completed datasets, fits 45 models, averages their coefficient estimates to get final parameter estimates, and uses Rubin's rule to get standard errors and approximate Wald test statistics assuming approximate normality.
 
 ```{r}
 f <- fit.mult.impute(log(totcst) ~ rcs(age, 4) + rcs(meanbp, 4) + rcs(hrt, 4) +
   sex + dzgroup + num.co + scoma + income, ols, a, data=d)
 ```
 
-```{r results='asis'}
+```{r}
 f
 anova(f)
 ```
@@ -278,7 +280,7 @@ d <- upData(d, num.co7 = factor(num.co),
 dd <- datadist(d)
 ```
 
-```{r results='asis'}
+```{r}
 # In the code below (x) means "execute x and print its result"
 ols(log(slos) ~ num.co, data=d)
 ols(log(slos) ~ pmin(num.co, 6), data=d)
