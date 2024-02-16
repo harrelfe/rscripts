@@ -35,6 +35,7 @@ minor: logistic
 require(rms)
 require(ggplot2)
 require(lattice)
+require(qreport)
 options(prType='html')
 ```
 
@@ -96,18 +97,12 @@ describe(d)
 
 # Marginal Relationships
 
-Estimate the probability that significant CAD will be found, using moving overlapping proportions and other methods.  The probability estimates will be a function of age and sex then of cholesterol and age.  Use the `movStats` function in `Github`.  Estimate probabilities using the `loess` nonparametric smoother, logistic regression (LR), and moving proportions in overlapping windows.  Use the `addggLayers` function in the `reptools` repository in Github to add spike histograms and extended box plots to depict age and cholesterol marginal distributions. For the second plot, since age is a continuous variable, if we want to stratify on it vertically we must use an arbitrary information-losing categorization (we will model this interaction as continuous later).  We use tertiles of age.
+Estimate the probability that significant CAD will be found, using moving overlapping proportions and other methods.  The probability estimates will be a function of age and sex then of cholesterol and age.  Use the `movStats` function in `Hmisc`.  Estimate probabilities using the `loess` nonparametric smoother, logistic regression (LR), and moving proportions in overlapping windows.  Use the `addggLayers` function to add spike histograms and extended box plots to depict age and cholesterol marginal distributions. For the second plot, since age is a continuous variable, if we want to stratify on it vertically we must use an arbitrary information-losing categorization (we will model this interaction as continuous later).  We use tertiles of age.
 
 ```{r results='asis'}
 #| fig.height: 7.5
-getRs('reptools.r')
-getRs('movStats.r')
 u <- movStats(sigdz ~ age + sex, loess=TRUE, lrm=TRUE,
               data=d, melt=TRUE, pr='margin')
-hlab <- function(x) {
-  x <- as.character(substitute(x))
-  label(d[[x]], plot=TRUE, default=x)
-}
 g <- ggplot(u, aes(x=age, y=sigdz, col=sex)) + geom_line() +
   facet_grid(Type ~ Statistic) +
   xlab(hlab(age)) + ylab(hlab(sigdz)) +
