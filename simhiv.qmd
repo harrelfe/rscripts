@@ -53,14 +53,14 @@ getHdata(simhiv)
 d <- upData(simhiv,
             rename = .q(init.class = class, init.year = year,       preARTAIDS.clinical = aids),
             labels = .q(aids = "Pre-ART AIDS") )
-html(contents(d), levelType='table')
+contents(d)
 ```
 
 # Descriptive Statistics
 
 
 ```{r desc, results='asis'}
-html(describe(d))
+describe(d)
 ```
 
 See how strongly predictors relate to each other.  Note that the Spearman $\rho$ rank correlations used in this call to `varclus` are transformation-invariant.
@@ -104,6 +104,9 @@ f
 a <- anova(f)
 a
 plot(a)
+plot(a, 'proportion chisq')
+rex <- rexVar(f, d)
+plot(rex)
 ```
 
 # Partial Effect Shapes and Strengths
