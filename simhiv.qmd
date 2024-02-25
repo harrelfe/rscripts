@@ -86,7 +86,7 @@ Let's use AIC to choose between 4 knots for continuous variables, and 5 knots.
 dd <- datadist(d); options(datadist='dd')
 f <- orm(post.cd4 ~ site + male + rcs(age, 4) + class + route +
          rcs(cr(nadir.cd4), 4) + rcs(year, 4) + rcs(cr(pre.rna), 4) +
-         aids, data=d)
+         aids, data=d, x=TRUE, y=TRUE)
 g <- orm(post.cd4 ~ site + male + rcs(age, 5) + class + route +
          rcs(cr(nadir.cd4), 5) + rcs(year, 5) + rcs(cr(pre.rna), 5) +
          aids, data=d)
@@ -105,7 +105,13 @@ a <- anova(f)
 a
 plot(a)
 plot(a, 'proportion chisq')
-rex <- rexVar(f, d)
+# Run the bootstrap so we can get uncertainties in rexVar
+bootdone <- TRUE
+if(bootdone) b <- readRDS('simhiv-b.rds') else {
+  b <- bootcov(f, B=300)   # 2 minutes
+  saveRDS(b, 'simhiv-b.rds')
+}
+rex <- rexVar(b, d)
 plot(rex)
 ```
 
