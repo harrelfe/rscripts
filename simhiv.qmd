@@ -101,7 +101,7 @@ f
 # Assess Strength of Associations
 
 ```{r results='asis'}
-a <- anova(f)
+a <- anova(f, test='LR')
 a
 plot(a)
 plot(a, 'proportion chisq')
@@ -111,6 +111,8 @@ if(bootdone) b <- readRDS('simhiv-b.rds') else {
   b <- bootcov(f, B=300)   # 2 minutes
   saveRDS(b, 'simhiv-b.rds')
 }
+# To get access to rexVar until Hmisc 5.1-2 arrives run
+# source('https://raw.githubusercontent.com/harrelfe/rms/master/R/rexVar.r')
 rex <- rexVar(b, d)
 plot(rex)
 ```
