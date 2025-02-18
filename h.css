@@ -11,3 +11,7 @@
 		white-space: pre;
 }
 
+.author a {
+  color: black !important;
+}
+

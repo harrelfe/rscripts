@@ -155,7 +155,7 @@ For model goodness of fit comparisons we focus on AIC and the third $R^2$ measur
 ```{r}
 dd <- datadist(d); options(datadist='dd')
 f1 <- lrm(sigdz ~ rcs(age, 4) * (sex + rcs(choleste, 4)),
-          data=d, tol=1e-13)    # tol= gets around error:failure to fit
+          data=d, x=TRUE, y=TRUE)  # x, y for test='LR' below
 f1
 f2 <- lrm(sigdz ~ rcs(age, 4) * sex + rcs(choleste, 4) +
           rcs(age, 4) %ia% rcs(choleste, 4), data=d)
@@ -189,13 +189,13 @@ lrtest(f1, f4)
 
 * Compare this with the appropriate line in the ANOVA table below
 
-## Wald Tests on the Full Model
+## Likelihood Ratio Tests on the Full Model
 
-Print and plot Wald chunk tests.  A second plot shows relative explained outcome variation by the various risk factors.  This is a variable importance measure.
+Print and plot LR chunk tests.  A second plot shows relative explained outcome variation by the various risk factors.  This is a variable importance measure.
 
 ```{r}
 #| fig.height: 2.85
-a <- anova(f1)
+a <- anova(f1, test='LR')
 a
 plot(a)
 plot(a, what='proportion chisq')
