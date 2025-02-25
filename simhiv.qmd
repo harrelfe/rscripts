@@ -39,7 +39,7 @@ options(prType='html')
 
 # Problem
 
-* From [Liu, Shepherd, Li, Harrell (2017)](https://biostat.app.vumc.org/wiki/Main/ArchivedAnalyses)
+* From[Liu, Shepherd, Li, Harrell (2017)
 * Simulated data to mimic real data from an HIV study
 * N observations: 1796
 * Goal: Examine predictors of post-treatment CD4 count
@@ -106,13 +106,7 @@ a
 plot(a)
 plot(a, 'proportion chisq')
 # Run the bootstrap so we can get uncertainties in rexVar
-bootdone <- TRUE
-if(bootdone) b <- readRDS('simhiv-b.rds') else {
-  b <- bootcov(f, B=300)   # 2 minutes
-  saveRDS(b, 'simhiv-b.rds')
-}
-# To get access to rexVar until Hmisc 5.1-2 arrives run
-# source('https://raw.githubusercontent.com/harrelfe/rms/master/R/rexVar.r')
+b   <- bootcov(f, B=300)
 rex <- rexVar(b, d)
 plot(rex)
 ```
