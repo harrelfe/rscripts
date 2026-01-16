@@ -44,14 +44,14 @@ sound <- function(x) {
 
 bmovie <- function(x) {
   file <- paste0('http://bit.ly/yt-', qproject, x)
-  linkit('movie.png', file)
+  linkit('/img/movie.png', file)
   }
 
-movie <- function(x) linkit('movie.png', x)
+movie <- function(x) linkit('/img/movie.png', x)
 
 ddisc <- function(x) {
   file <- paste0('http://bit.ly/datamethods-', qproject, x)
-  linkit('discourse.png', file)
+  linkit('/img/discourse.png', file)
   }
 
 disc <- function(x) {
@@ -61,7 +61,7 @@ disc <- function(x) {
 
 rmsdisc <- function(x='') {
   file <- paste0('https://discourse.datamethods.org/rms', x)
-  linkit('discourse.png', file)
+  linkit('/img/discourse.png', file)
 }
 
 blog <- function(x) {
@@ -173,7 +173,7 @@ hypcomment <- '<a href="https://hbiostat.org/comment.html"
 </a>'
   
 disccom <- function(topic)
-  if(! ishtml) invisible() else paste0('[[![](https://hbiostat.org/img/discourse.png)](https://discourse.datamethods.org/t/', topic, ')<br>',
+  if(! ishtml) invisible() else paste0('[[![](/img/discourse.png)](https://discourse.datamethods.org/t/', topic, ')<br>',
                                        hypcomment, ']{.aside}<br><br>')
 
 
