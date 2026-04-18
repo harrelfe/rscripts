@@ -13,3 +13,9 @@ Store the script in a location that is in your shell's path, such as `~/bin` or 
 On Mac this pops up a `Preview` window that can then be printed on a color printer.
 
 ![](https://github.com/harrelfe/rscripts/blob/master/prprint.png)
+
+To get a symbol table with line numbers at the end of the PDF listing use
+
+`prprint myfile.r st`
+
+![](https://github.com/harrelfe/rscripts/blob/master/prprint-st.png)

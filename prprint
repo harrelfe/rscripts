@@ -2,7 +2,9 @@
 """
 prprint - Print an R/S source file with syntax highlighting and block annotations.
 
-Usage:  prprint <file.[RrSs]>
+Usage:
+  prprint <file.[RrSs]>        listing only
+  prprint <file.[RrSs]> st     listing followed by a symbol table
 
 The file is rendered as a color-highlighted PDF, opened in Preview.
 Code blocks delimited by { } are annotated in the left margin with
@@ -18,6 +20,13 @@ Same-line { } pairs are not annotated.  On lines that both close one
 block and open another, both symbols appear in the margin, closing
 symbol first.
 
+The symbol table (option st) lists every variable and function name
+found in the file in case-insensitive alphabetical order, with a
+comma-separated list of line numbers (capped at 10, then ...) where
+each name appears.  Names that appear only as named arguments or list
+element names (left of = inside parentheses) are omitted.  The table
+is printed in a two-column layout on a new page.
+
 Requirements (install once):
   brew install weasyprint        # installs weasyprint + all native libraries
   pip3 install pygments          # pure Python, no native dependencies
@@ -30,9 +39,10 @@ import os
 import sys
 import shutil
 import subprocess
+from collections import defaultdict
 
 # ---------------------------------------------------------------------------
-# Dependency check — tell the user exactly what to do if anything is missing
+# Dependency check
 # ---------------------------------------------------------------------------
 MISSING_PY  = []
 MISSING_BIN = []
@@ -63,11 +73,20 @@ if MISSING_PY or MISSING_BIN:
 # ---------------------------------------------------------------------------
 # Argument handling
 # ---------------------------------------------------------------------------
-if len(sys.argv) != 2:
-    print("Usage: prprint <file.[RrSs]>", file=sys.stderr)
+def usage():
+    print("Usage: prprint <file.[RrSs]> [st]", file=sys.stderr)
     sys.exit(1)
 
-filepath = sys.argv[1]
+if len(sys.argv) not in (2, 3):
+    usage()
+
+filepath    = sys.argv[1]
+want_symtab = len(sys.argv) == 3 and sys.argv[2] == "st"
+
+if len(sys.argv) == 3 and sys.argv[2] != "st":
+    print(f"prprint: unknown option '{sys.argv[2]}' (only 'st' is supported)",
+          file=sys.stderr)
+    usage()
 
 if not os.path.isfile(filepath):
     print(f"prprint: file not found: {filepath}", file=sys.stderr)
@@ -80,86 +99,100 @@ if ext not in ("R", "r", "S", "s"):
     sys.exit(1)
 
 # ---------------------------------------------------------------------------
-# Symbol sequence
+# Symbol sequence for block annotations
 # ---------------------------------------------------------------------------
 def index_to_symbol(i: int) -> str:
-    """Map a 1-based block index to its margin symbol."""
     if i <= 26:
-        return chr(0x24B6 + i - 1)          # Ⓐ-Ⓩ
+        return chr(0x24B6 + i - 1)
     elif i <= 52:
-        return chr(0x24D0 + i - 27)         # ⓐ-ⓩ
+        return chr(0x24D0 + i - 27)
     else:
-        n = i - 52                           # 1-based number index
-        if n <= 20:
-            return chr(0x2460 + n - 1)      # ①-⑳
-        elif n <= 35:
-            return chr(0x3251 + n - 21)     # ㉑-㉟
-        elif n <= 50:
-            return chr(0x32B1 + n - 36)     # ㊱-㊿
-        else:
-            return f"({n})"                 # (51), (52), ...
+        n = i - 52
+        if n <= 20:  return chr(0x2460 + n - 1)
+        elif n <= 35: return chr(0x3251 + n - 21)
+        elif n <= 50: return chr(0x32B1 + n - 36)
+        else:         return f"({n})"
 
 # ---------------------------------------------------------------------------
-# Brace parsing via pygments token stream
+# Single token walk: brace pairs + symbol table
 # ---------------------------------------------------------------------------
-def find_brace_pairs(source: str) -> dict[int, list[str]]:
-    """
-    Return a dict mapping line numbers to a list of margin symbols.
-    Uses pygments to tokenise so braces inside strings/comments are ignored.
-    Closing symbols precede opening symbols on the same line.
-    """
+def analyse_source(source: str, want_symtab: bool):
     lexer  = get_lexer_by_name("r")
     tokens = list(pygments.lex(source, lexer))
 
-    # Walk tokens tracking line number and collecting Punctuation { }
-    brace_events = []   # list of (lineno, kind) where kind is 'open' or 'close'
-    lineno = 1
-    for ttype, val in tokens:
+    brace_events = []
+    sym_lines    = defaultdict(set)   # name -> set of line numbers
+    arg_only     = defaultdict(lambda: True)  # name -> still arg-only?
+    lineno       = 1
+
+    for i, (ttype, val) in enumerate(tokens):
+        # Brace detection
         if ttype == Token.Punctuation:
             for ch in val:
                 if ch == "{":
                     brace_events.append((lineno, "open"))
                 elif ch == "}":
                     brace_events.append((lineno, "close"))
+
+        # Symbol collection
+        if want_symtab and ttype in (Token.Name, Token.Name.Function):
+            if val.strip():
+                sym_lines[val].add(lineno)
+                # Look ahead past whitespace to check for '='
+                is_named_arg = False
+                for j in range(i + 1, min(i + 4, len(tokens))):
+                    nt, nv = tokens[j]
+                    if not nv.strip():
+                        continue
+                    if nt == Token.Operator and nv == "=":
+                        is_named_arg = True
+                    break
+                if not is_named_arg:
+                    arg_only[val] = False
+
         lineno += val.count("\n")
 
-    # Match braces using a stack
-    stack = []   # stack of (open_lineno, event_index)
-    pairs = []   # list of (open_lineno, close_lineno)
+    # Match brace pairs
+    stack = []
+    pairs = []
     for idx, (ln, kind) in enumerate(brace_events):
         if kind == "open":
             stack.append((ln, idx))
         elif kind == "close" and stack:
             open_ln, _ = stack.pop()
-            if open_ln != ln:             # skip same-line pairs
+            if open_ln != ln:
                 pairs.append((open_ln, ln))
 
-    # Assign symbols in order of opening line
     pairs.sort(key=lambda p: p[0])
-    margin: dict[int, list[str]] = {}
+    margin_map: dict = {}
     for block_idx, (open_ln, close_ln) in enumerate(pairs, start=1):
         sym = index_to_symbol(block_idx)
-        # Closing symbol first, opening symbol second
-        margin.setdefault(close_ln, []).insert(0, sym)  # prepend: close first
-        margin.setdefault(open_ln,  []).append(sym)     # append:  open  last
-    return margin
+        margin_map.setdefault(close_ln, []).insert(0, sym)
+        margin_map.setdefault(open_ln,  []).append(sym)
+
+    # Build filtered, sorted symbol table
+    sym_table = {}
+    if want_symtab:
+        for name, lines in sym_lines.items():
+            if not arg_only[name]:           # exclude arg-only names
+                sym_table[name] = sorted(lines)
+
+    return margin_map, sym_table
 
 # ---------------------------------------------------------------------------
-# Build annotated highlighted HTML
+# Build annotated highlighted HTML for the listing
 # ---------------------------------------------------------------------------
 with open(filepath, "r", encoding="utf-8") as fh:
     source = fh.read()
 
-source_lines = source.splitlines()
-total        = len(source_lines)
-numwidth     = len(str(total))
-margin_map   = find_brace_pairs(source)
+source_lines           = source.splitlines()
+total                  = len(source_lines)
+numwidth               = len(str(total))
+margin_map, sym_table  = analyse_source(source, want_symtab)
 
-# Maximum number of symbols on any one line
 max_syms  = max((len(v) for v in margin_map.values()), default=1)
 margwidth = max(numwidth, max_syms)
 
-# Build annotated source with margin column, then highlight the whole thing
 annotated_lines = []
 for i, line in enumerate(source_lines, start=1):
     if i in margin_map:
@@ -176,6 +209,61 @@ formatter   = HtmlFormatter(style="tango", nowrap=True)
 css_defs    = HtmlFormatter(style="tango").get_style_defs(".highlight")
 highlighted = highlight(annotated_source, lexer, formatter)
 
+# ---------------------------------------------------------------------------
+# Build symbol table HTML
+# ---------------------------------------------------------------------------
+# Character budget for line-number column:
+# 8.5in page, 0.5in margins -> 7.5in content
+# Two CSS columns, 1.5em gap at 7pt (1em=7/72in): gap=0.146in
+# Each column = (7.5-0.146)/2 = 3.677in; st-lines is 65% = 2.390in
+# 7pt monospace char width ~0.6em = 0.058in -> ~41 chars/line -> 82 for two lines; 20% conservative = 66
+_LINENO_BUDGET = 66
+
+def truncate_linenos(line_list: list) -> str:
+    """Format line numbers to fit within two lines of the st-lines column."""
+    result = []
+    used   = 0
+    for n in line_list:
+        chunk = (", " if result else "") + str(n)
+        if used + len(chunk) <= _LINENO_BUDGET:
+            result.append(str(n))
+            used += len(chunk)
+        else:
+            return ", ".join(result) + ", \u2026"
+    return ", ".join(result)
+
+def build_symtab_html(sym_table: dict) -> str:
+    if not sym_table:
+        return ""
+
+    sorted_names = sorted(sym_table.keys(), key=str.casefold)
+    rows = []
+    for name in sorted_names:
+        linenos   = truncate_linenos(sym_table[name])
+        safe_name = name.replace("&", "&amp;").replace("<", "&lt;")
+        rows.append(
+            f'<tr>'
+            f'<td class="st-name">{safe_name}</td>'
+            f'<td class="st-lines">{linenos}</td>'
+            f'</tr>'
+        )
+
+    rows_html = "\n".join(rows)
+    return f"""
+<div class="symtab">
+  <h2>Symbol Table</h2>
+  <div class="st-columns">
+    <table>
+{rows_html}
+    </table>
+  </div>
+</div>"""
+
+symtab_html = build_symtab_html(sym_table) if want_symtab else ""
+
+# ---------------------------------------------------------------------------
+# Assemble full HTML document
+# ---------------------------------------------------------------------------
 title = os.path.basename(filepath)
 html  = f"""<!DOCTYPE html>
 <html>
@@ -186,18 +274,50 @@ html  = f"""<!DOCTYPE html>
     @page      {{ margin: 0.5in }}
     body       {{ font-family: monospace; font-size: 9pt }}
     h1         {{ font-family: sans-serif; font-size: 11pt; margin-bottom: 0.2em }}
+    h2         {{ font-family: sans-serif; font-size: 10pt; margin-bottom: 0.3em }}
     .highlight {{ white-space: pre }}
     {css_defs}
+
+    /* Symbol table */
+    .symtab {{
+      page-break-before: always;
+    }}
+    .st-columns {{
+      column-count: 2;
+      column-gap: 1.5em;
+      column-rule: 1px solid #ccc;
+    }}
+    table {{
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 7pt;
+    }}
+    td {{
+      padding: 1px 4px;
+      vertical-align: top;
+    }}
+    td.st-name {{
+      font-weight: bold;
+      white-space: nowrap;
+      width: 35%;
+    }}
+    td.st-lines {{
+      color: #444;
+    }}
+    tr:nth-child(even) {{
+      background-color: #f5f5f5;
+    }}
   </style>
 </head>
 <body>
   <h1>{title}</h1>
   <div class="highlight">{highlighted}</div>
+  {symtab_html}
 </body>
 </html>"""
 
 # ---------------------------------------------------------------------------
-# Write HTML to temp file, render to PDF via weasyprint, open in Preview
+# Write HTML, render to PDF via weasyprint, open in Preview
 # ---------------------------------------------------------------------------
 pid      = os.getpid()
 htmlpath = f"/tmp/prprint_{pid}.html"
