@@ -1,0 +1,218 @@
+#!/usr/bin/env python3
+"""
+prprint - Print an R/S source file with syntax highlighting and block annotations.
+
+Usage:  prprint <file.[RrSs]>
+
+The file is rendered as a color-highlighted PDF, opened in Preview.
+Code blocks delimited by { } are annotated in the left margin with
+circled symbols in this sequence:
+  Ⓐ-Ⓩ  (blocks  1-26)
+  ⓐ-ⓩ  (blocks 27-52)
+  ①-⑳  (blocks 53-72)
+  ㉑-㉟  (blocks 73-87)
+  ㊱-㊿  (blocks 88-102)
+  (51),(52),...  beyond that
+
+Same-line { } pairs are not annotated.  On lines that both close one
+block and open another, both symbols appear in the margin, closing
+symbol first.
+
+Requirements (install once):
+  brew install weasyprint        # installs weasyprint + all native libraries
+  pip3 install pygments          # pure Python, no native dependencies
+
+If pip3 is not found:
+  brew install python3           # includes pip3
+"""
+
+import os
+import sys
+import shutil
+import subprocess
+
+# ---------------------------------------------------------------------------
+# Dependency check — tell the user exactly what to do if anything is missing
+# ---------------------------------------------------------------------------
+MISSING_PY  = []
+MISSING_BIN = []
+
+try:
+    from pygments import highlight
+    from pygments.lexers import get_lexer_by_name
+    from pygments.formatters import HtmlFormatter
+    from pygments.token import Token
+    import pygments
+except ImportError:
+    MISSING_PY.append("pygments")
+
+if shutil.which("weasyprint") is None:
+    MISSING_BIN.append("weasyprint")
+
+if MISSING_PY or MISSING_BIN:
+    if MISSING_PY:
+        pkgs = " ".join(MISSING_PY)
+        print(f"prprint: missing Python package(s): {pkgs}", file=sys.stderr)
+        print(f"  Install with:  pip3 install {pkgs}", file=sys.stderr)
+        print(f"  (If pip3 is missing:  brew install python3)", file=sys.stderr)
+    if MISSING_BIN:
+        print(f"prprint: 'weasyprint' command not found", file=sys.stderr)
+        print(f"  Install with:  brew install weasyprint", file=sys.stderr)
+    sys.exit(1)
+
+# ---------------------------------------------------------------------------
+# Argument handling
+# ---------------------------------------------------------------------------
+if len(sys.argv) != 2:
+    print("Usage: prprint <file.[RrSs]>", file=sys.stderr)
+    sys.exit(1)
+
+filepath = sys.argv[1]
+
+if not os.path.isfile(filepath):
+    print(f"prprint: file not found: {filepath}", file=sys.stderr)
+    sys.exit(1)
+
+ext = os.path.splitext(filepath)[1].lstrip(".")
+if ext not in ("R", "r", "S", "s"):
+    print(f"prprint: file must have suffix .R, .r, .S, or .s (got: .{ext})",
+          file=sys.stderr)
+    sys.exit(1)
+
+# ---------------------------------------------------------------------------
+# Symbol sequence
+# ---------------------------------------------------------------------------
+def index_to_symbol(i: int) -> str:
+    """Map a 1-based block index to its margin symbol."""
+    if i <= 26:
+        return chr(0x24B6 + i - 1)          # Ⓐ-Ⓩ
+    elif i <= 52:
+        return chr(0x24D0 + i - 27)         # ⓐ-ⓩ
+    else:
+        n = i - 52                           # 1-based number index
+        if n <= 20:
+            return chr(0x2460 + n - 1)      # ①-⑳
+        elif n <= 35:
+            return chr(0x3251 + n - 21)     # ㉑-㉟
+        elif n <= 50:
+            return chr(0x32B1 + n - 36)     # ㊱-㊿
+        else:
+            return f"({n})"                 # (51), (52), ...
+
+# ---------------------------------------------------------------------------
+# Brace parsing via pygments token stream
+# ---------------------------------------------------------------------------
+def find_brace_pairs(source: str) -> dict[int, list[str]]:
+    """
+    Return a dict mapping line numbers to a list of margin symbols.
+    Uses pygments to tokenise so braces inside strings/comments are ignored.
+    Closing symbols precede opening symbols on the same line.
+    """
+    lexer  = get_lexer_by_name("r")
+    tokens = list(pygments.lex(source, lexer))
+
+    # Walk tokens tracking line number and collecting Punctuation { }
+    brace_events = []   # list of (lineno, kind) where kind is 'open' or 'close'
+    lineno = 1
+    for ttype, val in tokens:
+        if ttype == Token.Punctuation:
+            for ch in val:
+                if ch == "{":
+                    brace_events.append((lineno, "open"))
+                elif ch == "}":
+                    brace_events.append((lineno, "close"))
+        lineno += val.count("\n")
+
+    # Match braces using a stack
+    stack = []   # stack of (open_lineno, event_index)
+    pairs = []   # list of (open_lineno, close_lineno)
+    for idx, (ln, kind) in enumerate(brace_events):
+        if kind == "open":
+            stack.append((ln, idx))
+        elif kind == "close" and stack:
+            open_ln, _ = stack.pop()
+            if open_ln != ln:             # skip same-line pairs
+                pairs.append((open_ln, ln))
+
+    # Assign symbols in order of opening line
+    pairs.sort(key=lambda p: p[0])
+    margin: dict[int, list[str]] = {}
+    for block_idx, (open_ln, close_ln) in enumerate(pairs, start=1):
+        sym = index_to_symbol(block_idx)
+        # Closing symbol first, opening symbol second
+        margin.setdefault(close_ln, []).insert(0, sym)  # prepend: close first
+        margin.setdefault(open_ln,  []).append(sym)     # append:  open  last
+    return margin
+
+# ---------------------------------------------------------------------------
+# Build annotated highlighted HTML
+# ---------------------------------------------------------------------------
+with open(filepath, "r", encoding="utf-8") as fh:
+    source = fh.read()
+
+source_lines = source.splitlines()
+total        = len(source_lines)
+numwidth     = len(str(total))
+margin_map   = find_brace_pairs(source)
+
+# Maximum number of symbols on any one line
+max_syms  = max((len(v) for v in margin_map.values()), default=1)
+margwidth = max(numwidth, max_syms)
+
+# Build annotated source with margin column, then highlight the whole thing
+annotated_lines = []
+for i, line in enumerate(source_lines, start=1):
+    if i in margin_map:
+        syms   = "".join(margin_map[i])
+        margin = syms + " " * (margwidth - len(margin_map[i]))
+    else:
+        margin = str(i).rjust(margwidth)
+    annotated_lines.append(f"{margin} {line}")
+
+annotated_source = "\n".join(annotated_lines) + "\n"
+
+lexer       = get_lexer_by_name("r")
+formatter   = HtmlFormatter(style="tango", nowrap=True)
+css_defs    = HtmlFormatter(style="tango").get_style_defs(".highlight")
+highlighted = highlight(annotated_source, lexer, formatter)
+
+title = os.path.basename(filepath)
+html  = f"""<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>{title}</title>
+  <style>
+    @page      {{ margin: 0.5in }}
+    body       {{ font-family: monospace; font-size: 9pt }}
+    h1         {{ font-family: sans-serif; font-size: 11pt; margin-bottom: 0.2em }}
+    .highlight {{ white-space: pre }}
+    {css_defs}
+  </style>
+</head>
+<body>
+  <h1>{title}</h1>
+  <div class="highlight">{highlighted}</div>
+</body>
+</html>"""
+
+# ---------------------------------------------------------------------------
+# Write HTML to temp file, render to PDF via weasyprint, open in Preview
+# ---------------------------------------------------------------------------
+pid      = os.getpid()
+htmlpath = f"/tmp/prprint_{pid}.html"
+pdfpath  = f"/tmp/prprint_{pid}.pdf"
+
+with open(htmlpath, "w", encoding="utf-8") as fh:
+    fh.write(html)
+
+try:
+    subprocess.run(
+        ["weasyprint", htmlpath, pdfpath],
+        check=True,
+        stderr=subprocess.DEVNULL
+    )
+finally:
+    os.unlink(htmlpath)
+
+subprocess.run(["open", "-a", "Preview", pdfpath])
