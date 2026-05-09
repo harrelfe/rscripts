@@ -31,7 +31,7 @@ t.test(females, males, var.equal=TRUE) # traditional equal variance test
 
 # Longhand: sex=c('female', 'female', 'female', ... 'male', 'male', ...)
 dat <- data.frame(
-  sex=c(rep('female', 5), rep('male', 6)),
+  sex=factor(c(rep('female', 5), rep('male', 6))),
   SCr=c(.8, .7, .95, 1.05, 1.03, .9, .92, 1.25, 1.1, 1.08, 1.01)
   )
 dat
