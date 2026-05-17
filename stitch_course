@@ -769,6 +769,56 @@ webpage_insert <- function(src, libs = NULL, label = NULL, wp_index = 0) {
     '</div>')
 }
 
+# ── iframe insert ────────────────────────────────────────────────────────────
+# Embeds a URL or local file in a full-viewport iframe, preserving all JS/CSS.
+# Ideal for self-contained presentations (Marp, reveal.js, etc.) where
+# extracting body HTML would break JavaScript-driven behaviour.
+# spacing: 25vh above and below (same as webpage inserts).
+# label: appears in the right-margin tab while the iframe is in view.
+
+iframe_insert <- function(src, label = NULL, height = "90vh", wp_index = 0) {
+  if (is.null(label) || nchar(trimws(label)) == 0) {
+    label <- if (grepl("^https?://", src))
+      gsub("^www\\.", "", regmatches(src,
+        regexpr("(?<=://)[^/]+", src, perl = TRUE)))
+    else
+      tools::file_path_sans_ext(basename(src))
+  }
+
+  wp_key  <- paste0("wp-", wp_index)
+
+  # Sentinel banner for margin tab JS tracking
+  sentinel <- paste0(
+    '<div class="stitch-book-banner" data-book="', wp_key, '" ',
+    'style="height:0;margin:0;padding:0;border:none;background:none;"></div>')
+
+  # Margin tab
+  tab <- paste0(
+    '<div class="stitch-book-tab" data-book="', wp_key, '" ',
+    'style="display:none;position:fixed;top:50%;right:0;',
+    'transform:translateY(-50%);',
+    'background:#e8e8e8;color:#333;',
+    'padding:4px 6px;font-family:sans-serif;font-size:.6em;',
+    'font-weight:700;letter-spacing:.04em;',
+    'border-radius:4px 0 0 4px;',
+    'box-shadow:-1px 0 5px rgba(0,0,0,.15);z-index:500;',
+    'writing-mode:vertical-rl;text-orientation:mixed;">',
+    he(label), '</div>')
+
+  # The iframe itself — width 100%, height configurable
+  frame <- paste0(
+    '<iframe src="', src, '" ',
+    'style="width:100%;height:', height, ';border:none;display:block;" ',
+    'allowfullscreen loading="lazy"></iframe>')
+
+  paste0(
+    '<div class="stitch-iframe-insert" style="margin:25vh 0;">',
+    sentinel, "
+", tab, "
+", frame,
+    '</div>')
+}
+
 # ── Page wrapper ──────────────────────────────────────────────────────────────
 
 wrap_page <- function(title, presenters = NULL, cover_images = NULL,
@@ -921,6 +971,16 @@ for (item in nav$sessions) {
     next
   }
 
+  # Top-level iframe between sessions
+  if (!is.null(item$iframe) && is.null(item$title)) {
+    wp_counter <<- wp_counter + 1L
+    message("\n[iframe between sessions] ", item$iframe)
+    height <- if (!is.null(item$height)) as.character(item$height) else "90vh"
+    body_parts <- c(body_parts,
+      iframe_insert(item$iframe, item$label, height, wp_counter))
+    next
+  }
+
   sess <- item
   si   <- si + 1L
   message("\n--- Session ", si, ": ", sess$title)
@@ -941,6 +1001,15 @@ for (item in nav$sessions) {
       wp_counter <<- wp_counter + 1L
       body_parts <- c(body_parts,
         webpage_insert(entry$webpage, entry$libs, entry$label, wp_counter))
+      next
+    }
+
+    # iframe insert entry
+    if (!is.null(entry$iframe)) {
+      wp_counter <<- wp_counter + 1L
+      height <- if (!is.null(entry$height)) as.character(entry$height) else "90vh"
+      body_parts <- c(body_parts,
+        iframe_insert(entry$iframe, entry$label, height, wp_counter))
       next
     }
 
