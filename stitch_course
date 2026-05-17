@@ -1,0 +1,1036 @@
+#!/usr/bin/env Rscript
+# stitch_course.R
+# ---------------
+# Fetches sections from three Harrell books and stitches them into one
+# long-scrolling HTML file for linear course presentation.
+#
+# Usage:
+#   Rscript stitch_course.R [nav.yaml] [out.html]
+#
+# Packages required:
+#   install.packages(c("httr2", "xml2", "yaml", "stringr", "base64enc"))
+
+suppressPackageStartupMessages({
+  library(httr2)
+  library(xml2)
+  library(yaml)
+  library(stringr)
+  library(base64enc)
+})
+
+`%||%` <- function(a, b) if (!is.null(a)) a else b
+
+# ── Book registry ─────────────────────────────────────────────────────────────
+
+BOOKS <- list(
+  bbr = list(
+    short = "BBR",
+    full  = "Biostatistics for Biomedical Research",
+    base  = "https://hbiostat.org/bbr",
+    local = "~/web/bbr",
+    color = "#2c5f8a"
+  ),
+  rms = list(
+    short = "RMS",
+    full  = "Regression Modeling Strategies",
+    base  = "https://hbiostat.org/rmsc",
+    local = "~/web/rmsc",
+    color = "#5a3e8a"
+  ),
+  rflow = list(
+    short = "RFlow",
+    full  = "R Workflow",
+    base  = "https://hbiostat.org/rflow",
+    local = "~/web/rflow",
+    color = "#2a7a4b"
+  )
+)
+
+# ── Network fetch ─────────────────────────────────────────────────────────────
+
+fetch_url <- function(url) {
+  message("  [fetch] ", url)
+  request(url) |>
+    req_headers("User-Agent" = "Mozilla/5.0 (stitcher/7.0)") |>
+    req_timeout(30) |>
+    req_perform() |>
+    resp_body_string()
+}
+
+# ── Local-first page fetcher ──────────────────────────────────────────────────
+# Checks the book's local mirror before hitting the network.
+# Local mirror layout: ~/web/{book}/{slug}.html or ~/web/{book}/{slug}/index.html
+# The base  URL is still used for absolutizing assets so output HTML is portable.
+
+fetch_page <- function(url, book_key = NULL) {
+  if (!is.null(book_key) && book_key %in% names(BOOKS)) {
+    b         <- BOOKS[[book_key]]
+    local_dir <- path.expand(b$local)
+    slug      <- basename(url)
+    slug      <- sub("\\.html$", "", slug)   # strip .html suffix
+    # slug is "index" if URL ends with the book base (no chapter path)
+    base_slug <- basename(str_remove(b$base, "/?$"))
+    if (slug == "" || slug == base_slug) slug <- "index"
+    candidates <- c(
+      file.path(local_dir, paste0(slug, ".html")),
+      file.path(local_dir, slug, "index.html"),
+      file.path(local_dir, "index.html")     # book index page
+    )
+    for (path in candidates) {
+      if (file.exists(path)) {
+        message("  [local] ", path)
+        return(paste(readLines(path, warn = FALSE), collapse = "\n"))
+      }
+    }
+    message("  [local miss] no mirror found for ", url)
+  }
+  # Fall back to network fetch
+  fetch_url(url)
+}
+
+# ── Parse book TOC ────────────────────────────────────────────────────────────
+# Returns data.frame(num, url, title)
+
+parse_toc <- function(book_key) {
+  b     <- BOOKS[[book_key]]
+  html  <- fetch_page(b$base, book_key)
+  doc   <- read_html(html)
+  links <- xml_find_all(doc,
+    "//nav//a | //div[contains(@class,'sidebar')]//a")
+
+  seen <- character(0)
+  out  <- list()
+  for (a in links) {
+    href <- xml_attr(a, "href")
+    text <- str_squish(xml_text(a))
+    if (is.na(href) || href == "" || href == "#") next
+    if (nchar(text) == 0 || nchar(text) > 120)   next
+    # Absolutize relative hrefs
+    if (str_starts(href, "/"))
+      href <- paste0("https://hbiostat.org", href)
+    else if (!str_starts(href, "http"))
+      href <- paste0(b$base, "/", href)
+    # Normalize local-mirror artifacts: /./  and explicit .html suffixes
+    href <- gsub("/\\./", "/", href)      # remove /./
+    href <- sub("\\.html$", "", href)     # strip .html suffix
+    href <- str_remove(href, "/?$")        # strip trailing slash
+    # Skip anchor-only links
+    if (str_detect(href, "#")) next
+    # Keep only URLs belonging to this book
+    if (!str_starts(href, b$base)) next
+    if (href %in% seen) next
+    seen <- c(seen, href)
+    # Chapter entry: text like "4 Descriptive Statistics..."
+    m <- str_match(text, "^(\\d+)\\s+(.+)$")
+    if (!is.na(m[1, 2])) {
+      out[[length(out) + 1]] <- data.frame(
+        num   = m[1, 2],
+        url   = href,
+        title = str_squish(m[1, 3]),
+        stringsAsFactors = FALSE)
+      next
+    }
+    # Preface / index page: URL matches book base with or without trailing slash
+    # Preface: URL is the book base or the book base /index
+    base_clean <- str_remove(b$base, "/?$")
+    if (href == base_clean || href == paste0(base_clean, "/index")) {
+      if (!any(vapply(out, function(x) x$num == "preface", logical(1)))) {
+        out[[length(out) + 1]] <- data.frame(
+          num   = "preface",
+          url   = b$base,
+          title = text,
+          stringsAsFactors = FALSE)
+      }
+    }
+  }
+  if (length(out) == 0) stop("No chapters found for book: ", book_key)
+  toc <- do.call(rbind, out)
+  toc[!duplicated(toc$url), ]
+}
+
+# ── Resolve chapters from include specs ───────────────────────────────────────
+# specs: character vector e.g. c("preface", "4", "5.1", "5.4")
+# Returns list of lists: list(num, url, title, specs)
+
+resolve_chapters <- function(specs, excludes, toc) {
+  specs     <- as.character(unlist(specs))
+  excludes  <- if (!is.null(excludes)) as.character(unlist(excludes)) else character(0)
+  chap_nums <- unique(vapply(specs, function(s) {
+    s <- str_trim(s)
+    if (s == "preface")            "preface"
+    else if (s == "intro")         "__intro__"
+    else if (str_starts(s, "#"))   "__slug__"   # id-based; chapter determined at runtime
+    else str_split(s, "\\.")[[1]][1]
+  }, character(1)))
+
+  out <- list()
+  for (n in chap_nums) {
+    if (n == "__intro__") next   # intro is not a standalone chapter number
+    if (n == "__slug__")  next   # #slug specs are attached to other chapters
+    row <- toc[toc$num == n, ]
+    if (nrow(row) == 0) {
+      warning("Chapter '", n, "' not found in TOC — skipping"); next
+    }
+    # Collect specs belonging to this chapter in their original YAML order.
+    # A spec belongs if it matches this chapter numerically, is intro/preface,
+    # or is a #slug (attached to all chapters; extract_content skips if not found).
+    numeric_or_kw <- grepl(paste0("^", n, "($|\\.)"), specs) |
+                     specs == "intro" |
+                     (n == "preface" & specs == "preface") |
+                     str_starts(specs, "#")
+    matching <- specs[numeric_or_kw]   # preserves original YAML order
+    # Exclude specs: numeric prefix match + #slug excludes, in original order
+    excl_match <- grepl(paste0("^", n, "\\."), excludes) |
+                  str_starts(excludes, "#")
+    chap_excludes <- excludes[excl_match]
+    out[[length(out) + 1]] <- list(
+      num      = n,
+      url      = row$url[1],
+      title    = row$title[1],
+      specs    = matching,
+      excludes = chap_excludes)
+  }
+  out
+}
+
+# ── Absolutize in-page asset URLs ────────────────────────────────────────────
+# Images like "descript_files/figure-html/foo.png" are relative to the
+# chapter page URL directory, e.g. https://hbiostat.org/bbr/
+
+absolutize <- function(doc, chapter_url) {
+  base <- paste0(str_remove(chapter_url, "/[^/]*$"), "/")
+  for (attr in c("src", "href", "data-src")) {
+    for (n in xml_find_all(doc, sprintf("//*[@%s]", attr))) {
+      v <- xml_attr(n, attr)
+      if (is.na(v) || v == "")         next
+      if (str_starts(v, "http"))       next
+      if (str_starts(v, "//"))         next
+      if (str_starts(v, "data:"))      next
+      if (str_starts(v, "#"))          next
+      if (str_starts(v, "javascript")) next
+      if (str_starts(v, "mailto:"))    next
+      xml_attr(n, attr) <- paste0(base, v)
+    }
+  }
+  invisible(doc)
+}
+
+# ── Extract main content from a chapter page ──────────────────────────────────
+# specs: include specs for this chapter, e.g. c("5.1","5.2") or c("4")
+
+extract_content <- function(html_text, chapter_url, specs, excludes = character(0)) {
+  doc <- read_html(html_text)
+  absolutize(doc, chapter_url)
+
+  # Remove page furniture by exact id — safe, doesn't touch content
+  for (eid in c("quarto-sidebar", "quarto-toc-sidebar", "quarto-search",
+                "quarto-header", "quarto-appendix", "quarto-search-results",
+                "quarto-sidebar-glass", "quarto-margin-sidebar",
+                "quarto-embedded-source-code-modal")) {
+    node <- xml_find_first(doc, sprintf("//*[@id='%s']", eid))
+    if (!inherits(node, "xml_missing"))
+      tryCatch(xml_remove(node), error = function(e) NULL)
+  }
+  # Remove margin-aside single-character red annotations, e.g.
+  # <span class="margin-aside"><span style="color:red">N</span></span>
+  for (n in xml_find_all(doc,
+    "//span[contains(@class,'margin-aside')]
+           [span[@style='color:red' and string-length(normalize-space(.))=1]]")) {
+    tryCatch(xml_remove(n), error = function(e) NULL)
+  }
+  # Remove audio clip containers (mp3 links in column margins)
+  for (n in xml_find_all(doc,
+    "//audio | //div[contains(@class,'column-margin')][.//audio] |
+     //span[contains(@class,'margin-aside')][.//audio]")) {
+    tryCatch(xml_remove(n), error = function(e) NULL)
+  }
+  # Remove only site-level header by id — do NOT use //header globally as
+  # that also strips header#title-block-header which holds the chapter title
+  for (n in xml_find_all(doc, "//footer"))
+    tryCatch(xml_remove(n), error = function(e) NULL)
+
+  # Content node confirmed by diagnostics as main#quarto-document-content
+  main <- xml_find_first(doc, "//*[@id='quarto-document-content']")
+  if (inherits(main, "xml_missing")) {
+    for (xp in c("//main", "//*[@id='quarto-content']", "//body")) {
+      main <- xml_find_first(doc, xp)
+      if (!inherits(main, "xml_missing")) {
+        message("    fallback selector: ", xp); break
+      }
+    }
+  }
+  if (inherits(main, "xml_missing"))
+    return(sprintf("<p><em>No content found in %s</em></p>", chapter_url))
+
+  # Whole chapter if any spec is a bare chapter number (no dot, not intro, not #slug)
+  bare <- specs[!str_detect(specs, "\\.") & specs != "intro" & !str_starts(specs, "#")]
+  if (length(bare) > 0) {
+    out <- as.character(main)
+    if (is.na(out))
+      return(sprintf("<p><em>Serialization failed: %s</em></p>", chapter_url))
+    return(apply_excludes(out, excludes, chapter_url))
+  }
+
+  all_secs  <- xml_find_all(main, ".//section")
+  collected <- character(0)
+
+  for (sp in specs) {
+
+    # "intro": content before the first numbered section
+    if (sp == "intro") {
+      # Find the first section whose heading starts with a digit
+      first_numbered <- NULL
+      for (s in all_secs) {
+        h <- xml_find_first(s, ".//h1|.//h2|.//h3|.//h4|.//h5|.//h6")
+        if (inherits(h, "xml_missing")) next
+        ht <- str_squish(xml_text(h))
+        if (grepl("^\\d", ht)) { first_numbered <- s; break }
+      }
+      if (is.null(first_numbered)) {
+        # No numbered sections found — return whole chapter
+        message("    intro: no numbered sections found, using full chapter")
+        out <- as.character(main)
+        if (!is.na(out)) { collected <- c(collected, out); next }
+      }
+      # Collect all child nodes of main that precede first_numbered
+      main_children <- xml_children(main)
+      intro_nodes   <- character(0)
+      for (ch in main_children) {
+        # Stop when we reach the first numbered section
+        if (identical(ch, first_numbered)) break
+        # Also stop if this child contains first_numbered as a descendant
+        desc <- xml_find_first(ch, sprintf(".//*[@id='%s']",
+                               xml_attr(first_numbered, "id") %||% "__none__"))
+        if (!inherits(desc, "xml_missing")) break
+        ch_html <- tryCatch(as.character(ch), error = function(e) NULL)
+        if (!is.null(ch_html) && !is.na(ch_html))
+          intro_nodes <- c(intro_nodes, ch_html)
+      }
+      if (length(intro_nodes) > 0) {
+        message("    intro: ", length(intro_nodes), " pre-section nodes")
+        collected <- c(collected,
+          paste0('<div class="chapter-intro">',
+                 paste(intro_nodes, collapse="\n"), '</div>'))
+      } else {
+        warning("intro: no pre-section content found in ", chapter_url)
+      }
+      next
+    }
+
+    # #slug spec: find section by id attribute
+    if (str_starts(sp, "#")) {
+      slug_id <- str_remove(sp, "^#")
+      snode   <- xml_find_first(main,
+                   sprintf(".//section[@id='%s']", slug_id))
+      if (!inherits(snode, "xml_missing")) {
+        sec_html <- tryCatch(as.character(snode), error = function(e) NULL)
+        if (!is.null(sec_html) && !is.na(sec_html)) {
+          h  <- xml_find_first(snode, ".//h1|.//h2|.//h3|.//h4|.//h5|.//h6")
+          ht <- if (!inherits(h, "xml_missing")) str_squish(xml_text(h)) else slug_id
+          message("    section #", slug_id, ": ", substr(ht, 1, 60))
+          collected <- c(collected, sec_html)
+        }
+      } else {
+        message("    #", slug_id, " not in this chapter — skipping")
+      }
+      next
+    }
+
+    # Numbered sub-section: match heading text against spec prefix
+    found <- FALSE
+    for (s in all_secs) {
+      h <- xml_find_first(s, ".//h1|.//h2|.//h3|.//h4|.//h5|.//h6")
+      if (inherits(h, "xml_missing")) next
+      ht <- str_squish(xml_text(h))
+      if (str_starts(ht, paste0(sp, " ")) ||
+          str_starts(ht, paste0(sp, "\u00a0"))) {
+        sec_html <- as.character(s)
+        if (!is.na(sec_html)) {
+          collected <- c(collected, sec_html)
+          message("    section ", sp, ": ", substr(ht, 1, 60))
+          found <- TRUE; break
+        }
+      }
+    }
+    if (!found) {
+      warning("Section '", sp, "' not found in ", chapter_url, " — skipping")
+    }
+  }
+
+  if (length(collected) == 0) {
+    out <- as.character(main)
+    if (!is.na(out)) return(apply_excludes(out, excludes, chapter_url))
+    return(sprintf("<p><em>Serialization failed: %s</em></p>", chapter_url))
+  }
+  apply_excludes(paste(collected, collapse = "\n"), excludes, chapter_url)
+}
+
+# ── Apply exclude specs to extracted HTML ─────────────────────────────────────
+# Parses the HTML string, finds sections whose headings match any exclude spec,
+# removes them, and returns the modified HTML string.
+# Safe: operates on a copy; unmatched specs warn and are skipped.
+
+apply_excludes <- function(html_str, excludes, chapter_url) {
+  if (length(excludes) == 0) return(html_str)
+  doc  <- tryCatch(read_html(paste0("<div>", html_str, "</div>")),
+                   error = function(e) NULL)
+  if (is.null(doc)) return(html_str)
+  root <- xml_find_first(doc, "//div")
+  for (ex in excludes) {
+    found <- FALSE
+    # #slug exclude: find by id attribute
+    if (str_starts(ex, "#")) {
+      slug_id <- str_remove(ex, "^#")
+      snode   <- xml_find_first(root,
+                   sprintf(".//section[@id='%s']", slug_id))
+      if (!inherits(snode, "xml_missing")) {
+        message("    excluded #", slug_id)
+        tryCatch(xml_remove(snode), error = function(e) NULL)
+        found <- TRUE
+      }
+    } else {
+      # Numeric prefix: match heading text
+      for (s in xml_find_all(root, ".//section")) {
+        h <- xml_find_first(s, ".//h1|.//h2|.//h3|.//h4|.//h5|.//h6")
+        if (inherits(h, "xml_missing")) next
+        ht <- str_squish(xml_text(h))
+        if (str_starts(ht, paste0(ex, " ")) ||
+            str_starts(ht, paste0(ex, "\u00a0"))) {
+          message("    excluded: ", ex, " — ", substr(ht, 1, 60))
+          tryCatch(xml_remove(s), error = function(e) NULL)
+          found <- TRUE; break
+        }
+      }
+    }
+    if (!found) message("    exclude '", ex, "' not found in this chunk — skipping")
+  }
+  # Return inner HTML of the wrapper div
+  inner <- paste(vapply(xml_children(root), function(n)
+    tryCatch(as.character(n), error = function(e) ""), character(1)),
+    collapse = "\n")
+  if (nchar(inner) == 0) html_str else inner
+}
+
+# ── Extract <head> dependencies from a chapter page ───────────────────────────
+# Pulls CSS links, inline styles, MathJax config + loader, and useful JS.
+# Rewrites all relative URLs to absolute using the book base URL.
+# Skips nav/search/analytics/hypothes.is scripts not needed outside the book.
+
+extract_head_deps <- function(html_text, book_base) {
+  doc  <- read_html(html_text)
+  head <- xml_find_first(doc, "//head")
+  base <- paste0(str_remove(book_base, "/?$"), "/")
+
+  abs_url <- function(u) {
+    if (is.na(u) || u == "") return(NA_character_)
+    if (str_starts(u, "http") || str_starts(u, "//")) return(u)
+    paste0(base, str_remove(u, "^./"))
+  }
+
+  skip_patterns <- c(
+    "quarto-nav", "headroom", "quarto-search", "autocomplete",
+    "fuse.min", "axe-check", "anchor.min", "googletagmanager",
+    "hypothes.is", "quarto-html/quarto.js"
+  )
+
+  tags <- character(0)
+
+  # Stylesheet <link> tags
+  for (n in xml_find_all(head, ".//link")) {
+    rel  <- xml_attr(n, "rel")  %||% ""
+    href <- xml_attr(n, "href") %||% ""
+    if (rel %in% c("next", "prev", "canonical")) next
+    abs_href <- abs_url(href)
+    if (is.na(abs_href)) next
+    id_attr <- xml_attr(n, "id")
+    id_str  <- if (!is.na(id_attr) && id_attr != "")
+                 sprintf(' id="%s"', id_attr) else ""
+    tags <- c(tags, sprintf('<link rel="%s"%s href="%s">', rel, id_str, abs_href))
+  }
+
+  # Inline <style> blocks
+  for (n in xml_find_all(head, ".//style")) {
+    css <- xml_text(n)
+    if (nchar(trimws(css)) > 0)
+      tags <- c(tags, paste0("<style>", css, "</style>"))
+  }
+
+  # MathJax config: try xml_text first, then raw-HTML regex
+  # (xml2 sometimes returns empty string for script CDATA content)
+  mathjax_config_found <- FALSE
+  for (n in xml_find_all(head, ".//script[not(@src)]")) {
+    txt <- xml_text(n)
+    if (nchar(txt) > 0 && str_detect(txt, "MathJax")) {
+      tags <- c(tags, paste0("<script>", txt, "</script>"))
+      mathjax_config_found <- TRUE
+    }
+  }
+  if (!mathjax_config_found) {
+    # Regex fallback on raw HTML
+    m <- regmatches(html_text,
+           regexpr("<script[^>]*>[^<]*MathJax[^<]*</script>",
+                   html_text, perl = TRUE))
+    if (length(m) > 0) {
+      tags <- c(tags, m[[1]])
+      mathjax_config_found <- TRUE
+      message("  [head] MathJax config captured via regex")
+    }
+  }
+
+  # External scripts (filtered)
+  mathjax_loader_found <- FALSE
+  for (n in xml_find_all(head, ".//script[@src]")) {
+    src <- xml_attr(n, "src") %||% ""
+    if (src == "") next
+    if (any(vapply(skip_patterns, function(p) str_detect(src, p), logical(1)))) next
+    abs_src    <- abs_url(src)
+    defer_attr <- if (!is.na(xml_attr(n, "defer"))) " defer" else ""
+    async_attr <- if (!is.na(xml_attr(n, "async"))) " async" else ""
+    tags <- c(tags, sprintf('<script src="%s"%s%s></script>',
+                            abs_src, defer_attr, async_attr))
+    if (str_detect(src, "[Mm]ath[Jj]ax")) mathjax_loader_found <- TRUE
+  }
+
+  # Guaranteed MathJax: inject CDN if not found in the page
+  if (!mathjax_loader_found) {
+    message("  [head] MathJax loader not found — injecting CDN")
+    if (!mathjax_config_found)
+      tags <- c(tags, paste0(
+        '<script>MathJax={tex:{inlineMath:[["$","$"],["\\\\(","\\\\)"]]},',
+        'options:{skipHtmlTags:["script","noscript","style","textarea","pre"]}};</script>'))
+    tags <- c(tags,
+      '<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" async></script>')
+  }
+
+  paste(tags, collapse = "\n")
+}
+
+# ── Extract mermaid/graphviz init scripts from page body ─────────────────────
+
+extract_body_scripts <- function(html_text) {
+  doc  <- read_html(html_text)
+  out  <- character(0)
+  for (s in xml_find_all(doc, "//body//script[not(@src)]")) {
+    txt <- xml_text(s)
+    if (nchar(txt) > 0 &&
+        str_detect(txt, "mermaid|graphviz|quarto-diagram|DiagrammeR"))
+      out <- c(out, paste0("<script>", txt, "</script>"))
+  }
+  unique(out)
+}
+
+# ── HTML helpers ──────────────────────────────────────────────────────────────
+
+he <- function(s) {
+  s <- gsub("&", "&amp;", s)
+  s <- gsub("<", "&lt;",  s)
+  s <- gsub(">", "&gt;",  s)
+  s
+}
+
+session_banner <- function(title, idx) {
+  paste0(
+    '<div id="session-', idx, '" ',
+    'style="background:#333;color:#f0f0f0;padding:18px 24px;',
+    'margin:60px 0 0 0;font-family:sans-serif;font-size:1.3em;',
+    'font-weight:700;letter-spacing:.03em;',
+    'border-left:6px solid #f0c040;scroll-margin-top:10px;">',
+    '&#128218; ', he(title),
+    '</div>')
+}
+
+book_banner <- function(book_key) {
+  b <- BOOKS[[book_key]]
+  # Full-width transition banner
+  banner <- paste0(
+    '<div class="stitch-book-banner" data-book="', book_key, '" ',
+    'style="background:', b$color, ';color:white;',
+    'padding:12px 24px;margin:40px 0 0 0;',
+    'border-radius:4px 4px 0 0;font-family:sans-serif;',
+    'display:flex;align-items:center;gap:16px;',
+    'box-shadow:0 2px 8px rgba(0,0,0,.3);">',
+    '<span style="font-size:1.5em;font-weight:700;letter-spacing:.05em;">',
+      b$short, '</span>',
+    '<span style="font-size:1em;opacity:.9;">', he(b$full), '</span>',
+    '<a href="', b$base, '" target="_blank" ',
+    'style="margin-left:auto;color:white;opacity:.8;font-size:.85em;',
+    'text-decoration:none;border:1px solid rgba(255,255,255,.5);',
+    'padding:2px 8px;border-radius:3px;">Open original &#8599;</a>',
+    '</div>')
+  # Sticky right-margin tab: light gray, 30% smaller than original design
+  tab <- paste0(
+    '<div class="stitch-book-tab" data-book="', book_key, '" ',
+    'style="display:none;position:fixed;top:50%;right:0;',
+    'transform:translateY(-50%);',
+    'background:#e8e8e8;color:#333;',
+    'padding:4px 6px;font-family:sans-serif;font-size:.6em;',
+    'font-weight:700;letter-spacing:.04em;',
+    'border-radius:4px 0 0 4px;',
+    'box-shadow:-1px 0 5px rgba(0,0,0,.15);z-index:500;',
+    'writing-mode:vertical-rl;text-orientation:mixed;">',
+    b$short, '</div>')
+  paste0(banner, "\n", tab)
+}
+
+build_toc <- function(sessions) {
+  # Only include items that are real sessions (have a title); skip image entries
+  si <- 0L
+  toc_entries <- character(0)
+  for (item in sessions) {
+    if (is.null(item$title)) next
+    si <- si + 1L
+    toc_entries <- c(toc_entries,
+      paste0('<li><a href="#session-', si, '" ',
+             'style="color:#2c5f8a;text-decoration:none;">',
+             he(item$title), '</a></li>'))
+  }
+  items <- paste(toc_entries, collapse = "\n")
+  paste0(
+    '<div id="course-toc" style="position:fixed;top:20px;right:20px;',
+    'width:270px;max-height:80vh;overflow-y:auto;background:#fafafa;',
+    'border:1px solid #ccc;border-radius:6px;padding:14px;',
+    'font-family:sans-serif;font-size:.82em;z-index:9999;',
+    'box-shadow:0 4px 16px rgba(0,0,0,.18);">',
+    '<div style="font-weight:700;margin-bottom:8px;">Course Contents</div>',
+    '<ul style="list-style:none;margin:0;padding:0;line-height:1.8;">',
+    items, '</ul>',
+    '<div style="margin-top:10px;text-align:right;">',
+    '<button onclick="document.getElementById(\'course-toc\').style.display=\'none\';',
+    'document.getElementById(\'show-toc\').style.display=\'block\';" ',
+    'style="cursor:pointer;padding:2px 8px;font-size:13px;">Hide \u2715</button>',
+    '</div></div>',
+    '<button id="show-toc" style="display:none;position:fixed;',
+    'top:20px;right:20px;z-index:9999;padding:4px 7px;font-size:16px;',
+    'cursor:pointer;background:none;color:#333;border:none;" ',
+    'onclick="document.getElementById(\'course-toc\').style.display=\'block\';',
+    'this.style.display=\'none\';">\u2630</button>')
+}
+
+# ── Image slide ───────────────────────────────────────────────────────────────
+# Local files (jpg/png/svg/gif) are base64-embedded so the HTML is fully
+# self-contained and works when opened directly or hosted remotely.
+# http/https URLs are used as-is.
+
+image_mime <- function(path) {
+  ext <- tolower(tools::file_ext(path))
+  switch(ext,
+    png  = "image/png",
+    jpg  = , jpeg = "image/jpeg",
+    svg  = "image/svg+xml",
+    gif  = "image/gif",
+    webp = "image/webp",
+    "image/png")
+}
+
+image_slide <- function(src, caption = NULL) {
+  cap_html <- if (!is.null(caption) && nchar(trimws(caption)) > 0)
+    paste0('<div style="text-align:center;font-style:italic;font-size:.9em;',
+           'margin-top:8px;color:#555;">', he(caption), '</div>')
+  else ""
+
+  img_src <- src
+  if (!grepl("^https?://", src)) {
+    if (file.exists(src)) {
+      raw     <- readBin(src, "raw", file.info(src)$size)
+      # base64encode may insert newlines every 76 chars -- strip them
+      b64     <- gsub("[
+]", "", base64encode(raw))
+      img_src <- paste0("data:", image_mime(src), ";base64,", b64)
+      message("  [image] embedded: ", src,
+              "  (", round(nchar(b64) / 1024), " KB base64)")
+    } else {
+      warning("Image not found: ", src,
+              "\n  (path is relative to working dir: ", getwd(), ")")
+    }
+  }
+
+  paste0(
+    '<div class="stitch-image-slide" ',
+    'style="margin:100vh 0;padding:0;text-align:center;">',
+    '<img src="', img_src, '" ',
+    'style="width:100%;max-width:100%;height:auto;display:block;margin:0 auto;',
+    'box-shadow:0 2px 12px rgba(0,0,0,.15);" ',
+    'alt="', if (!is.null(caption)) he(caption) else "slide", '">',
+    cap_html, '</div>')
+}
+
+# ── Webpage insert ───────────────────────────────────────────────────────────
+# Reads a local HTML file or fetches a URL, extracts body content, and
+# stitches it in with 25vh top/bottom spacing (1/4 of image slide spacing).
+# If libs is provided (path or URL), it is used as the base for rewriting
+# relative asset URLs.  If omitted, relative URLs are left as-is.
+# label appears in the right-margin tab; defaults to filename or hostname.
+
+webpage_insert <- function(src, libs = NULL, label = NULL, wp_index = 0) {
+  # Derive label from src if not given
+  if (is.null(label) || nchar(trimws(label)) == 0) {
+    label <- if (grepl("^https?://", src))
+      gsub("^www\\.", "", regmatches(src,
+        regexpr("(?<=://)[^/]+", src, perl = TRUE)))
+    else
+      tools::file_path_sans_ext(basename(src))
+  }
+
+  # Read content
+  message("  [webpage] ", src)
+  html_text <- tryCatch({
+    if (grepl("^https?://", src)) fetch_url(src)
+    else if (file.exists(src)) paste(readLines(src, warn = FALSE), collapse = "
+")
+    else stop("not found")
+  }, error = function(e) {
+    warning("webpage_insert: cannot read '", src, "': ", e$message)
+    return(NULL)
+  })
+  if (is.null(html_text))
+    return(sprintf('<p><em>Could not load: %s</em></p>', he(src)))
+
+  doc <- read_html(html_text)
+
+  # Absolutize relative asset URLs using libs as base, or src directory
+  base <- if (!is.null(libs) && nchar(trimws(libs)) > 0) {
+    paste0(str_remove(libs, "/?$"), "/")
+  } else if (grepl("^https?://", src)) {
+    paste0(str_remove(src, "/[^/]*$"), "/")
+  } else {
+    paste0(dirname(normalizePath(src)), "/")
+  }
+  # Only absolutize if libs was explicitly provided; otherwise leave as-is
+  if (!is.null(libs) && nchar(trimws(libs)) > 0) {
+    for (attr in c("src", "href", "data-src")) {
+      for (n in xml_find_all(doc, sprintf("//*[@%s]", attr))) {
+        v <- xml_attr(n, attr)
+        if (is.na(v) || v == "")         next
+        if (str_starts(v, "http"))       next
+        if (str_starts(v, "//"))         next
+        if (str_starts(v, "data:"))      next
+        if (str_starts(v, "#"))          next
+        if (str_starts(v, "javascript")) next
+        if (str_starts(v, "mailto:"))    next
+        xml_attr(n, attr) <- paste0(base, v)
+      }
+    }
+  }
+
+  # Strip standard page chrome
+  for (eid in c("quarto-sidebar", "quarto-toc-sidebar", "quarto-search",
+                "quarto-header", "quarto-appendix", "quarto-search-results",
+                "quarto-sidebar-glass", "quarto-margin-sidebar")) {
+    nd <- xml_find_first(doc, sprintf("//*[@id='%s']", eid))
+    if (!inherits(nd, "xml_missing"))
+      tryCatch(xml_remove(nd), error = function(e) NULL)
+  }
+  for (tag in c("//footer", "//nav"))
+    for (n in xml_find_all(doc, tag))
+      tryCatch(xml_remove(n), error = function(e) NULL)
+
+  # Extract content: prefer quarto-document-content, then main, then body
+  main <- NULL
+  for (xp in c("//*[@id='quarto-document-content']", "//main", "//body")) {
+    nd <- tryCatch(xml_find_first(doc, xp), error = function(e) NULL)
+    if (!is.null(nd) && !inherits(nd, "xml_missing")) { main <- nd; break }
+  }
+  if (is.null(main))
+    return(sprintf('<p><em>No content extracted from: %s</em></p>', he(src)))
+
+  body_html <- tryCatch(as.character(main), error = function(e) NULL)
+  if (is.null(body_html) || is.na(body_html))
+    return(sprintf('<p><em>Serialization failed: %s</em></p>', he(src)))
+
+  # Synthetic key for the margin tab (unique per webpage entry)
+  wp_key <- paste0("wp-", wp_index)
+
+  # Margin tab (same style as book tabs)
+  tab <- paste0(
+    '<div class="stitch-book-tab" data-book="', wp_key, '" ',
+    'style="display:none;position:fixed;top:50%;right:0;',
+    'transform:translateY(-50%);',
+    'background:#e8e8e8;color:#333;',
+    'padding:4px 6px;font-family:sans-serif;font-size:.6em;',
+    'font-weight:700;letter-spacing:.04em;',
+    'border-radius:4px 0 0 4px;',
+    'box-shadow:-1px 0 5px rgba(0,0,0,.15);z-index:500;',
+    'writing-mode:vertical-rl;text-orientation:mixed;">',
+    he(label), '</div>')
+
+  # Sentinel banner (invisible, zero-height) that the tab JS uses to
+  # detect when this webpage is in view — same mechanism as book banners
+  sentinel <- paste0(
+    '<div class="stitch-book-banner" data-book="', wp_key, '" ',
+    'style="height:0;margin:0;padding:0;border:none;background:none;">',
+    '</div>')
+
+  # 25vh spacing (1/4 of the 100vh used for image slides)
+  paste0(
+    '<div class="stitch-webpage-insert" style="margin:25vh 0;">',
+    sentinel, "
+", tab, "
+", body_html,
+    '</div>')
+}
+
+# ── Page wrapper ──────────────────────────────────────────────────────────────
+
+wrap_page <- function(title, presenters = NULL, cover_images = NULL,
+                      head_deps, toc_html, body_html,
+                      extra_body_scripts = character(0)) {
+  our_css <- '
+<style>
+/* Course stitcher layout overrides — applied after Quarto CSS */
+body { max-width:900px; margin:0 auto; padding:20px 40px 80px; }
+/* Suppress residual Quarto chrome */
+#quarto-sidebar, #quarto-toc-sidebar, #quarto-margin-sidebar,
+#quarto-sidebar-glass, #quarto-header, .quarto-title-meta,
+.navbar, nav.quarto-page-breadcrumbs { display:none !important; }
+img { max-width:100%; height:auto; }
+.stitch-image-slide img { width:100%; max-width:100%; height:auto; }
+/* Prevent pre/code blocks from wrapping at any zoom level.
+   overflow-x:auto adds a horizontal scrollbar only when needed,
+   so at normal zoom nothing changes visually. */
+pre, pre code {
+  white-space: pre !important;
+  overflow-x: auto !important;
+  word-wrap: normal !important;
+  word-break: normal !important;
+  overflow-wrap: normal !important;
+}
+/* Inline code should not break mid-token */
+code {
+  word-break: keep-all !important;
+  overflow-wrap: normal !important;
+}
+/* Tables: scroll horizontally rather than wrapping columns */
+table {
+  display: block;
+  overflow-x: auto;
+  max-width: 100%;
+  white-space: nowrap;
+}
+/* But restore normal wrapping inside table cells so cell text still wraps */
+th, td {
+  white-space: normal;
+}
+</style>'
+
+  tab_js <- '
+<script>
+(function() {
+  function updateTab() {
+    var banners = document.querySelectorAll(".stitch-book-banner");
+    var tabs    = document.querySelectorAll(".stitch-book-tab");
+    var current = null;
+    var mid = window.scrollY + window.innerHeight / 2;
+    banners.forEach(function(b) {
+      if (b.getBoundingClientRect().top + window.scrollY <= mid)
+        current = b.getAttribute("data-book");
+    });
+    tabs.forEach(function(t) {
+      t.style.display =
+        (t.getAttribute("data-book") === current) ? "block" : "none";
+    });
+  }
+  window.addEventListener("scroll", updateTab, { passive: true });
+  window.addEventListener("load",   updateTab);
+  updateTab();
+})();
+</script>'
+
+  # Build cover images block outside paste0 to avoid length > 1 issues
+  cover_html <- if (!is.null(cover_images) && length(cover_images) > 0)
+    paste(vapply(as.list(cover_images), function(img)
+      image_slide(path.expand(as.character(img))), character(1)),
+      collapse="\n")
+  else ""
+
+  paste0(
+    '<!DOCTYPE html>\n<html lang="en">\n<head>\n',
+    '<meta charset="UTF-8">\n',
+    '<meta name="viewport" content="width=device-width,initial-scale=1.0">\n',
+    '<title>', he(title), '</title>\n',
+    head_deps, '\n',
+    our_css, '\n',
+    '</head>\n<body>\n',
+    cover_html,
+    '<div style="text-align:center;padding:40px 0 20px;font-family:sans-serif;">',
+    '<h1 style="font-size:2.2em;color:#1a4e8a;">', he(title), '</h1>',
+    if (!is.null(presenters) && nchar(trimws(presenters)) > 0) {
+      lines <- strsplit(trimws(presenters), "\n")[[1]]
+      # Empty/blank lines become <br> spacers; non-empty lines are escaped
+      rendered <- vapply(lines, function(l)
+        if (nchar(trimws(l)) == 0) "" else he(trimws(l)), character(1))
+      paste0('<div style="margin-top:1.5em;font-size:1.6em;line-height:2;">',
+             paste(rendered, collapse="<br>"),
+             '</div>')
+    } else "",
+    '</div>\n',
+    toc_html, '\n',
+    body_html, '\n',
+    paste(extra_body_scripts, collapse = "\n"), '\n',
+    tab_js, '\n',
+    '</body>\n</html>')
+}
+
+# ── Main ──────────────────────────────────────────────────────────────────────
+
+args     <- commandArgs(trailingOnly = TRUE)
+nav_file <- if (length(args) >= 1) args[1] else "course_nav.yaml"
+out_file <- if (length(args) >= 2) args[2] else NULL
+nav      <- yaml.load_file(nav_file)
+if (!is.null(nav$output_file) && is.null(out_file)) out_file <- nav$output_file
+if (is.null(out_file)) out_file <- "course_session.html"
+
+message("=== Course Stitcher ===")
+message("Nav : ", nav_file)
+message("Out : ", out_file)
+
+toc_cache    <- list()
+head_deps    <- NULL
+body_scripts <- character(0)
+
+get_toc <- function(key) {
+  if (is.null(toc_cache[[key]])) {
+    message("[TOC] ", key)
+    t <- parse_toc(key)
+    message("      ", nrow(t), " chapters")
+    toc_cache[[key]] <<- t
+  }
+  toc_cache[[key]]
+}
+
+body_parts <- character(0)
+last_book  <- NULL
+wp_counter <- 0L
+
+si <- 0L  # session counter (only incremented for real sessions)
+for (item in nav$sessions) {
+
+  # Top-level image between sessions (sibling of session objects)
+  if (!is.null(item$image) && is.null(item$title)) {
+    message("\n[image between sessions] ", item$image)
+    body_parts <- c(body_parts,
+      image_slide(path.expand(item$image), item$caption))
+    next
+  }
+
+  # Top-level webpage between sessions
+  if (!is.null(item$webpage) && is.null(item$title)) {
+    wp_counter <<- wp_counter + 1L
+    message("\n[webpage between sessions] ", item$webpage)
+    body_parts <- c(body_parts,
+      webpage_insert(item$webpage, item$libs, item$label, wp_counter))
+    next
+  }
+
+  sess <- item
+  si   <- si + 1L
+  message("\n--- Session ", si, ": ", sess$title)
+  body_parts <- c(body_parts, session_banner(sess$title, si))
+
+  for (entry in sess$sections) {
+
+    # Image slide entry
+    if (!is.null(entry$image)) {
+      message("  [image] ", path.expand(entry$image))
+      body_parts <- c(body_parts,
+        image_slide(path.expand(entry$image), entry$caption))
+      next
+    }
+
+    # Webpage insert entry
+    if (!is.null(entry$webpage)) {
+      wp_counter <<- wp_counter + 1L
+      body_parts <- c(body_parts,
+        webpage_insert(entry$webpage, entry$libs, entry$label, wp_counter))
+      next
+    }
+
+    bk <- entry$book
+    if (is.null(bk) || !bk %in% names(BOOKS)) {
+      warning("Unknown or missing book key: ", bk %||% "(null)"); next
+    }
+
+    if (is.null(last_book) || last_book != bk) {
+      body_parts <- c(body_parts, book_banner(bk))
+      last_book  <- bk
+    }
+
+    specs    <- as.character(unlist(entry$include))
+    toc      <- get_toc(bk)
+    excludes <- if (!is.null(entry$exclude)) as.character(unlist(entry$exclude)) else character(0)
+    chapters <- resolve_chapters(specs, excludes, toc)
+
+    if (length(chapters) == 0) {
+      warning("No chapters resolved: book=", bk,
+              " specs=", paste(specs, collapse = ",")); next
+    }
+
+    for (chap in chapters) {
+      message("  [", bk, "] Ch ", chap$num, " — ", chap$title)
+      message("    specs: ", paste(chap$specs, collapse = ", "))
+
+      html_text <- tryCatch(fetch_page(chap$url, bk), error = function(e) {
+        warning("Fetch failed: ", e$message); NULL
+      })
+      if (is.null(html_text)) next
+
+      # Extract head deps once from the first successfully fetched chapter
+      if (is.null(head_deps)) {
+        message("  [head] extracting from ", chap$url)
+        head_deps <- tryCatch(
+          extract_head_deps(html_text, BOOKS[[bk]]$base),
+          error = function(e) {
+            warning("Head extraction failed: ", e$message); ""
+          })
+      }
+
+      # Collect diagram init scripts
+      body_scripts <- unique(c(body_scripts,
+        tryCatch(extract_body_scripts(html_text), error = function(e) character(0))))
+
+      content <- tryCatch(
+        extract_content(html_text, chap$url, chap$specs, chap$excludes),
+        error = function(e) {
+          warning("extract_content failed: ", e$message)
+          sprintf("<p><em>Error loading %s: %s</em></p>", chap$url, e$message)
+        })
+
+      if (is.null(content) || all(is.na(content)) || all(nchar(trimws(content)) == 0)) {
+        warning("Empty content for ", chap$url)
+        content <- sprintf("<p><em>Empty content from %s</em></p>", chap$url)
+      }
+
+      body_parts <- c(body_parts,
+        sprintf('<div class="chapter-section" data-book="%s" data-ch="%s">',
+                bk, chap$num),
+        content,
+        '</div>')
+    }
+  }
+}
+
+message("\nbody_parts : ", length(body_parts))
+message("NA entries : ", sum(is.na(body_parts)))
+if (length(body_scripts) > 0)
+  message("diagram scripts: ", length(body_scripts))
+
+toc_html  <- build_toc(nav$sessions)
+body_html <- paste(body_parts, collapse = "\n")
+message("body_html chars: ", nchar(body_html))
+
+full_html <- wrap_page(
+  nav$title %||% "Course Session",
+  presenters  = nav$presenters,
+  cover_images = if (!is.null(nav$images)) as.list(nav$images)
+                 else if (!is.null(nav$image)) list(nav$image)
+                 else NULL,
+  head_deps   = head_deps %||% "",
+  toc_html    = toc_html,
+  body_html   = body_html,
+  extra_body_scripts = body_scripts)
+
+# writeLines() can mangle very long lines (e.g. base64-embedded images).
+# Use a binary-mode connection with cat() instead, safe for any string length.
+con <- file(out_file, open = "wb")
+cat(full_html, file = con, sep = "")
+close(con)
+message("\n\u2713  ", out_file, "  (", round(file.size(out_file) / 1024), " KB)")
