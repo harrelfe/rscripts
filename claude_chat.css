@@ -1,0 +1,356 @@
+/*
+ * rms_chat.css — Pandoc stylesheet for RMS modeling chat transcripts
+ * Requires wrap_turns.lua filter to emit div.turn.frank / div.turn.claude
+ *
+ * Usage:
+ *   pandoc input.md \
+ *     --standalone --self-contained \
+ *     --lua-filter wrap_turns.lua \
+ *     --css rms_chat.css \
+ *     --highlight-style pygments \
+ *     --metadata title="RMS Modeling Strategy — Chat Transcript" \
+ *     -o output.html
+ */
+
+
+/* ── Variables ─────────────────────────────────────────────────────────── */
+
+:root {
+  --bg:           #f7f4ef;
+  --surface:      #ffffff;
+  --surface-user: #1a2744;
+  --ink:          #1c1c1c;
+  --ink-light:    #5a5a5a;
+  --ink-user:     #e8e4dc;
+  --accent:       #b84c2a;
+  --accent-muted: #8b3a0f;
+  --accent-light: #f0e8e3;
+  --rule:         #ddd8cf;
+  --code-bg:      #f0ede7;
+  --code-bg-dark: #111827;
+  --code-ink:     #c9d1d9;
+  --table-head:   #eae6df;
+}
+
+/* ── Base ───────────────────────────────────────────────────────────────── */
+
+html {
+  background-color: var(--bg);
+  color: var(--ink);
+}
+
+body {
+  font-family: 'Source Serif 4', Georgia, serif;
+  font-size: 17px;
+  line-height: 1.78;
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 0 1.5rem 5rem;
+  background: var(--bg);
+  color: var(--ink);
+  hyphens: none;
+  overflow-wrap: break-word;
+}
+
+/* ── Title block ────────────────────────────────────────────────────────── */
+
+header#title-block-header {
+  background: var(--surface-user);
+  color: var(--ink-user);
+  margin: 0 -1.5rem 2.5rem;
+  padding: 2.5rem 2rem 2rem;
+  border-bottom: 4px solid var(--accent);
+  text-align: left;
+}
+
+header#title-block-header h1.title {
+  font-family: 'Source Serif 4', serif;
+  font-size: 1.9rem;
+  font-weight: 400;
+  color: var(--ink-user);
+  margin: 0;
+  line-height: 1.3;
+}
+
+/* Hide the duplicate h1 pandoc emits from the markdown # heading */
+body > h1:first-of-type {
+  display: none;
+}
+
+/* Topics/date paragraph that follows the hidden h1 */
+body > h1:first-of-type + p {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.82rem;
+  color: var(--ink-light);
+  letter-spacing: 0.04em;
+  margin-top: 0;
+  margin-bottom: 2rem;
+  border-bottom: 1px solid var(--rule);
+  padding-bottom: 1.2rem;
+}
+
+/* ── Turn containers ────────────────────────────────────────────────────── */
+
+div.turn {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 2rem;
+}
+
+/* ── Speaker labels ─────────────────────────────────────────────────────── */
+
+div.turn-label {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  margin-bottom: 0.45rem;
+  padding-left: 0.25rem;
+}
+
+div.turn-label p {
+  margin: 0;
+}
+
+div.turn.frank .turn-label { color: var(--accent); }
+div.turn.claude .turn-label { color: var(--ink-light); }
+
+/* ── Bubbles ────────────────────────────────────────────────────────────── */
+
+div.bubble {
+  padding: 1.4rem 1.6rem;
+  border-radius: 3px;
+  line-height: 1.8;
+}
+
+div.turn.frank div.bubble {
+  background: var(--surface-user);
+  color: var(--ink-user);
+  border-left: 3px solid var(--accent);
+}
+
+div.turn.claude div.bubble {
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--rule);
+  border-left: 3px solid #c8c0b0;
+}
+
+/* ── Horizontal rules (between turns, outside bubbles) ─────────────────── */
+
+hr {
+  border: none;
+  border-top: 1px dashed var(--rule);
+  background: none;
+  height: auto;
+  margin: 0.5rem 0 2rem;
+  display: none;   /* hrs are now structural noise — turns handle spacing */
+}
+
+/* ── Headings inside bubbles ────────────────────────────────────────────── */
+
+/* h2 inside a bubble = section within the response (shouldn't normally appear,
+   but guard against it) */
+div.bubble h2 {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 1.05rem;
+  font-weight: 500;
+  color: var(--accent);
+  margin: 1.4rem 0 0.5rem;
+  letter-spacing: 0.01em;
+}
+
+div.bubble h3 {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.97rem;
+  font-weight: 500;
+  color: var(--accent);
+  margin: 1.3rem 0 0.4rem;
+  letter-spacing: 0.01em;
+}
+
+div.turn.frank div.bubble h3 {
+  color: #f0c89a;
+}
+
+div.bubble h4 {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: var(--ink);
+  margin: 1rem 0 0.3rem;
+}
+
+div.bubble h2:first-child,
+div.bubble h3:first-child { margin-top: 0; }
+
+/* ── Paragraphs inside bubbles ──────────────────────────────────────────── */
+
+div.bubble p {
+  margin: 0 0 0.9rem;
+}
+
+div.bubble p:last-child {
+  margin-bottom: 0;
+}
+
+/* ── Inline code ────────────────────────────────────────────────────────── */
+
+div.bubble code {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.82em;
+  background: var(--code-bg);
+  color: var(--accent-muted);
+  padding: 0.1em 0.35em;
+  border-radius: 2px;
+  hyphens: none;
+}
+
+div.turn.frank div.bubble code {
+  background: rgba(255,255,255,0.12);
+  color: #f0c89a;
+}
+
+/* ── Code blocks ────────────────────────────────────────────────────────── */
+
+div.bubble div.sourceCode {
+  margin: 0.8rem 0 1rem;
+}
+
+div.bubble pre.sourceCode {
+  background: var(--code-bg-dark) !important;
+  border-radius: 3px;
+  padding: 1.1rem 1.2rem;
+  overflow-x: auto;
+  margin: 0;
+}
+
+div.bubble pre.sourceCode code {
+  background: none !important;
+  color: var(--code-ink) !important;
+  font-size: 0.83em;
+  padding: 0;
+  border-radius: 0;
+}
+
+/* Dark-theme syntax token colors */
+div.bubble code span.kw { color: #79b8ff; }
+div.bubble code span.fu { color: #b392f0; }
+div.bubble code span.st { color: #9ecbff; }
+div.bubble code span.co { color: #6a737d; font-style: italic; }
+div.bubble code span.at { color: #ffab70; }
+div.bubble code span.ot { color: #85e89d; }
+div.bubble code span.dv,
+div.bubble code span.fl { color: #79b8ff; }
+div.bubble code span.op { color: #e1e4e8; }
+div.bubble code span.sc { color: #9ecbff; }
+div.bubble code span.cn { color: #79b8ff; }
+div.bubble code span.bu { color: #b392f0; }
+
+/* ── Lists inside bubbles ───────────────────────────────────────────────── */
+
+div.bubble ul,
+div.bubble ol {
+  padding-left: 1.6rem;
+  margin: 0.4rem 0 0.9rem;
+}
+
+div.bubble li {
+  margin-bottom: 0.3rem;
+}
+
+/* ── Tables inside bubbles ──────────────────────────────────────────────── */
+
+div.bubble table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.9rem 0 1.1rem;
+  font-size: 0.9rem;
+  font-family: 'DM Sans', sans-serif;
+  display: table;
+}
+
+div.bubble thead { border: none; }
+
+div.bubble th {
+  background: var(--table-head);
+  font-weight: 500;
+  text-align: left;
+  padding: 0.5rem 0.75rem;
+  border-top: none;
+  border-bottom: 2px solid var(--rule);
+  font-size: 0.82rem;
+  letter-spacing: 0.03em;
+}
+
+div.bubble tbody { border: none; margin-top: 0; }
+
+div.bubble td {
+  padding: 0.45rem 0.75rem;
+  border-bottom: 1px solid var(--rule);
+  vertical-align: top;
+}
+
+div.bubble tr.odd  td { background: var(--surface); }
+div.bubble tr.even td { background: #faf8f5; }
+div.bubble tr:last-child td { border-bottom: none; }
+
+/* ── Links ──────────────────────────────────────────────────────────────── */
+
+a { color: var(--accent); }
+a:visited { color: var(--accent-muted); }
+
+div.turn.frank div.bubble a,
+div.turn.frank div.bubble a:visited { color: #93c5fd; }
+
+/* ── em / correction notes ──────────────────────────────────────────────── */
+
+div.bubble em { font-style: italic; }
+
+/* ── Print ──────────────────────────────────────────────────────────────── */
+
+@media print {
+  body { background: white; color: black; font-size: 11pt; max-width: 100%; padding: 0; }
+
+  div.turn.frank div.bubble {
+    background: #e8ecf5 !important;
+    color: black !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  div.turn.claude div.bubble {
+    background: white !important;
+    border: 1px solid #ccc;
+  }
+
+  div.bubble pre.sourceCode {
+    background: #f4f4f4 !important;
+    border: 1px solid #ccc;
+  }
+
+  div.bubble pre.sourceCode code { color: black !important; }
+
+  div.bubble code span.kw,
+  div.bubble code span.fu,
+  div.bubble code span.st,
+  div.bubble code span.at,
+  div.bubble code span.ot,
+  div.bubble code span.dv,
+  div.bubble code span.fl,
+  div.bubble code span.op,
+  div.bubble code span.sc,
+  div.bubble code span.cn,
+  div.bubble code span.bu { color: black; font-weight: normal; }
+  div.bubble code span.co { color: #555; }
+}
+
+/* ── Responsive ─────────────────────────────────────────────────────────── */
+
+@media (max-width: 600px) {
+  body { font-size: 15px; padding: 0 0.6rem 3rem; }
+  header#title-block-header { margin: 0 -0.6rem 2rem; padding: 1.5rem 1rem 1.2rem; }
+  header#title-block-header h1.title { font-size: 1.4rem; }
+  div.bubble { padding: 1rem 1.1rem; }
+}
