@@ -1,0 +1,10 @@
+#!/bin/zsh
+# Convert a markdown file created by a Claude chat into nicely formatted html
+# Add to top of chat a title: live surrounded by lines with 3 dashes
+#
+pandoc $1.md \
+  --standalone \
+  --lua-filter ~/R/rscripts/claude_chat.lua \
+  --include-in-header ~/R/rscripts/claude_chat_fonts.html \
+  --highlight-style pygments \
+  -o $1.html
