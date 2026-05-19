@@ -2,6 +2,8 @@
 # Convert a markdown file created by a Claude chat into nicely formatted html
 # Add to top of chat a title: live surrounded by lines with 3 dashes
 #
+# Example file is in ~/i/claude/skills/rms/examples with output in ~/web/LLM
+#
 pandoc $1.md \
   --standalone \
   --lua-filter ~/R/rscripts/claude_chat.lua \
