@@ -68,11 +68,12 @@ Other tools, all optional but assumed by parts of this setup:
      { "context": "Workspace", "bindings": { "ctrl-alt-r": ["task::Spawn", { "task_name": "R console" }] } }
    ]
    ```
-3. Install the two CotEditor Script-menu items below (send-selection and
-   send-R-chunks-above), each under
-   `~/Library/Application Scripts/com.coteditor.CotEditor/`, and bind each to
-   a keyboard shortcut via System Settings > Keyboard > Keyboard Shortcuts >
-   App Shortcuts (matching the script's menu title exactly).
+3. Run `zsh leanRide-cot.sh` once — it installs the two CotEditor
+   Script-menu items described below (`Rwatch.sh` and `sendrchunks.sh`)
+   into `~/Library/Application Scripts/com.coteditor.CotEditor/`, and
+   prints the exact steps for binding each to a keyboard shortcut via
+   System Settings > Keyboard > Keyboard Shortcuts > App Shortcuts
+   (Menu Title must match the script's filename without `.sh`).
 4. At the start of an R session, call `iastart()`.
 
 ## `iastart()`
@@ -173,9 +174,14 @@ the `>` prompt.
 Both scripts avoid AppleScript's `write text` into iTerm2 (it silently drops
 lines near the end of longer pastes — no bracketed-paste framing, so a fast
 character stream can outrun the console) and avoid any
-Accessibility-permission keystroke automation.
+Accessibility-permission keystroke automation. `leanRide-cot.sh` installs
+both into CotEditor's Scripts folder in one step (see Setup above); a
+CotEditor keyboard shortcut still has to be bound to each by hand afterward
+(System Settings > Keyboard > Keyboard Shortcuts > App Shortcuts, Menu Title
+matching the script's filename without `.sh` — `leanRide-cot.sh` prints the
+exact steps when run).
 
-**Send Selection** (bind to Cmd-Return): sends exactly what's selected,
+**`Rwatch.sh`** (bind to Cmd-Return): sends exactly what's selected,
 unmodified.
 ```zsh
 #!/bin/zsh
@@ -185,10 +191,10 @@ mkdir -p ~/.rsend
 cat > ~/.rsend/pending.R
 ```
 
-**Send R Chunks Above** (bind to Cmd-Shift-Return): for `.qmd`/`.Rmd`
+**`sendrchunks.sh`** (bind to Cmd-Shift-Return): for `.qmd`/`.Rmd`
 documents, reproduces RStudio/Quarto's "Run All Chunks Above." Select from
 the top of the document to your cursor (Cmd-Shift-Up does this in one step),
-then run this instead of the plain send script — it strips everything except
+then run this instead of `Rwatch.sh` — it strips everything except
 the contents of `` ```{r ...} `` fenced chunks (prose, YAML frontmatter,
 inline `` `r ...` `` code, and any non-R fenced chunk like `` ```{python} ``,
 `` ```{mermaid} ``, `` ```{dot} `` are all dropped). Quarto's `#|`
@@ -196,9 +202,16 @@ chunk-option comment lines are left in place deliberately — they're harmless
 ordinary R comments when sourced. It does not look at `eval`/`include` chunk
 options at all, unlike RStudio's real "Run All Chunks Above," which skips
 `eval=FALSE` chunks — every `{r ...}` chunk in the selection runs regardless.
-If the selection contains no R chunk at all, the output is empty; use Send
-Selection for plain `.R` files instead. The full script (with its awk
-extraction logic) is delivered separately as `Send R Chunks Above.sh`.
+If the selection contains no R chunk at all, the output is empty; use
+`Rwatch.sh` for plain `.R` files instead.
+
+**Deprecated: a "Send to iTerm2" script.** An earlier script wrote code
+directly into the iTerm2 window via AppleScript (`tell application "iTerm2"
+... write text ...`) instead of going through `~/.rsend/pending.R`. That's
+exactly the approach `Rwatch.sh`/`rsend_watch()` replaced, for the reason
+above (dropped lines on longer pastes) — if you still have this script
+installed or bound to a shortcut, it's superseded and safe to delete or
+unbind.
 
 ## `ienv()` — a lightweight environment pane
 
