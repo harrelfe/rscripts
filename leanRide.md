@@ -6,8 +6,9 @@ by a handful of R functions and small scripts, rather than one monolithic
 application. It deliberately does not try to reproduce every RStudio/Positron
 feature (see "What's not here" at the end) — the goal is the few pieces that
 matter for interactive R work: a script editor, a console, a live help
-browser, a live plot viewer, a way to send code from editor to console, and a
-substitute for the variables/environment pane.
+browser, a live plot viewer, a way to send code from editor to console, a
+substitute for the variables/environment pane, and an interactive data
+viewer.
 
 ## Install
 
@@ -17,14 +18,14 @@ R packages, from CRAN:
 install.packages(c("httpgd", "later", "DT", "htmltools", "htmlwidgets"))
 ```
 
-`httpgd` and `later` are required for `iastart()`; `DT`, `htmltools`, and
-`htmlwidgets` are required for `ienv()`. If you never call `ienv()` you don't
-need the latter three.
+`httpgd` and `later` are required for `leanRide()`; `DT`, `htmltools`, and
+`htmlwidgets` are required for `vObjects()` and `vData()`. If you never call
+either of those you don't need the latter three.
 
 Other tools, all optional but assumed by parts of this setup:
 
 - **ungoogled-chromium** — `brew install --cask chromium`. If not installed,
-  `iastart()` automatically falls back to Safari (see below); nothing breaks
+  `leanRide()` automatically falls back to Safari (see below); nothing breaks
   either way.
 - **radian** — a better R console (history, syntax highlighting) than plain
   `R --interactive`, used as the console in the Zed task below. Install via
@@ -41,9 +42,9 @@ Other tools, all optional but assumed by parts of this setup:
 ## Setup
 
 1. Add `leanRide.r`'s contents to `~/.Rprofile` (or add a line there that
-   `source()`s it from wherever you keep it). If you plan to use `ienv()`
-   (see below), add `envExclude <- objects(all.names = TRUE)` as the very
-   last line of `~/.Rprofile`, after everything else in it has run.
+   `source()`s it from wherever you keep it). Nothing else to do for
+   `vObjects()` here — `leanRide()` snapshots pre-existing objects itself by
+   default (see `epobj` below).
 2. In Zed, add to `settings.json`:
    ```json
    {
@@ -74,12 +75,12 @@ Other tools, all optional but assumed by parts of this setup:
    prints the exact steps for binding each to a keyboard shortcut via
    System Settings > Keyboard > Keyboard Shortcuts > App Shortcuts
    (Menu Title must match the script's filename without `.sh`).
-4. At the start of an R session, call `iastart()`.
+4. At the start of an R session, call `leanRide()`.
 
-## `iastart()`
+## `leanRide()`
 
 ```r
-iastart(plot_port = 8892, watch = TRUE, force = FALSE, use_chromium = TRUE)
+leanRide(plot_port = 8892, watch = TRUE, force = FALSE, use_chromium = TRUE, epobj = TRUE)
 ```
 
 Starts R's HTML help server, opens a Help window and a live `httpgd` Plots
@@ -87,8 +88,21 @@ window, starts `httpgd` itself, and (unless `watch = FALSE`) starts the
 CotEditor-send file watcher (`rsend_watch()`). Safe to call more than once
 per session — a second call is a no-op unless you pass `force = TRUE`.
 
+**`epobj`** ("exclude pre-existing objects", default `TRUE`): on its first
+call this session, `leanRide()` snapshots every object currently in your
+global environment — `~/.Rprofile`'s own objects (everything in
+`leanRide.r`, for instance) and anything else present before you started
+your actual analysis, including whatever any `source()`d file added — and
+stores it as `envExclude` in the global environment, for `vObjects()` to hide
+(see below). This replaces having to add that snapshot line to
+`~/.Rprofile` yourself. Set `epobj = FALSE` to skip this — useful if you
+don't use `vObjects()`, or want to manage `envExclude` yourself. The snapshot is
+only taken once per session even across a later `leanRide(force = TRUE)`
+call, so re-running `leanRide()` (say, to reopen its windows) never
+retroactively hides objects your analysis has already created by then.
+
 **Browser choice.** If ungoogled-chromium is installed and `use_chromium =
-TRUE` (the default), `iastart()` opens two genuinely bare `--app=` Chromium
+TRUE` (the default), `leanRide()` opens two genuinely bare `--app=` Chromium
 windows for Help and Plots — no toolbar, tabs, bookmarks bar, or sidebar,
 since each is its own chromeless window rather than a tab — sized to 40% of
 screen width by 50% of screen height. Otherwise (Chromium not found, or
@@ -103,13 +117,13 @@ Whichever browser is used, `?topic` help calls are redirected into the
 already-open Help window in place (via `options(browser = ...)`), rather
 than opening a new OS-default-browser window every time. This redirect keys
 off each R session's own dynamic-help port, so it works correctly even with
-several `iastart()` sessions running at once — each session updates only its
+several `leanRide()` sessions running at once — each session updates only its
 own Help window, never another session's. Everything else that calls
-`browseURL()` — htmlwidgets, DT/gt tables, `Hmisc::describe()`, `ienv()`'s
+`browseURL()` — htmlwidgets, DT/gt tables, `Hmisc::describe()`, `vObjects()`'s
 own output, anything not a help URL — just opens in the OS default browser
-(Safari), exactly as it would with no `iastart()` running at all.
+(Safari), exactly as it would with no `leanRide()` running at all.
 
-**Gotchas this design works around**, if you're modifying `iastart.r`
+**Gotchas this design works around**, if you're modifying `leanRide.r`
 yourself:
 
 - Launch the Chromium binary directly
@@ -139,14 +153,14 @@ yourself:
   fork/exec behavior), which keeps the port bound at the OS level even
   after R exits — `httpgd::hgd()` then aborts the *entire* R process (an
   uncaught C++ exception, not a catchable R condition) on the next
-  `iastart()` call with "Address already in use." `.port_available()` (an
+  `leanRide()` call with "Address already in use." `.port_available()` (an
   `lsof -sTCP:LISTEN` check, not a `socketConnection(server=TRUE, ...)`
-  probe — the latter blocks waiting for a client and hangs `iastart()`
+  probe — the latter blocks waiting for a client and hangs `leanRide()`
   forever) and `.find_free_port()` are a defensive second line of
   protection regardless.
 - The Safari fallback needs its own per-session help-window targeting,
   just like Chromium's. Safari is a single OS-wide shared app process, so
-  with more than one R session running `iastart(use_chromium = FALSE)` at
+  with more than one R session running `leanRide(use_chromium = FALSE)` at
   once, a plain `open <url>` has no way to know which of Safari's windows
   a given `?topic` call belongs to, and can land in the wrong session's
   window. `.navigate_safari_help()` searches Safari's windows/tabs for the
@@ -165,7 +179,7 @@ yourself:
 
 Two independent CotEditor Script-menu items, both writing to
 `~/.rsend/pending.R`, which `rsend_watch()` (started automatically by
-`iastart()`) polls every ~0.3s via the `later` package and `source()`s when
+`leanRide()`) polls every ~0.3s via the `later` package and `source()`s when
 it changes — this works at a plain R console, not just inside an IDE,
 because `later`'s callbacks run through R's own polled-events mechanism, the
 same plumbing that lets Shiny/`httpgd` serve requests while sitting idle at
@@ -213,14 +227,14 @@ above (dropped lines on longer pastes) — if you still have this script
 installed or bound to a shortcut, it's superseded and safe to delete or
 unbind.
 
-## `ienv()` — a lightweight environment pane
+## `vObjects()` — a lightweight environment pane
 
 ```r
-ienv(pos = -1L)
+vObjects(pos = -1L)
 ```
 
 No standalone macOS tool cleanly replicates RStudio/Positron's live
-Environment pane, so `ienv()` is a substitute: it builds an HTML table of the
+Environment pane, so `vObjects()` is a substitute: it builds an HTML table of the
 objects in a given environment and opens it via the same `browseURL()`
 mechanism as any other htmlwidget output (so it lands in Safari, or wherever
 your current `options(browser=...)` points).
@@ -229,30 +243,28 @@ your current `options(browser=...)` points).
 environment): passed to `objects()`/`ls()`'s own `pos` argument, so it takes
 the same values `ls(pos = ...)` does — an integer position in the search
 list (`search()`), or a search-list name as a string, e.g.
-`ienv(pos = "package:Hmisc")` to inspect what a package exports.
+`vObjects(pos = "package:Hmisc")` to inspect what a package exports.
 
 **Hiding your `.Rprofile`'s own clutter with `envExclude`.** `~/.Rprofile`
 typically defines a bunch of helper objects and functions of its own
 (everything in `leanRide.r`, for instance), and — since it can `source()` in
 other files — potentially plenty more that isn't visible just by reading
-`~/.Rprofile` itself. Rather than have `ienv()` try to work out what your
+`~/.Rprofile` itself. Rather than have `vObjects()` try to work out what your
 Rprofile defines (a static-parsing approach was tried and dropped — it
-can't see what a `source()`d file adds), add one line at the very end of
-`~/.Rprofile`, after everything else in it has run:
-
-```r
-envExclude <- objects(all.names = TRUE)
-```
-
-This snapshots the names of every object present at that point — your own
-Rprofile's, and anything any file it `source()`d added — regardless of how
-they got there. `ienv()` checks for `envExclude` in the environment it's
-listing (`pos`): if present, it excludes everything named in it (plus
-`envExclude` itself, so that variable doesn't show up as clutter); if
-`envExclude` doesn't exist there, `ienv()` just lists everything. This means
-`ienv()` run against a plain package environment (`pos = "package:Hmisc"`,
-say) always lists everything in it, since there's no `envExclude` to find
-there.
+can't see what a `source()`d file adds), `leanRide()` snapshots the names of
+every object present in your global environment at the point it first runs
+— your own Rprofile's, and anything any file it `source()`d added,
+regardless of how they got there — and stores that snapshot as
+`envExclude` (see `epobj` above; set `epobj = FALSE` to skip this).
+`vObjects()` checks for `envExclude` in the environment it's listing (`pos`): if
+present, it excludes everything named in it (plus `envExclude` itself, so
+that variable doesn't show up as clutter); if `envExclude` doesn't exist
+there, `vObjects()` just lists everything. This means `vObjects()` run against a
+plain package environment (`pos = "package:Hmisc"`, say) always lists
+everything in it, since there's no `envExclude` to find there. If you'd
+rather manage `envExclude` yourself — for instance to also exclude some
+objects your analysis creates early on — set `epobj = FALSE` and assign
+`envExclude` yourself before relying on `vObjects()`.
 
 Each row shows an object's class, dimensions or length, size, its `label`
 and `units` attributes when present (as used by Hmisc-labelled variables),
@@ -267,12 +279,35 @@ environment being shown — "Global Environment" for the default `pos = -1L`,
 or the literal search-list name otherwise (e.g. `package:stats`).
 
 One implementation note if you're modifying this: `pos = -1L` can't simply
-be forwarded to `objects(pos = pos)` from inside `ienv()`'s own body — `-1`
+be forwarded to `objects(pos = pos)` from inside `vObjects()`'s own body — `-1`
 means "the environment that called this function," and evaluated from
-inside `ienv()` that would resolve to `ienv()`'s own local frame, not your
-console's global environment. `ienv()` special-cases `pos = -1` to
-`parent.frame()` (evaluated directly in `ienv()`'s own body, so it means
-`ienv()`'s actual caller) before doing anything else with it.
+inside `vObjects()` that would resolve to `vObjects()`'s own local frame, not your
+console's global environment. `vObjects()` special-cases `pos = -1` to
+`parent.frame()` (evaluated directly in `vObjects()`'s own body, so it means
+`vObjects()`'s actual caller) before doing anything else with it.
+
+## `vData()` — an interactive data viewer
+
+```r
+vData(x)
+```
+
+A substitute for RStudio/Positron's clickable data viewer tab. `vData()`
+takes a data frame, data.table, or two-dimensional array (matrix) and opens
+it as a sortable, filterable, paginated HTML table via the same
+`DT`/`browseURL()` mechanism `vObjects()` uses — so it lands in Safari, or
+wherever your current `options(browser=...)` points, and takes advantage of
+the search/sort/column-filter controls `DT::datatable()` already provides
+rather than reimplementing any of that. Wide tables scroll horizontally
+rather than compressing columns unreadably.
+
+`x` also works as a plain vector, for convenience — named vectors are shown
+as two columns (`Name`, `Value`); unnamed ones as a single `Value` column.
+Anything with more than two dimensions (a 3-D+ array) isn't supported and
+raises an error, since there's no natural 2-D table to show for it.
+
+The window/tab title and table caption both name the argument as you
+typed it (`deparse(substitute(x))`), e.g. `Data (mydata)`.
 
 ## `cotd` — CotEditor folder-adjacent file opening
 
@@ -339,7 +374,7 @@ can be combined if useful.
 - **A debugger** (breakpoints, step controls, a call stack). Not built —
   low personal priority. `browser()`/`debug()` at the console still work as
   they always have in plain R.
-- **A live variables/objects pane that updates automatically.** `ienv()` is
+- **A live variables/objects pane that updates automatically.** `vObjects()` is
   an on-demand substitute, not a live-updating panel.
 - **A third native pane inside Zed for HTML/help content.** Zed's extension
   API has no webview/arbitrary-HTML rendering capability (checked against

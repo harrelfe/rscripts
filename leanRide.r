@@ -56,7 +56,7 @@ rsend_watch <- function(interval = 0.3) {
   for (p in start + seq(0, tries - 1)) {
     if (.port_available(p)) return(p)
   }
-  stop("iastart: could not find a free port near ", start,
+  stop("leanRide: could not find a free port near ", start,
        " after ", tries, " tries.")
 }
 
@@ -143,10 +143,20 @@ end tell', help_url, plot_url, win_w, win_h), as_open)
   system2("osascript", args = shQuote(as_open))
 }
 
-iastart <- function(plot_port = 8892, watch = TRUE, force = FALSE, use_chromium = TRUE) {
-  if (isTRUE(getOption(".iastart_ran")) && !force) {
-    message("iastart: already running this session (use iastart(force = TRUE) to reopen).")
+leanRide <- function(plot_port = 8892, watch = TRUE, force = FALSE, use_chromium = TRUE, epobj = TRUE) {
+  if (isTRUE(getOption(".leanRide_ran")) && !force) {
+    message("leanRide: already running this session (use leanRide(force = TRUE) to reopen).")
     return(invisible(NULL))
+  }
+
+  # snapshot pre-existing objects for vObjects() to exclude -- see leanRide.md.
+  # envir = .GlobalEnv, not the default pos = -1L, since -1 inside a function
+  # means that function's own frame, not the global environment (same
+  # gotcha as vObjects()'s own pos argument below). Guarded by exists() so a
+  # later leanRide(force = TRUE) call doesn't reset the snapshot to include
+  # objects your analysis has created since the first call.
+  if (isTRUE(epobj) && !exists("envExclude", envir = .GlobalEnv, inherits = FALSE)) {
+    envExclude <<- objects(envir = .GlobalEnv, all.names = TRUE)
   }
 
   options(help_type = "html")
@@ -157,11 +167,11 @@ iastart <- function(plot_port = 8892, watch = TRUE, force = FALSE, use_chromium 
   if (!requireNamespace("httpgd", quietly = TRUE))
     stop("Please install.packages('httpgd') first.")
 
-  start_hgd <- !isTRUE(getOption(".iastart_hgd"))
+  start_hgd <- !isTRUE(getOption(".leanRide_hgd"))
   if (start_hgd && !.port_available(plot_port)) {
     free_port <- .find_free_port(plot_port + 1)
     message(sprintf(
-      "iastart: port %d is already in use (leftover httpgd server from an earlier session?); using %d instead.",
+      "leanRide: port %d is already in use (leftover httpgd server from an earlier session?); using %d instead.",
       plot_port, free_port))
     plot_port <- free_port
   }
@@ -171,7 +181,7 @@ iastart <- function(plot_port = 8892, watch = TRUE, force = FALSE, use_chromium 
   chromium <- if (isTRUE(use_chromium)) .chromium_app_path() else NA_character_
   if (!is.na(chromium)) {
     binary <- .chromium_binary(chromium)
-    profile_dir <- tempfile("iastart-chromium-")
+    profile_dir <- tempfile("leanRide-chromium-")
     dir.create(profile_dir, recursive = TRUE)
     b <- .screen_bounds()
     sw <- b[3]; sh <- b[4]
@@ -185,7 +195,7 @@ iastart <- function(plot_port = 8892, watch = TRUE, force = FALSE, use_chromium 
       if (startsWith(url, help_prefix)) .navigate_chromium_help(url, hport)
       else system2("open", args = shQuote(url))
     })
-    message("iastart: bare Chromium windows opened for Help (left) and Plots (right).")
+    message("leanRide: bare Chromium windows opened for Help (left) and Plots (right).")
   } else {
     .launch_safari_tabs(help_url, plot_url)
     help_prefix <- sprintf("http://127.0.0.1:%d/", hport)
@@ -194,30 +204,30 @@ iastart <- function(plot_port = 8892, watch = TRUE, force = FALSE, use_chromium 
       else system2("open", args = shQuote(url))
     })
     if (isTRUE(use_chromium)) {
-      message("iastart: Chromium not found; opened Safari with Help/Plots tabs (resized to half-screen).")
+      message("leanRide: Chromium not found; opened Safari with Help/Plots tabs (resized to half-screen).")
     } else {
-      message("iastart: use_chromium = FALSE; opened Safari with Help/Plots tabs (resized to half-screen).")
+      message("leanRide: use_chromium = FALSE; opened Safari with Help/Plots tabs (resized to half-screen).")
     }
   }
 
   if (start_hgd) {
     httpgd::hgd(host = "127.0.0.1", port = plot_port, token = FALSE, silent = TRUE)
-    options(.iastart_hgd = TRUE)
+    options(.leanRide_hgd = TRUE)
   }
 
-  if (isTRUE(watch) && !isTRUE(getOption(".iastart_rsend"))) {
+  if (isTRUE(watch) && !isTRUE(getOption(".leanRide_rsend"))) {
     if (!requireNamespace("later", quietly = TRUE))
       stop("Please install.packages('later') first.")
     rsend_watch()
-    options(.iastart_rsend = TRUE)
+    options(.leanRide_rsend = TRUE)
   }
 
-  options(.iastart_ran = TRUE)
-  if (isTRUE(watch)) message("iastart: CotEditor-send is watching.")
+  options(.leanRide_ran = TRUE)
+  if (isTRUE(watch)) message("leanRide: CotEditor-send is watching.")
   invisible(list(help_url = help_url, plot_url = plot_url))
 }
 
-.ienv_attr_str <- function(v) {
+.vObjects_attr_str <- function(v) {
   if (is.function(v)) return("<function>")
   if (is.environment(v)) return("<environment>")
   s <- tryCatch(as.character(v), error = function(e) NA_character_)
@@ -227,7 +237,7 @@ iastart <- function(plot_port = 8892, watch = TRUE, force = FALSE, use_chromium 
 }
 
 # see leanRide.md for what this shows, the pos argument, and envExclude
-ienv <- function(pos = -1L) {
+vObjects <- function(pos = -1L) {
   if (!requireNamespace("DT", quietly = TRUE))
     stop("Please install.packages('DT') first.")
   if (!requireNamespace("htmltools", quietly = TRUE))
@@ -238,14 +248,15 @@ ienv <- function(pos = -1L) {
   env_label <- if (is.character(pos)) pos else search()[abs(pos)]
   if (identical(env_label, ".GlobalEnv")) env_label <- "Global Environment"
 
-  # -1 must mean ienv()'s caller, not ienv()'s own frame -- see leanRide.md
+  # -1 must mean vObjects()'s caller, not vObjects()'s own frame -- see leanRide.md
   if (identical(pos, -1L) || identical(pos, -1)) pos <- parent.frame()
   envir <- as.environment(pos)
   all_names <- objects(pos = pos, all.names = TRUE)
 
-  # envExclude, if the user has set it (see leanRide.md), is a snapshot of
-  # objects() to hide -- typically everything present right after
-  # ~/.Rprofile finishes running, including anything it source()d in
+  # envExclude, if present (see leanRide.md -- leanRide()'s epobj argument
+  # creates it by default), is a snapshot of objects() to hide: everything
+  # present right when leanRide() ran, including ~/.Rprofile's own objects
+  # and anything it source()d in
   if (exists("envExclude", envir = envir, inherits = FALSE)) {
     ex <- get("envExclude", envir = envir, inherits = FALSE)
     keep <- setdiff(all_names, c(ex, "envExclude"))
@@ -255,7 +266,7 @@ ienv <- function(pos = -1L) {
   title <- sprintf("Objects (%s)", env_label)
 
   if (!length(keep)) {
-    message("ienv: no objects to show.")
+    message("vObjects: no objects to show.")
     return(invisible(NULL))
   }
 
@@ -279,7 +290,7 @@ ienv <- function(pos = -1L) {
     at <- attributes(obj)
     extra <- at[setdiff(names(at), structural)]
     extra_str <- if (length(extra)) {
-      paste(sprintf("%s=%s", names(extra), vapply(extra, .ienv_attr_str, character(1))),
+      paste(sprintf("%s=%s", names(extra), vapply(extra, .vObjects_attr_str, character(1))),
             collapse = "; ")
     } else ""
     data.frame(
@@ -306,6 +317,50 @@ ienv <- function(pos = -1L) {
     caption = title,
     rownames = FALSE,
     options = list(pageLength = 100, autoWidth = TRUE)
+  )
+  widget <- htmlwidgets::prependContent(
+    widget,
+    htmltools::tags$style(htmltools::HTML(
+      "table.dataTable td { white-space: normal !important; word-wrap: break-word; }"
+    ))
+  )
+
+  out <- tempfile(fileext = ".html")
+  htmlwidgets::saveWidget(widget, out, selfcontained = TRUE, title = title)
+  utils::browseURL(out)
+  invisible(tab)
+}
+
+# see leanRide.md for what this shows
+vData <- function(x) {
+  if (!requireNamespace("DT", quietly = TRUE))
+    stop("Please install.packages('DT') first.")
+  if (!requireNamespace("htmltools", quietly = TRUE))
+    stop("Please install.packages('htmltools') first.")
+  if (!requireNamespace("htmlwidgets", quietly = TRUE))
+    stop("Please install.packages('htmlwidgets') first.")
+
+  nm <- deparse(substitute(x))
+  d  <- dim(x)
+
+  if (is.null(d)) {
+    # plain vector -- not the primary use case, but handled for convenience
+    tab <- if (is.null(names(x))) data.frame(Value = x)
+           else data.frame(Name = names(x), Value = x, row.names = NULL)
+  } else if (length(d) == 2) {
+    tab <- as.data.frame(x)
+  } else {
+    stop("vData: x must be a data frame, data table, matrix, or vector (not a >2-D array).")
+  }
+
+  title <- sprintf("Data (%s)", nm)
+
+  widget <- DT::datatable(
+    tab,
+    caption = title,
+    rownames = TRUE,
+    filter = "top",
+    options = list(pageLength = 25, scrollX = TRUE, autoWidth = TRUE)
   )
   widget <- htmlwidgets::prependContent(
     widget,
