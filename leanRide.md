@@ -303,6 +303,37 @@ association only forms via the Open-panel-selection path) — this is an
 accepted trade-off; Zed remains the tool for when an actual folder sidebar
 is wanted.
 
+## Using Claude Code alongside leanRide
+
+Claude Code can act as a coding assistant for the `.r`/`.qmd` file you have
+open in CotEditor (or Zed), without leanRide needing to change at all: it
+just edits the file on disk with its ordinary file-editing tools, the same
+as if you'd typed the change yourself. CotEditor watches its open documents
+and reloads them automatically when they change externally, so an edit
+Claude Code makes shows up in the open buffer right away.
+
+The one thing to watch for is save order. If you have unsaved edits of your
+own sitting in the buffer when Claude Code writes to the file, CotEditor
+will flag the conflict rather than silently discarding one side — so get in
+the habit of saving (Cmd-S) before asking Claude Code to touch a file you've
+been typing in, both so it's editing the version you actually meant and so
+you don't lose your own in-progress changes.
+
+Execution stays entirely manual and separate from this: Claude Code never
+touches `~/.rsend/pending.R` or iTerm2 in this workflow. You review what it
+changed, select what you want to run, and trigger it yourself with
+`Rwatch.sh` or `sendrchunks.sh` as always — then report back anything
+worth knowing (an error, unexpected output, a plot that looks wrong) for
+the next round.
+
+If you'd rather have Claude Code see what's actually being submitted to R —
+either to keep a record of it, or to review a selection before it's run —
+it can instead watch `~/.rsend/pending.R` for changes, since that file
+already holds exactly what each send script queues up. This is a separate,
+optional way of working from the file-editing one above (Claude Code
+reading what you send, rather than writing what you'll send) and the two
+can be combined if useful.
+
 ## What's not here
 
 - **A debugger** (breakpoints, step controls, a call stack). Not built —
