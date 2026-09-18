@@ -24,9 +24,9 @@ either of those you don't need the latter three.
 
 Other tools, all optional but assumed by parts of this setup:
 
-- **ungoogled-chromium** — `brew install --cask chromium`. If not installed,
-  `leanRide()` automatically falls back to Safari (see below); nothing breaks
-  either way.
+- **ungoogled-chromium** — `brew install --cask chromium`, only needed if
+  you want the `use_chromium = TRUE` option (see below); Safari, the
+  default, needs nothing extra installed.
 - **radian** — a better R console (history, syntax highlighting) than plain
   `R --interactive`, used as the console in the Zed task below. Install via
   `pip install radian` or `brew install radian`.
@@ -80,7 +80,7 @@ Other tools, all optional but assumed by parts of this setup:
 ## `leanRide()`
 
 ```r
-leanRide(plot_port = 8892, watch = TRUE, force = FALSE, use_chromium = TRUE, epobj = TRUE)
+leanRide(plot_port = 8892, watch = TRUE, force = FALSE, use_chromium = FALSE, epobj = TRUE)
 ```
 
 Starts R's HTML help server, opens a Help window and a live `httpgd` Plots
@@ -101,17 +101,19 @@ only taken once per session even across a later `leanRide(force = TRUE)`
 call, so re-running `leanRide()` (say, to reopen its windows) never
 retroactively hides objects your analysis has already created by then.
 
-**Browser choice.** If ungoogled-chromium is installed and `use_chromium =
-TRUE` (the default), `leanRide()` opens two genuinely bare `--app=` Chromium
-windows for Help and Plots — no toolbar, tabs, bookmarks bar, or sidebar,
-since each is its own chromeless window rather than a tab — sized to 40% of
-screen width by 50% of screen height. Otherwise (Chromium not found, or
-`use_chromium = FALSE`) it falls back to a single Safari window with Help and
-Plots as *tabs*, sized to 1/3 screen width by 1/2 screen height (Safari has
-no bare/app mode compatible with tabs, and this setup deliberately never
-touches your global Safari view-option preferences, which is the only way to
-trim Safari's own chrome further). `use_chromium = FALSE` exists mainly so
-you can exercise the Safari path on demand without uninstalling Chromium.
+**Browser choice.** By default (`use_chromium = FALSE`) `leanRide()` opens a
+single Safari window with Help and Plots as *tabs*, sized to 1/3 screen
+width by 1/2 screen height (Safari has no bare/app mode compatible with
+tabs, and this setup deliberately never touches your global Safari
+view-option preferences, which is the only way to trim Safari's own chrome
+further) — one window with tabs, rather than two separate windows, is
+usually the more convenient way to manage this. Set `use_chromium = TRUE` if
+ungoogled-chromium is installed and you'd rather have two genuinely bare
+`--app=` Chromium windows for Help and Plots instead — no toolbar, tabs,
+bookmarks bar, or sidebar, since each is its own chromeless window rather
+than a tab — sized to 40% of screen width by 50% of screen height. If
+Chromium isn't actually installed, `use_chromium = TRUE` silently falls
+back to the same Safari behavior as the default.
 
 Whichever browser is used, `?topic` help calls are redirected into the
 already-open Help window in place (via `options(browser = ...)`), rather
@@ -294,12 +296,32 @@ vData(x)
 
 A substitute for RStudio/Positron's clickable data viewer tab. `vData()`
 takes a data frame, data.table, or two-dimensional array (matrix) and opens
-it as a sortable, filterable, paginated HTML table via the same
+it as a sortable, searchable, paginated HTML table via the same
 `DT`/`browseURL()` mechanism `vObjects()` uses — so it lands in Safari, or
-wherever your current `options(browser=...)` points, and takes advantage of
-the search/sort/column-filter controls `DT::datatable()` already provides
-rather than reimplementing any of that. Wide tables scroll horizontally
-rather than compressing columns unreadably.
+wherever your current `options(browser=...)` points. Click a column header
+to sort by it, and use the search box to filter rows by any text they
+contain. Wide tables scroll horizontally rather than compressing columns
+unreadably.
+
+Per-column filter widgets (`DT::datatable(..., filter = "top")`) are
+deliberately not used: they pull in extra JS libraries (Selectize for
+factor/character columns, ionRangeSlider for numeric ranges) that don't
+reliably bundle into the selfcontained HTML file `vData()`/`vObjects()`
+write and open via `file://` with no web server — when they fail to load,
+the whole table breaks (`DataTables warning ... Requested unknown
+parameter` is the symptom). The single global search box has no such
+dependency and works reliably the same way.
+
+Before display, each column is stripped down to a plain type DT already
+knows how to render (`factor`/`ordered`, `Date`, `POSIXct`, `difftime`, or
+the bare numeric/integer/character/logical storage mode), and any `label`
+or `units` attribute is dropped. This matters for Hmisc-labelled data:
+`label()`/`units()` add a `"labelled"` class on top of the real type, and
+left in place it can likewise confuse DT's column-type detection and
+corrupt the table the same way `filter = "top"` did — same symptom, same
+underlying cause (something DT doesn't recognize breaking its column
+bookkeeping). Labels and units aren't lost, just not shown here; `vObjects()`
+already shows them in its own dedicated columns.
 
 `x` also works as a plain vector, for convenience — named vectors are shown
 as two columns (`Name`, `Value`); unnamed ones as a single `Value` column.
@@ -308,6 +330,25 @@ raises an error, since there's no natural 2-D table to show for it.
 
 The window/tab title and table caption both name the argument as you
 typed it (`deparse(substitute(x))`), e.g. `Data (mydata)`.
+
+**A data dictionary, as an alternative to `vData()`.** `vData()` shows raw
+values, not variable-level metadata (labels, units, value ranges, missing
+counts). For an HTML data dictionary instead, set `options(prType = 'html')`
+once, then run Hmisc's `contents()` on a data frame or data.table:
+
+```r
+options(prType = 'html')
+contents(mydata)
+```
+
+For substantially more detail per variable (distributions, counts, extremes),
+use Hmisc's `describe()` the same way:
+
+```r
+describe(mydata)
+```
+
+Both open in the browser the same way `vData()`/`vObjects()` do.
 
 ## `cotd` — CotEditor folder-adjacent file opening
 

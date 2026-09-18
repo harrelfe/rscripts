@@ -143,7 +143,7 @@ end tell', help_url, plot_url, win_w, win_h), as_open)
   system2("osascript", args = shQuote(as_open))
 }
 
-leanRide <- function(plot_port = 8892, watch = TRUE, force = FALSE, use_chromium = TRUE, epobj = TRUE) {
+leanRide <- function(plot_port = 8892, watch = TRUE, force = FALSE, use_chromium = FALSE, epobj = TRUE) {
   if (isTRUE(getOption(".leanRide_ran")) && !force) {
     message("leanRide: already running this session (use leanRide(force = TRUE) to reopen).")
     return(invisible(NULL))
@@ -331,6 +331,24 @@ vObjects <- function(pos = -1L) {
   invisible(tab)
 }
 
+# strips a column down to a plain type DT/jsonlite know how to serialize --
+# see leanRide.md. Hmisc's label()/units() add classes like "labelled" (and
+# the label/units themselves as attributes) on top of the real storage type;
+# left in place, they can confuse DT's column-type detection and corrupt the
+# whole table (a "DataTables warning ... unknown parameter" is the symptom).
+.vdata_plain_col <- function(col) {
+  dt_classes <- c("factor", "ordered", "Date", "POSIXct", "POSIXt", "difftime")
+  cls <- class(col)
+  if (any(cls %in% dt_classes)) {
+    class(col) <- cls[cls %in% dt_classes]
+  } else if (!is.null(attr(col, "class"))) {
+    class(col) <- NULL
+  }
+  attr(col, "label") <- NULL
+  attr(col, "units") <- NULL
+  col
+}
+
 # see leanRide.md for what this shows
 vData <- function(x) {
   if (!requireNamespace("DT", quietly = TRUE))
@@ -345,27 +363,33 @@ vData <- function(x) {
 
   if (is.null(d)) {
     # plain vector -- not the primary use case, but handled for convenience
-    tab <- if (is.null(names(x))) data.frame(Value = x)
-           else data.frame(Name = names(x), Value = x, row.names = NULL)
+    tab <- if (is.null(names(x))) data.frame(Value = .vdata_plain_col(x))
+           else data.frame(Name = names(x), Value = .vdata_plain_col(x), row.names = NULL)
   } else if (length(d) == 2) {
-    tab <- as.data.frame(x)
+    tab0 <- as.data.frame(x)
+    tab <- as.data.frame(lapply(tab0, .vdata_plain_col), stringsAsFactors = FALSE, check.names = FALSE)
+    rownames(tab) <- rownames(tab0)
   } else {
     stop("vData: x must be a data frame, data table, matrix, or vector (not a >2-D array).")
   }
 
   title <- sprintf("Data (%s)", nm)
 
+  # filter = "top" deliberately omitted -- see leanRide.md: its per-column
+  # widgets (Selectize, ionRangeSlider) don't reliably bundle into a
+  # selfcontained file opened via file://, and corrupt the whole table when
+  # they fail to load. DT's built-in global search box still works fine.
   widget <- DT::datatable(
     tab,
     caption = title,
     rownames = TRUE,
-    filter = "top",
     options = list(pageLength = 25, scrollX = TRUE, autoWidth = TRUE)
   )
   widget <- htmlwidgets::prependContent(
     widget,
     htmltools::tags$style(htmltools::HTML(
-      "table.dataTable td { white-space: normal !important; word-wrap: break-word; }"
+      "table.dataTable td { white-space: normal !important; word-wrap: break-word; }
+       .dataTables_scrollBody table.dataTable { margin-left: 0 !important; }"
     ))
   )
 
