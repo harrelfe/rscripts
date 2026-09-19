@@ -24,9 +24,9 @@ either of those you don't need the latter three.
 
 Other tools, all optional but assumed by parts of this setup:
 
-- **ungoogled-chromium** — `brew install --cask chromium`, only needed if
-  you want the `use_chromium = TRUE` option (see below); Safari, the
-  default, needs nothing extra installed.
+- **ungoogled-chromium** — `brew install --cask chromium`. Used by default
+  (see below); if not installed, `leanRide()` automatically falls back to
+  Safari and nothing breaks either way.
 - **radian** — a better R console (history, syntax highlighting) than plain
   `R --interactive`, used as the console in the Zed task below. Install via
   `pip install radian` or `brew install radian`.
@@ -80,7 +80,7 @@ Other tools, all optional but assumed by parts of this setup:
 ## `leanRide()`
 
 ```r
-leanRide(plot_port = 8892, watch = TRUE, force = FALSE, use_chromium = FALSE, epobj = TRUE)
+leanRide(plot_port = 8892, watch = TRUE, force = FALSE, use_chromium = TRUE, epobj = TRUE)
 ```
 
 Starts R's HTML help server, opens a Help window and a live `httpgd` Plots
@@ -101,19 +101,17 @@ only taken once per session even across a later `leanRide(force = TRUE)`
 call, so re-running `leanRide()` (say, to reopen its windows) never
 retroactively hides objects your analysis has already created by then.
 
-**Browser choice.** By default (`use_chromium = FALSE`) `leanRide()` opens a
-single Safari window with Help and Plots as *tabs*, sized to 1/3 screen
-width by 1/2 screen height (Safari has no bare/app mode compatible with
-tabs, and this setup deliberately never touches your global Safari
-view-option preferences, which is the only way to trim Safari's own chrome
-further) — one window with tabs, rather than two separate windows, is
-usually the more convenient way to manage this. Set `use_chromium = TRUE` if
-ungoogled-chromium is installed and you'd rather have two genuinely bare
-`--app=` Chromium windows for Help and Plots instead — no toolbar, tabs,
-bookmarks bar, or sidebar, since each is its own chromeless window rather
-than a tab — sized to 40% of screen width by 50% of screen height. If
-Chromium isn't actually installed, `use_chromium = TRUE` silently falls
-back to the same Safari behavior as the default.
+**Browser choice.** If ungoogled-chromium is installed and `use_chromium =
+TRUE` (the default), `leanRide()` opens two genuinely bare `--app=` Chromium
+windows for Help and Plots — no toolbar, tabs, bookmarks bar, or sidebar,
+since each is its own chromeless window rather than a tab — sized to 40% of
+screen width by 50% of screen height. Otherwise (Chromium not found, or
+`use_chromium = FALSE`) it falls back to a single Safari window with Help and
+Plots as *tabs*, sized to 1/3 screen width by 1/2 screen height (Safari has
+no bare/app mode compatible with tabs, and this setup deliberately never
+touches your global Safari view-option preferences, which is the only way to
+trim Safari's own chrome further). `use_chromium = FALSE` exists mainly so
+you can exercise the Safari path on demand without uninstalling Chromium.
 
 Whichever browser is used, `?topic` help calls are redirected into the
 already-open Help window in place (via `options(browser = ...)`), rather
@@ -349,6 +347,69 @@ describe(mydata)
 ```
 
 Both open in the browser the same way `vData()`/`vObjects()` do.
+
+## `vPackages()` — CRAN update check
+
+```r
+vPackages(update = FALSE)
+```
+
+Prints installed vs. CRAN-available versions for any package with an update
+pending, using base R's own `old.packages()` — no substitute for RStudio
+here, just a short, memorable name for something you'd otherwise type out
+by hand. Pass `update = TRUE` to also install everything listed.
+
+Both the check and the install are pinned to `.libPaths()[1]` — your own
+default writable library — rather than left to scan/write across every
+library on `.libPaths()`. This matters because R's "recommended" packages
+(`MASS`, `Matrix`, `survival`, `nlme`, `nnet`, `spatial`, `class`,
+`cluster`, `KernSmooth`, `lattice`, and similar) ship bundled with R itself
+in a separate system library. Left unpinned, a package present in more than
+one library shows up as a *separate row per library* — you may see the same
+package name twice, at two different installed versions — and since
+`install.packages()` only ever writes to `.libPaths()[1]`, it can never
+touch a copy that lives in another library path. That row then reports as
+needing an update forever, no matter how many times you run
+`vPackages(update = TRUE)`, because the copy it's actually complaining
+about never gets touched. Pinning both the check and the install to the
+same single library sidesteps this: it always shows and updates only the
+packages you actually manage yourself, and leaves R's own bundled
+recommended packages alone (their versions track R's own release, not ad
+hoc CRAN installs). If you want to see what's installed elsewhere on
+`.libPaths()`, run `.libPaths()` to see the list and call `old.packages(lib.loc
+= <that path>)` directly.
+
+`installed.packages(lib.loc = lib, noCache = TRUE)` is used rather than
+plain `installed.packages()`. Without `noCache = TRUE`,
+`installed.packages()`'s own session cache can still report a package's
+pre-update version on the very next `old.packages()` call right after
+`install.packages()` just updated it — so calling `vPackages()` again after
+`vPackages(update = TRUE)` would otherwise list the same packages as still
+needing an update, even though they no longer do.
+
+**A package can still show up again even after both fixes above.** CRAN's
+*source* package index bumps a package's listed version the moment a
+maintainer submits it, but the macOS *binary* build can lag behind that by
+anywhere from hours to a day or two. `old.packages()`'s "ReposVer" reflects
+the source index, while `install.packages()` (correctly) installs whatever
+binary actually exists yet — so if no matching binary has been built, the
+"update" silently reinstalls the version you already had, and the package
+keeps reappearing here through no fault of `vPackages()` itself. The
+recurring `Some listed binary packages have no source` warning from
+`install.packages()`/`old.packages()` is CRAN telling you exactly this.
+`vPackages(update = TRUE)` checks for this directly — after installing, it
+compares each package's version before and after, and for anything that
+didn't actually change it prints `vPackages: no newer macOS binary yet on
+CRAN for: <names> -- still at the version you had; try again later.`,
+rather than leaving you to wonder whether the tool is broken. There's
+nothing to do for those but wait and re-run `vPackages(update = TRUE)`
+again later.
+
+(One implementation note if you're modifying this: `old.packages()` returns
+a normal character matrix when several packages are listed, but a "list
+matrix" — `typeof()` `"list"`, not `"character"` — when it finds exactly
+one. `vPackages()` rebuilds it as a genuine character matrix first so the
+rest of the function behaves the same either way.)
 
 ## `cotd` — CotEditor folder-adjacent file opening
 

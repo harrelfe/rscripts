@@ -143,7 +143,7 @@ end tell', help_url, plot_url, win_w, win_h), as_open)
   system2("osascript", args = shQuote(as_open))
 }
 
-leanRide <- function(plot_port = 8892, watch = TRUE, force = FALSE, use_chromium = FALSE, epobj = TRUE) {
+leanRide <- function(plot_port = 8892, watch = TRUE, force = FALSE, use_chromium = TRUE, epobj = TRUE) {
   if (isTRUE(getOption(".leanRide_ran")) && !force) {
     message("leanRide: already running this session (use leanRide(force = TRUE) to reopen).")
     return(invisible(NULL))
@@ -397,4 +397,47 @@ vData <- function(x) {
   htmlwidgets::saveWidget(widget, out, selfcontained = TRUE, title = title)
   utils::browseURL(out)
   invisible(tab)
+}
+
+# see leanRide.md for what this shows and the noCache fix
+vPackages <- function(update = FALSE) {
+  options(repos = c(CRAN = "https://cloud.r-project.org"))
+  # lib.loc/lib pinned to .libPaths()[1] (your own writable library), and
+  # noCache = TRUE -- see leanRide.md. Without pinning a single library,
+  # a package installed in more than one library path (e.g. a "recommended"
+  # package -- MASS, Matrix, survival, etc. -- that ships bundled with R
+  # itself in a separate system library) shows up as a SEPARATE row per
+  # library, and install.packages() (which only ever writes to
+  # .libPaths()[1]) can never touch the other one, so that row falsely
+  # reports as needing an update forever. noCache = TRUE separately guards
+  # against installed.packages()'s own session cache still reporting a
+  # package's pre-update version right after install.packages() updated it.
+  lib <- .libPaths()[1]
+  z <- old.packages(lib.loc = lib, instPkgs = installed.packages(lib.loc = lib, noCache = TRUE))
+  # old.packages() returns a plain character matrix when several packages
+  # are listed, but a "list matrix" (typeof "list") when exactly one is --
+  # see leanRide.md. Rebuilding as a genuine character matrix makes z[,...]
+  # and z[pkg, ...] behave consistently either way.
+  if (!is.null(z) && is.list(z))
+    z <- matrix(as.character(z), nrow = nrow(z), dimnames = dimnames(z))
+  print(z[, c('Installed', 'ReposVer'), drop = FALSE], quote = FALSE)
+  if (update && NROW(z) > 0) {
+    install.packages(rownames(z), lib = lib)
+    # A package can keep reappearing here even after "updating" it: CRAN's
+    # source index bumps a package's version immediately on submission, but
+    # the macOS binary build can lag behind by hours to days -- see
+    # leanRide.md. install.packages() then (correctly) installs the newest
+    # binary that actually exists, which is still the old version, so
+    # nothing changes. Say so explicitly rather than leaving that silent.
+    after <- installed.packages(lib.loc = lib, noCache = TRUE)
+    unchanged <- vapply(rownames(z), function(p) {
+      av <- if (p %in% rownames(after)) after[p, "Version"] else NA_character_
+      identical(unname(z[p, "Installed"]), unname(av))
+    }, logical(1))
+    if (any(unchanged))
+      message("vPackages: no newer macOS binary yet on CRAN for: ",
+              paste(rownames(z)[unchanged], collapse = ", "),
+              " -- still at the version you had; try again later.")
+  }
+  invisible(z)
 }
