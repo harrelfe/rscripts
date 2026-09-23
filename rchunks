@@ -1,0 +1,128 @@
+#!/bin/zsh
+# rchunks -- extract runnable R from a .qmd/.Rmd buffer (or selection).
+#
+# Install: put this file in ~/bin (make sure ~/bin is on your PATH) and
+# `chmod +x ~/bin/rchunks`.
+#
+# Usage: rchunks < input.qmd > output.R
+#        rchunks <<< "$SOME_SELECTION_VARIABLE"
+#
+# Reads a document or selection on stdin and writes plain, source()-able R
+# to stdout. This is the editor-agnostic core of leanRide's "Run All Chunks
+# Above" behavior: it knows nothing about CotEditor, Zed, or any other
+# editor -- it only reads stdin and writes stdout, so any editor that can
+# pipe a selection or buffer through an external command can drive it.
+# CotEditor's sendrchunks.sh and a Zed task both just call this.
+#
+# Extracts two things from the input, in document order, and drops
+# everything else (prose, YAML frontmatter, and any non-R fenced chunk like
+# ```{python}, ```{mermaid}, ```{dot}):
+#
+#   - the contents of ```{r ...} fenced chunks, each preceded by a
+#     "# Chunk N" comment (N = 1, 2, 3, ... in document order) and
+#     separated from whatever precedes it by a blank line;
+#   - inline `r <code>` spans found OUTSIDE any fenced chunk (a single
+#     backtick, "r", required whitespace, the code, optional trailing
+#     whitespace, a closing single backtick), each preceded by a
+#     "# Inline R code" comment and a blank line.
+#
+# A span that begins with two or more consecutive backticks (a literal
+# markdown escape, not inline R -- e.g. ``r not_code``) never qualifies, and
+# hitting a run of 2+ backticks while looking for an open span's closer
+# aborts that span rather than guessing past it (this only affects the
+# pathological case of two inline spans with zero characters between them,
+# e.g. `r x``r y` -- put a space between spans and it's a non-issue).
+#
+# Quarto's #| chunk-option comment lines inside R chunks are deliberately
+# NOT stripped out -- they're harmless ordinary R comments when sourced,
+# not worth the extra complexity of parsing them out. Likewise this doesn't
+# look at eval/include chunk options at all: every {r ...} chunk in the
+# input runs, regardless of eval=FALSE -- unlike RStudio's own "Run All
+# Chunks Above", which does skip eval=FALSE chunks. Revisit if that
+# distinction ever actually matters in practice.
+#
+# If the input contains neither an R chunk nor an inline R span (e.g. a
+# plain .R file with no backtick spans), the output is empty.
+
+awk '
+BEGIN { in_any = 0; in_r = 0; chunk_num = 0; first = 1 }
+
+function emit_header(text) {
+  if (!first) print ""
+  print text
+  first = 0
+}
+
+function extract_inline(line,    n, i, j, k, rs, rl, rs2, rl2, code, codestart, found_close, ch) {
+  n = length(line)
+  i = 1
+  while (i <= n) {
+    ch = substr(line, i, 1)
+    if (ch != "`") { i++; continue }
+    rs = i
+    while (i <= n && substr(line, i, 1) == "`") i++
+    rl = i - rs
+    if (rl == 1 && i <= n && substr(line, i, 1) == "r") {
+      j = i + 1
+      if (j <= n && (substr(line, j, 1) == " " || substr(line, j, 1) == "\t")) {
+        while (j <= n && (substr(line, j, 1) == " " || substr(line, j, 1) == "\t")) j++
+        codestart = j
+        k = j
+        found_close = 0
+        while (k <= n) {
+          if (substr(line, k, 1) == "`") {
+            rs2 = k
+            while (k <= n && substr(line, k, 1) == "`") k++
+            rl2 = k - rs2
+            if (rl2 == 1) {
+              code = substr(line, codestart, rs2 - codestart)
+              gsub(/[ \t]+$/, "", code)
+              emit_header("# Inline R code")
+              print code
+              found_close = 1
+              i = k
+            } else {
+              # a run of 2+ backticks before any valid closer -- ambiguous,
+              # abandon this candidate rather than guess; resume scanning
+              # right after the offending run
+              i = k
+            }
+            break
+          } else {
+            k++
+          }
+        }
+        if (!found_close && k > n) i = j   # no backtick found at all on the rest of the line
+        continue
+      }
+    }
+  }
+}
+
+{
+  line = $0
+  if (line ~ /^[[:space:]]*```/) {
+    if (in_any) {
+      in_any = 0
+      in_r = 0
+    } else {
+      in_any = 1
+      if (line ~ /^[[:space:]]*```\{r[ ,}]/) {
+        in_r = 1
+        chunk_num++
+        emit_header("# Chunk " chunk_num)
+      } else {
+        in_r = 0
+      }
+    }
+    next
+  }
+  if (in_r) {
+    print line
+  } else if (in_any) {
+    next
+  } else {
+    extract_inline(line)
+  }
+}
+'

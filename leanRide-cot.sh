@@ -22,40 +22,21 @@ cat > ~/"Library/Application Scripts/com.coteditor.CotEditor/sendrchunks.sh" <<'
 # Workflow: click at (or inside) the chunk you're about to run, press
 # Cmd-Shift-Up to select from there to the top of the document, then this
 # shortcut -- reproduces RStudio/Quarto's "Run All Chunks Above" without any
-# chunk-boundary parsing or Accessibility-permission UI automation: we only
-# ever look at the text CotEditor hands us on stdin (the selection).
+# chunk-boundary parsing or Accessibility-permission UI automation.
 #
-# Strips everything except the contents of ```{r ...} fenced chunks:
-# prose, YAML frontmatter, inline `r ...` code, and any non-R fenced chunk
-# (```{python}, ```{mermaid}, ```{dot}, etc.) are all dropped. Quarto's
-# #| chunk-option comment lines are deliberately NOT stripped out of R
-# chunks -- they're harmless ordinary R comments when sourced, not worth
-# the extra complexity of parsing them out. Likewise this doesn't look at
-# eval/include chunk options at all: every {r ...} chunk in the selection
-# runs, regardless of eval=FALSE -- unlike RStudio's own "Run All Chunks
-# Above", which does skip eval=FALSE chunks. Revisit if that distinction
-# ever actually matters in practice.
+# All the actual chunk/inline-R extraction logic lives in ~/bin/rchunks
+# (shared with Zed -- see leanRide.md), so this script is just glue: hand
+# CotEditor's selection (stdin) to rchunks and write its output to
+# pending.R for rsend_watch() to pick up. See ~/bin/rchunks for exactly
+# what gets extracted and why.
 #
-# If the selection contains no ```{r ...} fence at all (e.g. run by
-# habit on a plain .R file, or a .qmd selection with no R chunks in range),
-# the output is empty -- there's nothing to extract. Use the plain
-# Cmd-Return script for that case instead.
+# Uses rchunks's full path rather than relying on PATH, since CotEditor
+# runs this script as a plain child process that does not source your
+# ~/.zshrc or ~/.zprofile -- so a bare `rchunks` call could fail with
+# "command not found" even though it works fine typed into iTerm2.
 
 mkdir -p ~/.rsend
-awk '
-  {
-    line = $0
-    if (line ~ /^[[:space:]]*```/) {
-      if (in_r) {
-        in_r = 0
-      } else if (line ~ /^[[:space:]]*```\{r[ ,}]/) {
-        in_r = 1
-      }
-      next
-    }
-    if (in_r) print line
-  }
-' > ~/.rsend/pending.R
+~/bin/rchunks > ~/.rsend/pending.R
 EOF
 chmod +x ~/"Library/Application Scripts/com.coteditor.CotEditor/sendrchunks.sh"
 

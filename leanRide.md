@@ -69,13 +69,20 @@ Other tools, all optional but assumed by parts of this setup:
      { "context": "Workspace", "bindings": { "ctrl-alt-r": ["task::Spawn", { "task_name": "R console" }] } }
    ]
    ```
-3. Run `zsh leanRide-cot.sh` once — it installs the two CotEditor
+3. Put `rchunks` on your `PATH`: `mkdir -p ~/bin`, copy `rchunks` there,
+   `chmod +x ~/bin/rchunks`, and add `export PATH="$HOME/bin:$PATH"` to
+   `~/.zshrc` if `~/bin` isn't already on your `PATH` (needed for calling it
+   by name from the command line or from a Zed task; the CotEditor script
+   below calls it by full path regardless, so it doesn't strictly need this
+   step, but it's worth doing once so `rchunks < foo.qmd` works from any
+   terminal too).
+4. Run `zsh leanRide-cot.sh` once — it installs the two CotEditor
    Script-menu items described below (`Rwatch.sh` and `sendrchunks.sh`)
    into `~/Library/Application Scripts/com.coteditor.CotEditor/`, and
    prints the exact steps for binding each to a keyboard shortcut via
    System Settings > Keyboard > Keyboard Shortcuts > App Shortcuts
    (Menu Title must match the script's filename without `.sh`).
-4. At the start of an R session, call `leanRide()`.
+5. At the start of an R session, call `leanRide()`.
 
 ## `leanRide()`
 
@@ -208,16 +215,83 @@ cat > ~/.rsend/pending.R
 **`sendrchunks.sh`** (bind to Cmd-Shift-Return): for `.qmd`/`.Rmd`
 documents, reproduces RStudio/Quarto's "Run All Chunks Above." Select from
 the top of the document to your cursor (Cmd-Shift-Up does this in one step),
-then run this instead of `Rwatch.sh` — it strips everything except
-the contents of `` ```{r ...} `` fenced chunks (prose, YAML frontmatter,
-inline `` `r ...` `` code, and any non-R fenced chunk like `` ```{python} ``,
-`` ```{mermaid} ``, `` ```{dot} `` are all dropped). Quarto's `#|`
-chunk-option comment lines are left in place deliberately — they're harmless
-ordinary R comments when sourced. It does not look at `eval`/`include` chunk
-options at all, unlike RStudio's real "Run All Chunks Above," which skips
-`eval=FALSE` chunks — every `{r ...}` chunk in the selection runs regardless.
-If the selection contains no R chunk at all, the output is empty; use
-`Rwatch.sh` for plain `.R` files instead.
+then run this instead of `Rwatch.sh`. The script itself is just glue —
+```zsh
+#!/bin/zsh
+# %%%{CotEditorXInput=Selection}%%%
+# %%%{CotEditorXOutput=Discard}%%%
+mkdir -p ~/.rsend
+~/bin/rchunks > ~/.rsend/pending.R
+```
+— all the actual extraction logic lives in `~/bin/rchunks` (below), so it's
+one command that any editor able to pipe text through an external program
+can call. It uses `rchunks`'s full path rather than relying on `PATH`,
+because CotEditor runs Script-menu items as plain child processes that
+don't source `~/.zshrc`/`~/.zprofile` — a bare `rchunks` call could fail
+with "command not found" even though it works fine typed into iTerm2.
+
+### `~/bin/rchunks` — the shared extraction command
+
+`leanRide-cot.sh` installs `rchunks` into `~/bin` (create that directory
+and add it to your `PATH` first, in `~/.zshrc`, if you haven't already; the
+CotEditor script above sidesteps needing that by calling `~/bin/rchunks`
+directly). It reads a document or selection on stdin and writes plain,
+`source()`-able R to stdout — no editor-specific assumptions at all. Try it
+straight from the command line: `rchunks < some_report.qmd`.
+
+It extracts two things from the input, in document order, and drops
+everything else (prose, YAML frontmatter, and any non-R fenced chunk like
+`` ```{python} ``, `` ```{mermaid} ``, `` ```{dot} ``):
+
+- the contents of `` ```{r ...} `` fenced chunks, each preceded by a
+  `# Chunk N` comment (`N` = 1, 2, 3, ... in document order) and separated
+  from whatever precedes it by a blank line;
+- inline `` `r <code>` `` spans found *outside* any fenced chunk (a single
+  backtick, `r`, required whitespace, the code, optional trailing
+  whitespace, a closing single backtick), each preceded by a blank line and
+  a `# Inline R code` comment, and then `source()`'d along with everything
+  else once written to `pending.R`.
+
+A single line of text can contain more than one inline `` `r ...` `` span,
+and each is extracted separately. A span that begins with two or more
+consecutive backticks (a literal markdown escape, not inline R — e.g.
+`` ``r not_code`` ``) never qualifies; that's also true if the extra
+backticks show up while scanning for an open span's closer, which aborts
+that span rather than guessing past it (this only matters for two inline
+spans with nothing between them, e.g. `` `r x``r y` `` — put a space
+between spans and it's a non-issue).
+
+Quarto's `#|` chunk-option comment lines inside R chunks are left in place
+deliberately — they're harmless ordinary R comments when sourced. It does
+not look at `eval`/`include` chunk options at all, unlike RStudio's real
+"Run All Chunks Above," which skips `eval=FALSE` chunks — every `{r ...}`
+chunk in the input runs regardless. If the input contains neither an R
+chunk nor an inline R span, the output is empty; use `Rwatch.sh` for plain
+`.R` files instead.
+
+### Using `rchunks` from Zed
+
+Zed doesn't have CotEditor's Script-menu concept, but its Tasks
+(`~/.config/zed/tasks.json`) can run an arbitrary shell command bound to a
+keystroke, with the current selection available as an environment variable
+substitution. A task that plays the same role as `sendrchunks.sh` looks
+like:
+
+```json
+{
+  "label": "Send R chunks above",
+  "command": "mkdir -p ~/.rsend && printf '%s' \"$ZED_SELECTED_TEXT\" | ~/bin/rchunks > ~/.rsend/pending.R",
+  "use_new_terminal": false,
+  "allow_concurrent_runs": false
+}
+```
+
+Bind a keystroke to that task the same way you'd bind any Zed task (`zed:
+spawn task` in the keymap, targeting this task's label), and use the same
+"select from cursor to top of document, then run the task" workflow as in
+CotEditor. `rchunks` itself is unaware of which editor called it — this
+task and `sendrchunks.sh` are just two thin front ends for the same
+command, so a fix to chunk parsing only ever needs to happen in one place.
 
 **Deprecated: a "Send to iTerm2" script.** An earlier script wrote code
 directly into the iTerm2 window via AppleScript (`tell application "iTerm2"
