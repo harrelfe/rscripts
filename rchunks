@@ -58,6 +58,11 @@
 #
 # If the input contains neither an R chunk nor an inline R span (e.g. a
 # plain .R file with no backtick spans), the output is empty.
+#
+# Except for numbering chunks, you can do the same thing as rchunks in R
+# using
+#   options(knitr.purl.inline = TRUE)
+#   knitr::purl("my_doc.qmd", output = "my_doc.R")
 
 awk '
 BEGIN { in_any = 0; in_r = 0; chunk_num = 0; first = 1; chunk_name = ""; chunk_eval_false = 0 }
