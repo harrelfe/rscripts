@@ -261,13 +261,33 @@ that span rather than guessing past it (this only matters for two inline
 spans with nothing between them, e.g. `` `r x``r y` `` — put a space
 between spans and it's a non-issue).
 
-Quarto's `#|` chunk-option comment lines inside R chunks are left in place
-deliberately — they're harmless ordinary R comments when sourced. It does
-not look at `eval`/`include` chunk options at all, unlike RStudio's real
-"Run All Chunks Above," which skips `eval=FALSE` chunks — every `{r ...}`
-chunk in the input runs regardless. If the input contains neither an R
-chunk nor an inline R span, the output is empty; use `Rwatch.sh` for plain
-`.R` files instead.
+Chunk headers are also read for two more things:
+
+- **a chunk name.** `` ```{r chunkname} `` or `` ```{r chunkname, X} `` (`X`
+  is anything not containing `{` or `}`, with optional whitespace around it
+  — knitr/Quarto chunk options, comma-separated); `` ```{r} `` or
+  `` ```{r, X} `` (a leading comma) means no name. When there's a name, it's
+  appended to that chunk's header comment: `# Chunk N - chunkname`.
+- **`eval=FALSE`** (or `eval=F`), among the options in `X`. When present,
+  every non-blank line of that chunk is commented out with a `# ` prefix
+  rather than left runnable — the chunk still appears in `pending.R`, in
+  its normal place, but sourcing it does nothing, matching what
+  `eval=FALSE` means in a real knitr/Quarto render. Blank lines inside a
+  disabled chunk stay blank. No other chunk option (`echo`, `include`,
+  `fig.*`, ...) affects execution, since none of those mean "don't run
+  this."
+
+A `#| eval: false` Quarto pragma *inside* a chunk body isn't specially
+recognized — it's already inert as far as sourcing is concerned (a `#|`
+line is just an ordinary R comment), so it doesn't need special handling;
+only `eval=FALSE` written in the `` ```{r ...} `` header line itself is
+acted on, since that line is otherwise discarded and its information would
+be lost. Quarto's `#|` lines are otherwise left in place deliberately, for
+the same reason — harmless comments once sourced, not worth parsing out.
+It does not look at `include` at all, and every `{r ...}` chunk in the
+input runs unless its header says `eval=FALSE`. If the input contains
+neither an R chunk nor an inline R span, the output is empty; use
+`Rwatch.sh` for plain `.R` files instead.
 
 ### Using `rchunks` from Zed
 

@@ -33,24 +33,65 @@
 # pathological case of two inline spans with zero characters between them,
 # e.g. `r x``r y` -- put a space between spans and it's a non-issue).
 #
+# Chunk headers are read for two more things:
+#
+#   - a chunk name/label -- ```{r chunkname} or ```{r chunkname, X} (X is
+#     anything not containing "{" or "}"; a header with no name at all,
+#     ```{r} or ```{r, X}, is unnamed). When present, the name is appended
+#     to that chunk's header comment: "# Chunk N - chunkname".
+#   - eval=FALSE (or eval=F), among the comma-separated options in X. When
+#     present, every non-blank line of that chunk is commented out (a "# "
+#     prefix) rather than left runnable -- the chunk still appears in
+#     pending.R, in order, but sourcing it does nothing, matching what
+#     eval=FALSE means in a real knitr/Quarto render. Blank lines inside a
+#     disabled chunk are left blank. No other chunk options (echo, include,
+#     fig.*, etc.) affect execution, since none of them mean "don't run
+#     this."
+#
 # Quarto's #| chunk-option comment lines inside R chunks are deliberately
-# NOT stripped out -- they're harmless ordinary R comments when sourced,
-# not worth the extra complexity of parsing them out. Likewise this doesn't
-# look at eval/include chunk options at all: every {r ...} chunk in the
-# input runs, regardless of eval=FALSE -- unlike RStudio's own "Run All
-# Chunks Above", which does skip eval=FALSE chunks. Revisit if that
-# distinction ever actually matters in practice.
+# NOT stripped out -- they're harmless ordinary R comments when sourced
+# (and already inert as far as R is concerned, since a line starting with
+# "#|" is just a comment; only the ```{r ...} header line's own eval=FALSE
+# is acted on here, not a #| eval: false pragma inside the chunk body,
+# which would take real Quarto-option parsing to distinguish from prose in
+# a comment).
 #
 # If the input contains neither an R chunk nor an inline R span (e.g. a
 # plain .R file with no backtick spans), the output is empty.
 
 awk '
-BEGIN { in_any = 0; in_r = 0; chunk_num = 0; first = 1 }
+BEGIN { in_any = 0; in_r = 0; chunk_num = 0; first = 1; chunk_name = ""; chunk_eval_false = 0 }
 
 function emit_header(text) {
   if (!first) print ""
   print text
   first = 0
+}
+
+# Parses a ```{r ...} header line, setting chunk_name (possibly "") and
+# chunk_eval_false (0/1). Assumes exactly one "{" and one "}" on the line
+# (the header syntax this supports has no nested braces).
+function parse_r_header(line,    b, e, inner, rem, commapos, namepart, optspart) {
+  chunk_name = ""
+  chunk_eval_false = 0
+  b = index(line, "{")
+  e = index(line, "}")
+  if (b == 0 || e == 0 || e < b) return
+  inner = substr(line, b + 1, e - b - 1)   # between { and }, e.g. "r foo, eval=FALSE"
+  rem = substr(inner, 2)                   # drop the leading "r"
+  gsub(/^[ \t]+/, "", rem)
+  commapos = index(rem, ",")
+  if (commapos > 0) {
+    namepart = substr(rem, 1, commapos - 1)
+    optspart = substr(rem, commapos + 1)
+  } else {
+    namepart = rem
+    optspart = ""
+  }
+  gsub(/^[ \t]+|[ \t]+$/, "", namepart)
+  chunk_name = namepart
+  gsub(/[ \t]/, "", optspart)
+  if (optspart ~ /(^|,)eval=(FALSE|F)(,|$)/) chunk_eval_false = 1
 }
 
 function extract_inline(line,    n, i, j, k, rs, rl, rs2, rl2, code, codestart, found_close, ch) {
@@ -110,7 +151,10 @@ function extract_inline(line,    n, i, j, k, rs, rl, rs2, rl2, code, codestart, 
       if (line ~ /^[[:space:]]*```\{r[ ,}]/) {
         in_r = 1
         chunk_num++
-        emit_header("# Chunk " chunk_num)
+        parse_r_header(line)
+        hdr = "# Chunk " chunk_num
+        if (chunk_name != "") hdr = hdr " - " chunk_name
+        emit_header(hdr)
       } else {
         in_r = 0
       }
@@ -118,7 +162,8 @@ function extract_inline(line,    n, i, j, k, rs, rl, rs2, rl2, code, codestart, 
     next
   }
   if (in_r) {
-    print line
+    if (chunk_eval_false && line !~ /^[ \t]*$/) print "# " line
+    else print line
   } else if (in_any) {
     next
   } else {
