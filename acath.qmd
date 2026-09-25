@@ -2,31 +2,41 @@
 title: "Diagnostic Model Using Duke Cardiac Catheterization Data"
 author:
   - name: Frank Harrell
-    affiliation: Department of Biostatistics<br>Vanderbilt University School of Medicine<br>MSCI Biostatistics II
+    url: https://hbiostat.org
+    affiliation: Department of Biostatistics<br>Vanderbilt University School of Medicine
+author-title: ""
+affiliation-title: ""
+published-title: ""
 date: last-modified
+
 format:
   html:
-    self-contained: true
-    number-sections: true
-    number-depth: 3
+    embed-resources: true
     anchor-sections: true
-    smooth-scroll: true
+    code-tools: true
+    code-fold: true
+    fig-width: 6
+    fig-height: 4
+    code-block-bg: "#f1f3f5"
+    code-block-border-left: "#31BAE9"
+    mainfont: Source Sans Pro
     theme: journal
     toc: true
     toc-depth: 3
-    toc-title: Contents
     toc-location: left
-    code-link: false
-    code-tools: true
-    code-fold: show
-    code-block-bg: "#f1f3f5"
-    code-block-border-left: "#31BAE9"
+    captions: true
+    cap-location: margin
+    table-captions: true
+    tbl-cap-location: margin
     reference-location: margin
-    fig-cap-location: margin
+
+bibliography:
+  - grateful-refs.bib
 
 execute:
   warning: false
   message: false
+  
 major: regression modeling; rms
 minor: logistic
 ---
@@ -160,6 +170,7 @@ f1
 f2 <- lrm(sigdz ~ rcs(age, 4) * sex + rcs(choleste, 4) +
           rcs(age, 4) %ia% rcs(choleste, 4), data=d)
 f2
+latex(f2)   # show mathematical form of model fit
 f3 <- lrm(sigdz ~ rcs(age, 4) * sex + rcs(choleste, 4) +
           age %ia% choleste, data=d)
 f3
@@ -265,7 +276,10 @@ plot(cal)
 
 # Computing Environment
 
-```{r echo=FALSE,results='asis'}
-markupSpecs$html$session()
+```{r}
+# ggplot2 was not actually used, only imported by qreport
+grateful::cite_packages(pkgs='Session', output='paragraph', out.dir='.',
+    cite.tidyverse=FALSE, omit=c('grateful', 'ggplot2'))
 ```
 
+The code was run on `r sessionInfo()$running`.
