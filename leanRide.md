@@ -10,6 +10,10 @@ browser, a live plot viewer, a way to send code from editor to console, a
 substitute for the variables/environment pane, and an interactive data
 viewer.
 
+A presentation overviewing leanRide may be found
+[here](https://hbiostat.org/talks/leanRide.html), which contains a link to
+a video demonstration.
+
 ## Install
 
 R packages, from CRAN:
