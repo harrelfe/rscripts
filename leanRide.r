@@ -130,25 +130,36 @@ end tell', prefix, url), as_nav)
   win_w <- floor(b[3] / 3)
   win_h <- floor(b[4] / 2)
   as_open <- tempfile(fileext = ".applescript")
-  # "set newWin to make new document ..." captures a direct reference to the
-  # window this call just created, so the resize/tab setup below (tell
-  # newWin ...) is guaranteed to act on that specific window -- never on any
-  # Safari window you already had open -- regardless of window ordering.
-  # Referring to it positionally instead (tell window 1 ...) would rely on
-  # the new window happening to be frontmost at that instant, which is true
-  # almost always but not guaranteed (e.g. Safari still restoring windows
-  # from its last session when "activate" launches it).
+  # "make new document" returns a Safari *document* object, not a window --
+  # confirmed by testing ("Can't get every tab of document Untitled"):
+  # "tabs" is a property of the window class, not document, so the earlier
+  # attempt to build the plot tab off that reference always failed silently.
+  # "window 1" immediately after creating the document is the window that
+  # owns it (nothing else runs in between that could create another Safari
+  # window first), so capturing that into winRef gets the right object type
+  # while keeping the original guarantee: every step below acts on exactly
+  # the window this call just created, never on any window you already had
+  # open, since winRef is bound once, right after creation, rather than
+  # re-resolved positionally at each later step.
+  #
+  # "activate" is deliberately last, not first: Safari interprets being
+  # activated while it has zero visible windows (e.g. your last window was
+  # minimized, not closed) as "restore my last window", which is the likely
+  # cause of an old minimized window popping back up alongside the new one.
+  # Creating the window and tab first, then activating once there's already
+  # a window to show, should avoid triggering that restore.
   writeLines(sprintf(
 'tell application "Safari"
+  make new document with properties {URL:"%s"}
+  set winRef to window 1
+  make new tab at end of tabs of winRef with properties {URL:"%s"}
+  set current tab of winRef to tab 1 of winRef
+  set bounds of winRef to {0, 0, %d, %d}
   activate
-  set newWin to make new document with properties {URL:"%s"}
-  tell newWin
-    make new tab with properties {URL:"%s"}
-    set current tab to tab 1
-    set bounds to {0, 0, %d, %d}
-  end tell
 end tell', help_url, plot_url, win_w, win_h), as_open)
-  system2("osascript", args = shQuote(as_open))
+  out <- system2("osascript", args = shQuote(as_open), stdout = TRUE, stderr = TRUE)
+  if (length(out) && any(nzchar(out)))
+    message("leanRide: Safari AppleScript output/error:\n", paste(out, collapse = "\n"))
 }
 
 leanRide <- function(plot_port = 8892, watch = TRUE, force = FALSE, use_chromium = TRUE, epobj = TRUE) {
