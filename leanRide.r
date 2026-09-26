@@ -130,11 +130,19 @@ end tell', prefix, url), as_nav)
   win_w <- floor(b[3] / 3)
   win_h <- floor(b[4] / 2)
   as_open <- tempfile(fileext = ".applescript")
+  # "set newWin to make new document ..." captures a direct reference to the
+  # window this call just created, so the resize/tab setup below (tell
+  # newWin ...) is guaranteed to act on that specific window -- never on any
+  # Safari window you already had open -- regardless of window ordering.
+  # Referring to it positionally instead (tell window 1 ...) would rely on
+  # the new window happening to be frontmost at that instant, which is true
+  # almost always but not guaranteed (e.g. Safari still restoring windows
+  # from its last session when "activate" launches it).
   writeLines(sprintf(
 'tell application "Safari"
   activate
-  make new document with properties {URL:"%s"}
-  tell window 1
+  set newWin to make new document with properties {URL:"%s"}
+  tell newWin
     make new tab with properties {URL:"%s"}
     set current tab to tab 1
     set bounds to {0, 0, %d, %d}
