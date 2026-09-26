@@ -22,6 +22,16 @@ install.packages(c("httpgd", "later", "DT", "htmltools", "htmlwidgets"))
 `htmlwidgets` are required for `vObjects()` and `vData()`. If you never call
 either of those you don't need the latter three.
 
+Also recommended, optional:
+
+```r
+install.packages("Hmisc")
+```
+
+Not needed for anything above, but `contents()` and `describe()` (both from
+`Hmisc`) are the data-dictionary alternative to `vData()` described below —
+worth having installed if you work with labelled data frames.
+
 Other tools, all optional but assumed by parts of this setup:
 
 - **ungoogled-chromium** — `brew install --cask chromium`. Used by default
@@ -320,6 +330,28 @@ exactly the approach `Rwatch.sh`/`rsend_watch()` replaced, for the reason
 above (dropped lines on longer pastes) — if you still have this script
 installed or bound to a shortcut, it's superseded and safe to delete or
 unbind.
+
+**Troubleshooting: a keyboard shortcut just beeps.** If pressing Cmd-Return
+or Cmd-Shift-Return produces a system beep and nothing happens, but
+clicking "Rwatch"/"sendrchunks" directly from CotEditor's Script menu (the
+scroll/quill menu-bar icon, not File/Edit) works fine, the App Shortcuts
+binding in System Settings has gone stale — it's still pointing at a menu
+item title that no longer matches (often left over from an earlier script
+name or a reinstall), and macOS doesn't warn you about the mismatch, it
+just beeps. Fix: System Settings > Keyboard > Keyboard Shortcuts > App
+Shortcuts, delete both CotEditor entries, and re-add them from scratch —
+Application: CotEditor, Menu Title typed exactly as the Script menu shows
+it (`Rwatch`, `sendrchunks`, no `.sh`), Keyboard Shortcut captured by
+pressing the actual keys rather than typed as text. Re-adding rather than
+editing in place matters, since an entry that "looks right" in the list can
+still carry the stale internal binding.
+
+Separately, if `sendrchunks` runs (you see "Sourcing from CotEditor" in the
+console) but nothing executes and no code is echoed, check that you
+actually had a selection in the document first (Cmd-Shift-Up from inside
+the chunk you want, or any selection containing an R chunk) — `sendrchunks`
+reads only the current selection, and an empty selection silently produces
+an empty `pending.R`.
 
 ## `vObjects()` — a lightweight environment pane
 
