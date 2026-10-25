@@ -616,3 +616,35 @@ can be combined if useful.
   3-pane (editor + console + HTML) setup ever becomes a hard requirement,
   Positron (Posit's VS Code fork, which does support webviews) is the tool
   that already does this natively — at the cost of leaving Zed + CotEditor.
+  
+## Zed's native REPL was evaluated and not adopted
+
+Zed has a built-in REPL that can run R code via a Jupyter kernel (IRkernel
+was tested). It was considered as a replacement for the CotEditor
+send-to-console mechanism, but was not adopted: R's internal help server
+and httpgd both depend on a background listener socket that only gets
+serviced when the hosting frontend drives R's event loop the way a normal
+terminal does, and under Zed+IRkernel that servicing doesn't happen
+reliably -- both the Help tab and the httpgd Plots tab failed to connect,
+and this did not clear up after restarting the kernel or restarting Zed.
+That points to a structural incompatibility, not something fixable by
+configuration, so this isn't worth re-investigating without a different
+underlying approach (e.g. a custom R-embedding companion process with a
+correctly implemented event loop -- a real but nontrivial undertaking).
+leanRide stays on the CotEditor-based mechanism.
+
+## Possible future enhancements (not yet implemented)
+
+- **More controlled browser-window placement.** Rather than just resizing
+  a new Safari/Chromium window to a fixed quadrant of the screen, explore
+  docking or positioning browser windows relative to the actual on-screen
+  position of the terminal and editor windows, so they land adjacent to
+  wherever those windows currently are rather than at a fixed fraction of
+  the screen.
+- **Collapsible output stream for HTML output.** For output other than
+  Help (`vObjects()`, `vData()`, `contents()`, `describe()`), instead of
+  each call replacing the content of a single browser tab, accumulate a
+  scrollable history within one window where each past output collapses
+  to a titled entry that can be re-expanded on click -- closer to a
+  notebook-style output log than a single overwritten view.
+  
